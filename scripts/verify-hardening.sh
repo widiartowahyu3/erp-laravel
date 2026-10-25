@@ -269,7 +269,7 @@ EOF'
 FPM_RAW=$(docker compose exec php sh -c 'SCRIPT_FILENAME=/tmp/fpm_probe.php REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000' 2>/dev/null || true)
 docker compose exec php rm -f /tmp/fpm_probe.php 2>/dev/null || true
 
-FPM_JSON=$(echo "$FPM_RAW" | sed '1,/^$/d')
+FPM_JSON=$(echo "$FPM_RAW" | tr -d '\r' | grep -m 1 '^{' || true)
 
 if echo "$FPM_JSON" | grep -q "exec"; then
     pass "disable_functions pada FPM memuat 'exec'"
@@ -283,7 +283,7 @@ else
     fail "function_exists('exec') pada FPM TIDAK bernilai false ($FPM_JSON)"
 fi
 
-if echo "$FPM_JSON" | grep -q '/var/www/html'; then
+if echo "$FPM_JSON" | tr -d '\\' | grep -q '/var/www/html'; then
     pass "open_basedir pada FPM terisolasi pada /var/www/html:/tmp"
 else
     fail "open_basedir pada FPM tidak sesuai ($FPM_JSON)"
