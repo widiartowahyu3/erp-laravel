@@ -29,7 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
             parse_url((string) config('app.url'), PHP_URL_HOST),
         ])));
 
-        $middleware->appendToGroup('web', SecurityHeaders::class);
+        $middleware->appendToGroup('web', [
+            SecurityHeaders::class,
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
