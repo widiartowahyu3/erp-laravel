@@ -1,21 +1,21 @@
-# Kebijakan & Standar Hardening Keamanan (Fase 0 - Revisi)
+# Kebijakan & Standar Hardening Keamanan (Fase 1 - Final)
 
-Dokumen ini mendokumentasikan seluruh lapisan pengamanan (defense-in-depth) yang diterapkan pada Fase 0 beserta alasan teknis dan checklist review arsitek/pengawas.
+Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) yang diterapkan pada proyek ERP Distribusi / Trading, mencakup infrastruktur Docker (Fase 0) dan baseline keamanan aplikasi Laravel 13 + Vue 3 (Fase 1).
 
 ---
 
-## 1. Daftar Hardening & Alasan Penerapan
+## 1. Lapisan Infrastruktur Docker & Host (Fondasi Fase 0)
 
 ### A. Lapisan Host & Git Repository
 1. **Pemisahan Kredensial & Deteksi Kebocoran Otomatis**:
-   - Berkas `.env` infra dan segala variasinya diabaikan secara ketat oleh `.gitignore` (kecuali `.env.example`).
-   - Direktori `secrets/*` diabaikan sepenuhnya oleh `.gitignore` (hanya `secrets/README.md` yang terlacak).
+   - Berkas `.env` infra dan segala variasinya diabaikan secara ketat oleh `.gitignore` (kecuali template contoh).
+   - Direktori `secrets/*` diabaikan sepenuhnya oleh `.gitignore` (hanya `secrets/README.md` yang terlacak), direktori `secrets/` dikunci dengan mode ketat `700`.
    - Hook Git `pre-commit` memeriksa staged diff terhadap pola rahasia (`APP_KEY=base64:`, live password/token/secret tanpa placeholder, berkas dalam `secrets/`, dan private key).
-   - Hook `pre-commit` menjalankan pemindaian menyeluruh via Docker image resmi terpin `zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f`.
+   - Hook `pre-commit` menjalankan pemindaian menyeluruh via Docker image resmi terpin `zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f` dengan opsi `:ro` dan `--network none`.
 2. **Standardisasi Pesan & Integritas Commit**:
    - Hook `commit-msg` mewajibkan Conventional Commits agar setiap riwayat perubahan dapat dilacak secara terstruktur.
-   - Hak akses kunci privat SSH dipertahankan di lingkungan pemilik tanpa dicetak ke log.
    - Kakas `make hooks` disediakan untuk kemudahan inisialisasi hook Git lokal.
+   - Uji fungsional hooks terotomatisasi via `make test-hooks`.
 
 ### B. Lapisan Container (Docker Engine & Compose)
 1. **Isolasi Struktur Kode Aplikasi (`src/`)**:
@@ -23,30 +23,28 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (defense-in-depth) yang
    - Service `php`: bind mount **HANYA** `./src:/var/www/html`.
    - Service `web`: bind mount **HANYA** `./src/public:/var/www/html/public:ro`.
    - Service `node`: bind mount **HANYA** `./src:/var/www/html`.
-   - *Alasan*: Container aplikasi tidak memiliki akses mount ke root repositori (`.`), `.git`, `.env` infra, konfigurasi Docker (`docker/`), maupun direktori `secrets/`.
+   - Container aplikasi tidak memiliki akses mount ke root repositori (`.`), `.git`, `.env` infra, konfigurasi Docker (`docker/`), maupun direktori `secrets/`.
 2. **User Non-Root pada Runtime**:
    - `web` berjalan sebagai user unprivileged `101:101`.
-   - `php` berjalan sebagai user `appuser` (UID/GID 1000 sesuai user WSL host).
+   - `php` berjalan sebagai user non-root UID/GID 1000 sesuai user WSL host.
    - `node` berjalan sebagai user `${UID:-1000}:${GID:-1000}`.
    - `db` (MariaDB) menjalankan proses daemon `mariadbd` sebagai user khusus `mysql` (UID 999).
-   - *Alasan*: Mencegah eskalasi hak akses host jika terjadi eksploitasi container breakout (RCE).
 3. **Root Filesystem Read-Only (`read_only: true`) & Tmpfs Ketat**:
    - Seluruh service berjalan dengan root filesystem terkunci (read-only).
-   - Direktori sementara dialokasikan via memory `tmpfs` dengan mode hak akses paling ketat yang berfungsi dan pembatasan kapasitas (`size=`):
+   - Partisi sementara menggunakan memory `tmpfs` dengan mode hak akses paling ketat yang berfungsi dan pembatasan kapasitas (`size=`):
      - `web`: `/tmp` (1777, 64m), `/var/cache/nginx` (700, UID 101, 64m), `/var/run` (700, UID 101, 16m).
-     - `php`: `/tmp` (1777, 256m), `/var/run` (700, UID 1000, 16m).
+     - `php`: `/tmp` (1777, 256m), `/var/run` (700, UID 1000, GID 1000, 16m).
      - `db`: `/run/mysqld` (755, UID 999, 16m), `/tmp` (1777, 256m), `/var/log/mysql` (755, UID 999, 64m).
      - `node`: `/tmp` (1777, 128m).
-   - Direktori cache paket (`composer_cache` di `/tmp/composer` dan `npm_cache` di `/home/node/.npm`) dipasang sebagai named volume dengan permission non-root yang terbukti dapat ditulis (*writable*).
-   - *Alasan*: Menghalangi penyerang mengunggah malware, webshell, atau memodifikasi binary sistem saat runtime.
+   - Cache Composer (`/tmp/composer`) dan NPM (`/home/node/.npm`) dipasang sebagai named volume dengan permission non-root yang terbukti dapat ditulis (*writable*).
 4. **Reduksi Linux Capabilities & Anti-Privilege Escalation**:
    - Seluruh container menerapkan `security_opt: [no-new-privileges:true]`.
    - Seluruh container menerapkan `cap_drop: [ALL]`.
    - Service `db` hanya menambahkan kapabilitas minimum absolut yang diwajibkan oleh entrypoint resmi: `CHOWN`, `SETUID`, `SETGID`, `DAC_OVERRIDE`.
 5. **Pembatasan Port & Segmentasi Jaringan**:
    - Port `web` hanya diexpose ke antarmuka loopback lokal: `127.0.0.1:8080`.
-   - Port `node` (Vite) hanya diexpose ke loopback lokal: `127.0.0.1:5173`.
-   - Port `db` (MariaDB) **TIDAK** dipublikasikan ke host sama sekali. Akses database dari host hanya melalui `docker compose exec`.
+   - Port `node` (Vite) hanya diexpose ke loopback lokal: `127.0.0.1:5174`.
+   - Port `db` (MariaDB) **TIDAK** dipublikasikan ke host sama sekali.
    - Jaringan disegmentasi menjadi:
      - `frontend`: Menghubungkan `web`, `php`, dan `node`.
      - `backend` (`internal: true`): Menghubungkan `php` dan `db`. Database tidak memiliki akses keluar internet.
@@ -78,39 +76,97 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (defense-in-depth) yang
    - Ekstensi wajib (`pdo_mysql`, `intl`, `bcmath`, `zip`, `Zend OPcache`) terverifikasi aktif pada runtime FPM dan CLI.
 3. **Probe Independen FPM via `cgi-fcgi`**:
    - Kakas `fcgi` (`cgi-fcgi`) dipasang pada stage dev PHP untuk memanggil pool FastCGI 127.0.0.1:9000 secara independen via berkas probe sementara di `/tmp` (non-destruktif) tanpa bergantung pada keberadaan berkas web root publik.
-   - Memverifikasi fungsi kritis FPM: `disable_functions` menonaktifkan fungsi berbahaya, `exec_exists=false`, `proc_open_exists=false`, `open_basedir=/var/www/html:/tmp`, `allow_url_fopen=0`, dan `expose_php=""`.
 
 ### E. Lapisan Database (MariaDB 12.3 LTS)
 1. **Pemisahan Hak Akses Aplikasi (Principle of Least Privilege)**:
-   - Dibuat 2 pengguna database terpisah:
-     - `erp_app`: Khusus request web aplikasi. Dibatasi **HANYA** DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Dilarang melakukan DDL (`CREATE`, `ALTER`, `DROP`).
-     - `erp_migrator`: Khusus migrasi skema database. Memiliki izin DDL dan DML migrasi, tetapi **TIDAK** memiliki izin `FILE`, `SUPER`, `PROCESS`, atau `GRANT OPTION`.
-   - **Kebijakan Injeksi Kredensial**: Berkas `src/.env` milik Laravel hanya boleh berisi kredensial `erp_app`. Kredensial `erp_migrator` HANYA disuntikkan saat menjalankan migrasi (environment sekali jalan), tidak pernah disimpan di `src/.env` maupun environment container `php` yang berjalan melayani request web.
+   - `erp_app`: Khusus request web aplikasi. Dibatasi **HANYA** DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Dilarang melakukan DDL (`CREATE`, `ALTER`, `DROP`).
+   - `erp_migrator`: Khusus migrasi skema database. Memiliki izin DDL dan DML migrasi, tetapi **TIDAK** memiliki izin `FILE`, `SUPER`, `PROCESS`, atau `GRANT OPTION`.
+   - **Kebijakan Injeksi Kredensial**: Berkas `src/.env` milik Laravel hanya berisi kredensial `erp_app`. Kredensial `erp_migrator` disuntikkan secara dinamis hanya saat mengeksekusi `make migrate`.
 2. **Pengelolaan Rahasia Root & Pembatasan Host**:
-   - Kata sandi root MariaDB dikelola melalui berkas `secrets/db_root_password.txt` (permission 600, di-.gitignore) dan dipasang via Docker Compose `secrets` (`MARIADB_ROOT_PASSWORD_FILE`). Kata sandi root tidak dicantumkan di file `.env` infra maupun environment container mana pun.
+   - Kata sandi root MariaDB dikelola melalui berkas `secrets/db_root_password.txt` (permission 644 di dalam direktori `secrets/` bermode 700) dan dipasang via Docker Compose `secrets` (`MARIADB_ROOT_PASSWORD_FILE`).
    - `MARIADB_ROOT_HOST=localhost` memastikan user `root` tidak dapat melakukan login melalui jaringan TCP/IP.
 3. **Parameter Pengerasan MariaDB**:
    - `local_infile = 0` memblokir pembacaan file lokal server melalui query SQL.
    - `symbolic-links = 0` menolak symlink database tables.
-   - Menghapus seluruh user anonim saat inisialisasi.
    - Healthcheck menggunakan skrip internal `/usr/local/bin/healthcheck.sh --connect --innodb_initialized` tanpa mengekspos kata sandi pada command line arguments.
 
 ---
 
-## 2. Checklist Review Arsitek / Pengawas
+## 2. Hardening Aplikasi Tingkat Lanjut (Fase 1)
+
+### A. Content Security Policy (CSP) & Per-Request Nonce
+- Middleware `App\Http\Middleware\SecurityHeaders` secara otomatis membangkitkan nonce unik per-request menggunakan `Vite::useCspNonce()`.
+- Nonce disinkronkan langsung ke tag script dan link CSS Blade via directive `@vite`.
+- Policy script-src: `'self' 'nonce-...'` (bebas dari `'unsafe-eval'`). Di lingkungan lokal, mengizinkan koneksi WebSocket dan script origin Vite dev server `127.0.0.1:5174`.
+- Policy style-src: `'self' 'unsafe-inline' 'nonce-...'` (izin `'unsafe-inline'` diberikan karena kebutuhan reaktivitas dynamic inline style binding komponen Vue dan token CSS Tailwind, terdokumentasi secara transparan).
+- Policy object-src: `'none'`, base-uri `'self'`, form-action `'self'`, frame-ancestors `'none'`.
+- Directive `upgrade-insecure-requests` otomatis ditambahkan pada lingkungan production.
+
+### B. Header Keamanan Tambahan
+- `X-Content-Type-Options: nosniff` (mencegah MIME type sniffing).
+- `X-Frame-Options: DENY` (mencegah serangan Clickjacking).
+- `Referrer-Policy: strict-origin-when-cross-origin` (melindungi privasi query string pada referer).
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()` (menonaktifkan API peramban yang sensitif).
+- `Cross-Origin-Opener-Policy: same-origin` (COOP mengisolasi konteks browsing).
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains` (HSTS pada lingkungan production).
+
+### C. Keamanan Sesi & Cookie
+- `SESSION_DRIVER=database` (disimpan terisolasi di database).
+- `SESSION_ENCRYPT=true` (payload sesi dienkripsi di level framework).
+- `SESSION_HTTP_ONLY=true` (mencegah pembacaan cookie sesi via JavaScript/XSS).
+- `SESSION_SAME_SITE=lax` (mitigasi serangan CSRF).
+- `SESSION_SECURE_COOKIE=true` pada production.
+
+### D. Eloquent & Database Safety Baseline
+- `Model::shouldBeStrict(! app()->isProduction())`: Mencegah N+1 lazy loading dan silent mass-assignment issues.
+- `DB::prohibitDestructiveCommands(app()->isProduction())`: Memblokir perintah destruktif seperti `migrate:fresh` di production.
+- `Date::use(CarbonImmutable::class)`: Mencegah bug mutasi tanggal yang tidak disengaja.
+
+### E. Custom Exception Handling & Penanganan Error
+- Di lingkungan production, penanganan error (`bootstrap/app.php`) mencegat status code 403, 404, 419, 429, 500, dan 503.
+- Mengembalikan respons JSON bersih untuk permintaan API/Inertia atau tampilan Blade minimalis tanpa pernah membocorkan stack trace, query SQL, atau path sistem internal.
+
+### F. Aturan Arsitektur Pest (Pest Arch Rules)
+Pengujian arsitektur `tests/Arch/SecurityArchTest.php` secara otomatis melarang fungsi-fungsi berbahaya di dalam kode `app/`:
+- Fungsi eksekusi kode dinamis: `eval`, `create_function`, `extract`, `unserialize`, `assert`.
+- Fungsi eksekusi command shell: `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`.
+- Fungsi debug logging tidak sengaja: `dd`, `dump`, `var_dump`.
+
+### G. Pengelolaan Dependensi Aman & Self-Hosted Assets
+- Dependensi Composer dilindungi oleh `roave/security-advisories:dev-latest`.
+- Audit otomatis `composer audit` dan `npm audit` 100% bebas kerentanan (0 vulnerabilities).
+- Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
+- Berkas `.npmrc` mengaktifkan `ignore-scripts=true`.
+
+---
+
+## 3. Matriks Ancaman & Mitigasi Keamanan Aplikasi
+
+| Vektor Ancaman | Dampak Potensial | Mekanisme Mitigasi Fase 1 | Verifikasi / Bukti Pengujian |
+|---|---|---|---|
+| **Cross-Site Scripting (XSS)** | Pencurian sesi, defacement, manipulasi DOM | Content Security Policy dengan per-request nonce unik, pembatasan script-src tanpa `unsafe-eval`, cookie HttpOnly | `SecurityHeadersTest.php`, `verify-hardening.sh` (Butir 14) |
+| **Cross-Site Request Forgery (CSRF)** | Eksekusi transaksi tanpa otorisasi pengguna | Cookie `SameSite=lax`, token CSRF Laravel (`VerifyCsrfToken`), form-action `'self'` | `ConfigSafetyTest.php`, `verify-hardening.sh` (Butir 14) |
+| **SQL Injection & Schema Tampering** | Kerusakan atau penghapusan skema database | Koneksi default `erp_app` dilarang keras DDL (CREATE/DROP), `DB::prohibitDestructiveCommands()`, PDO prepared statements | `DatabasePrivilegeTest.php`, `verify-hardening.sh` (Butir 8) |
+| **Clickjacking** | Pengguna dijebak mengklik tombol tersembunyi | Header `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'` | `SecurityHeadersTest.php`, `verify-hardening.sh` (Butir 14) |
+| **Information Disclosure** | Pembocoran credential, database path, atau source | Error handler produksi tanpa stack trace, server tokens & PHP headers tersembunyi, Nginx blokir `.env` dan `storage/logs` | `SmokeTest.php`, `verify-hardening.sh` (Butir 5 & 14) |
+| **Remote Code Execution (RCE)** | Pengambilalihan server via fungsi berbahaya | `disable_functions` pada PHP-FPM, Pest Arch test melarang `eval`, `exec`, `system`, dll di `app/` | `SecurityArchTest.php`, `verify-hardening.sh` (Butir 6) |
+| **Supply Chain Attacks** | Pemasangan dependensi berbahaya atau bervulnerabilitas | `roave/security-advisories`, `ignore-scripts=true` pada `.npmrc`, Docker images dipin dengan SHA256 digest | `composer audit`, `npm audit`, `verify-hardening.sh` |
+
+---
+
+## 4. Checklist Review Arsitek / Pengawas (Fase 1)
 
 - [x] Repositori bersih dari file `.env`, berkas rahasia `secrets/`, file `.key`, dan private key (`git ls-files`).
 - [x] Hook `pre-commit` (Gitleaks terpin + filter rahasia) dan `commit-msg` (Conventional Commits) aktif dan executable.
-- [x] Struktur kode aplikasi Laravel terisolasi di direktori `src/`; container PHP/Web/Node tidak me-mount root repositori infra.
-- [x] Multi-stage Dockerfile PHP menggunakan rilis stabil resmi `php:8.5.12-fpm-alpine` terpin digest.
-- [x] Ekstensi `pcntl` tidak terpasang; ekstensi wajib (`pdo_mysql`, `intl`, `bcmath`, `opcache`, `zip`) terverifikasi aktif.
-- [x] `disable_functions` aktif pada request web (FPM via `cgi-fcgi`), sedangkan CLI tetap mengizinkan `proc_open`.
-- [x] Container web (101:101), php (1000:1000), node (1000:1000), dan mariadbd (mysql 999:999) berjalan 100% sebagai non-root.
-- [x] `read_only: true`, `security_opt: [no-new-privileges:true]`, dan `cap_drop: [ALL]` aktif di seluruh container (termasuk node).
-- [x] Cache Composer dan NPM terbukti dapat ditulis (*writable*) pada filesystem rootfs read-only.
-- [x] Database tidak terhubung ke jaringan `frontend` dan port database tidak diexpose ke host.
-- [x] Kata sandi root MariaDB menggunakan Docker Compose secrets, tidak bocor di `docker inspect` atau env `php`, dan root dibatasi ke localhost.
-- [x] User `erp_app` terbukti gagal saat menjalankan DDL (`CREATE TABLE`), namun sukses melakukan DML.
-- [x] Aturan Nginx diuji dengan berkas nyata (`src/public`) dan kontrol positif `/build/assets/vendor-test.js` lolos 200.
-- [x] Seluruh pengujian pada `make verify` lulus (100% PASS).
-- [x] Tidak ada framework Laravel/Vue, tabel aplikasi, atau kode bisnis yang terpasang pada Fase 0.
+- [x] Skeleton Laravel 13 bersih di `src/`, terhubung ke MariaDB (2 koneksi: `erp_app` dan `erp_migrator`), tanpa jejak SQLite.
+- [x] Seluruh file PHP baru menerapkan `declare(strict_types=1);`.
+- [x] `Model::shouldBeStrict()`, `Date::use(CarbonImmutable::class)`, `DB::prohibitDestructiveCommands()`, dan `Vite::useCspNonce()` terkonfigurasi di `AppServiceProvider`.
+- [x] Middleware `SecurityHeaders` aktif di web group dengan per-request nonce CSP dan seluruh header keamanan wajib.
+- [x] Font Inter di-self-host dari paket `@fontsource-variable/inter` tanpa ketergantungan CDN eksternal.
+- [x] Layout dasar `AppLayout.vue` responsif (desktop collapsible sidebar, mobile drawer, WCAG AA, focus-visible) dan `Dashboard.vue` beroperasi normal.
+- [x] Seluruh tes otomatis Pest (Unit, Feature, Arch) menggunakan MariaDB nyata lulus 100% (`make test`).
+- [x] Static analysis Larastan level 6 lulus 0 error (`make analyse`).
+- [x] Pengecekan gaya kode Pint lulus 0 pelanggaran (`make lint`).
+- [x] Linting frontend ESLint lulus 0 error (`docker compose --profile tools run --rm node npm run lint`).
+- [x] Audit dependensi Composer dan NPM bersih dari celah keamanan (0 vulnerabilities).
+- [x] Skrip verifikasi keamanan `make verify` lulus 100% (89 PASS / 0 FAIL).
