@@ -642,6 +642,97 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 14. Verifikasi Endpoint & Baseline Keamanan Aplikasi Laravel (Fase 1)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 14: Verifikasi Endpoint & Header Keamanan Aplikasi Laravel ---"
+
+ROOT_RES_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/)
+if [ "$ROOT_RES_CODE" = "200" ]; then
+    pass "Endpoint GET / mengembalikan HTTP 200"
+else
+    fail "Endpoint GET / mengembalikan HTTP $ROOT_RES_CODE (diharapkan 200)"
+fi
+
+ROOT_BODY=$(curl -s http://127.0.0.1:8080/)
+if echo "$ROOT_BODY" | grep -q 'data-page' || echo "$ROOT_BODY" | grep -q 'ERP Distribusi'; then
+    pass "Endpoint GET / memuat komponen aplikasi Inertia Dashboard ('data-page' / 'ERP Distribusi')"
+else
+    fail "Endpoint GET / TIDAK memuat komponen Inertia Dashboard"
+fi
+
+UP_RES_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/up)
+if [ "$UP_RES_CODE" = "200" ]; then
+    pass "Endpoint healthcheck GET /up mengembalikan HTTP 200"
+else
+    fail "Endpoint healthcheck GET /up mengembalikan HTTP $UP_RES_CODE (diharapkan 200)"
+fi
+
+ROOT_HEADERS=$(curl -s -I http://127.0.0.1:8080/)
+
+if echo "$ROOT_HEADERS" | grep -qi "Content-Security-Policy" && echo "$ROOT_HEADERS" | grep -qi "nonce-"; then
+    pass "Header Content-Security-Policy hadir dan memuat per-request nonce"
+else
+    fail "Header Content-Security-Policy TIDAK hadir atau tidak memuat nonce"
+fi
+
+if echo "$ROOT_HEADERS" | grep -qi "X-Content-Type-Options:[[:space:]]*nosniff"; then
+    pass "Header X-Content-Type-Options: nosniff terpasang dengan benar"
+else
+    fail "Header X-Content-Type-Options: nosniff TIDAK ditemukan"
+fi
+
+if echo "$ROOT_HEADERS" | grep -qi "X-Frame-Options:[[:space:]]*DENY"; then
+    pass "Header X-Frame-Options: DENY terpasang dengan benar"
+else
+    fail "Header X-Frame-Options: DENY TIDAK ditemukan"
+fi
+
+if echo "$ROOT_HEADERS" | grep -qi "Referrer-Policy:[[:space:]]*strict-origin-when-cross-origin"; then
+    pass "Header Referrer-Policy: strict-origin-when-cross-origin terpasang dengan benar"
+else
+    fail "Header Referrer-Policy: strict-origin-when-cross-origin TIDAK ditemukan"
+fi
+
+if echo "$ROOT_HEADERS" | grep -i "Set-Cookie" | grep -qi "HttpOnly"; then
+    pass "Cookie sesi Laravel mengonfigurasi atribut HttpOnly"
+else
+    fail "Cookie sesi Laravel TIDAK memuat atribut HttpOnly"
+fi
+
+if echo "$ROOT_HEADERS" | grep -i "Set-Cookie" | grep -qi "SameSite=lax"; then
+    pass "Cookie sesi Laravel mengonfigurasi atribut SameSite=lax"
+else
+    fail "Cookie sesi Laravel TIDAK memuat atribut SameSite=lax"
+fi
+
+STORAGE_LOG_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/storage/logs/laravel.log)
+if [ "$STORAGE_LOG_CODE" = "404" ] || [ "$STORAGE_LOG_CODE" = "403" ]; then
+    pass "Akses HTTP langsung ke /storage/logs/laravel.log diblokir Nginx (HTTP $STORAGE_LOG_CODE)"
+else
+    fail "Akses ke /storage/logs/laravel.log TIDAK diblokir (HTTP $STORAGE_LOG_CODE)"
+fi
+
+ENV_REQ_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/.env)
+if [ "$ENV_REQ_CODE" = "404" ] || [ "$ENV_REQ_CODE" = "403" ]; then
+    pass "Akses HTTP langsung ke /.env diblokir Nginx (HTTP $ENV_REQ_CODE)"
+else
+    fail "Akses ke /.env TIDAK diblokir (HTTP $ENV_REQ_CODE)"
+fi
+
+if grep -q "http://127.0.0.1:8080/up" compose.yaml; then
+    pass "Healthcheck service web di compose.yaml menggunakan endpoint /up"
+else
+    fail "Healthcheck service web di compose.yaml TIDAK menggunakan endpoint /up"
+fi
+
+if [ -d "src/public/build" ]; then
+    pass "Direktori aset frontend src/public/build tetap utuh dan tidak terhapus probe"
+else
+    fail "Direktori src/public/build terhapus secara destruktif!"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
