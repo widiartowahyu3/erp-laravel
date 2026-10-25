@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 # Base PHP-FPM image with required extensions & hardening
 # ------------------------------------------------------------------------------
-FROM php:8.4.27-fpm-alpine AS base
+FROM php:8.5.12-fpm-alpine@sha256:4c2818074ec49f6abe46620f3965e0cb75bc3a5f2b417edd1aacaba6f091c40e AS base
 
 # Install runtime libraries
 RUN apk add --no-cache \
@@ -11,7 +11,7 @@ RUN apk add --no-cache \
     libzip \
     libstdc++
 
-# Compile required PHP extensions using official mechanism
+# Compile required PHP extensions using official mechanism (OPcache is built-in on PHP 8.5)
 RUN apk add --no-cache --virtual .build-deps \
     $PHPIZE_DEPS \
     icu-dev \
@@ -21,7 +21,6 @@ RUN apk add --no-cache --virtual .build-deps \
         intl \
         bcmath \
         zip \
-        opcache \
     && apk del --no-network .build-deps \
     && rm -rf /tmp/* /var/cache/apk/*
 
@@ -43,7 +42,7 @@ WORKDIR /var/www/html
 RUN chown -R appuser:appuser /var/www/html
 
 # ------------------------------------------------------------------------------
-# Dev Stage: includes composer, git, unzip, and development opcache
+# Dev Stage: includes composer, git, unzip, bash, fcgi, and development opcache
 # ------------------------------------------------------------------------------
 FROM base AS dev
 
@@ -51,10 +50,11 @@ FROM base AS dev
 RUN apk add --no-cache \
     git \
     unzip \
-    bash
+    bash \
+    fcgi
 
 # Copy Composer binary from pinned official image
-COPY --from=composer:2.8.12 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.10.3@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc /usr/bin/composer /usr/bin/composer
 
 # CLI-specific configuration
 COPY docker/php/conf/php-cli.ini /usr/local/etc/php/conf.d/20-cli.ini

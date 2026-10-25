@@ -367,7 +367,7 @@ fi
 echo ""
 echo "--- Butir 9: Verifikasi Pemindaian Rahasia Gitleaks ---"
 
-GITLEAKS_IMG="zricethezav/gitleaks:v8.30.1"
+GITLEAKS_IMG="zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
 if docker run --rm -v "$(pwd):/repo" -w /repo "$GITLEAKS_IMG" git --verbose --no-banner >/dev/null 2>&1; then
     pass "Gitleaks lolos tanpa temuan rahasia pada seluruh repositori"
 else

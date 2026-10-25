@@ -1,6 +1,11 @@
-# Daftar Stack & Versi Image / Tool (Fase 0)
+# Daftar Stack & Versi Image / Tool (Fase 0 - Revisi)
 
-Dokumen ini mencatat seluruh image Docker, runtime, dan kakas (tools) resmi yang digunakan pada Fase 0. Seluruh versi yang dipilih adalah rilis **STABIL** (General Availability / LTS), bukan versi alpha, beta, Release Candidate (RC), atau rolling release (`latest` dilarang).
+Dokumen ini mencatat seluruh image Docker, runtime, dan kakas (tools) resmi yang digunakan pada Fase 0. Seluruh versi yang dipilih adalah rilis **STABIL** (General Availability / LTS), bukan versi alpha, beta, Release Candidate (RC), atau rolling release (`latest` dilarang). Seluruh image pihak ketiga dipin menggunakan format `tag@sha256:digest` untuk menjamin reproduktibilitas mutlak dan mencegah supply chain attacks.
+
+Tanggal Pengecekan & Verifikasi: **2026-10-25**
+
+> [!IMPORTANT]
+> **Aturan Tata Kelola Versi**: Seluruh versi image, dependensi, dan kakas wajib diverifikasi ulang status stabilitas, dukungan keamanan (EOL/LTS), serta keamanannya di awal setiap fase sebelum pengerjaan fase tersebut dimulai.
 
 ---
 
@@ -8,12 +13,12 @@ Dokumen ini mencatat seluruh image Docker, runtime, dan kakas (tools) resmi yang
 
 | Komponen / Layanan | Base Image Resmi | Tag Terverifikasi | Digest Image (SHA256) | Keterangan & Alasan Pemilihan |
 |---|---|---|---|---|
-| **PHP-FPM Runtime** | `library/php` | `8.4.27-fpm-alpine` | `sha256:6b83fd767e1902ae4c89fe11f929f02e78bf769215c703060ac8a7c4be672c8c` | Rilis stabil terbaru PHP 8.4 yang didukung Laravel 13. Varian Alpine untuk footprint minimal dan attack surface kecil. Ekstensi: `pdo_mysql`, `mbstring`, `intl`, `bcmath`, `opcache`, `zip`. `pcntl` sengaja tidak dipasang. |
-| **Composer** | `library/composer` | `2.8.12` | `sha256:5248900ab8b5f7f880c2d62180e40960cd87f60149ec9a1abfd62ac72a02577c` | Composer v2 stabil terbaru dipin untuk build stage development. |
-| **Web Server (Reverse Proxy)** | `nginxinc/nginx-unprivileged` | `1.28-alpine` | `sha256:7377697a821c131a924a7105fafbe7414db4e9fcc77a6f08f776f33f141ec3f8` | Nginx versi stabil (1.28) unprivileged resmi. Berjalan default sebagai user non-root UID 101. |
-| **Database Server** | `library/mariadb` | `12.3.3` | `sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf` | MariaDB 12.3 Long-Term Support (LTS). Seri 13.x dilarang (rolling release). |
-| **Node.js (Tooling & Vite Dev)** | `library/node` | `22-alpine` | `sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914` | Node.js Active LTS (v22). Digunakan strictly pada profil `tools` dan `dev` untuk kompilasi frontend Vite tanpa berjalan di production runtime. |
-| **Secret Scanner (Hook & CI)** | `zricethezav/gitleaks` | `v8.30.1` | `sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f` | Standar industri untuk deteksi kebocoran kredensial dan secret scanning. |
+| **PHP-FPM Runtime** | `library/php` | `8.5.12-fpm-alpine` | `sha256:4c2818074ec49f6abe46620f3965e0cb75bc3a5f2b417edd1aacaba6f091c40e` | Rilis patch stabil terbaru PHP 8.5. OPcache sudah bawaan (built-in). Ekstensi dikompilasi: `pdo_mysql`, `intl`, `bcmath`, `zip`. Dilengkapi `fcgi` (`cgi-fcgi`) pada target `dev` untuk probe status FPM independen. `pcntl` sengaja tidak dipasang. |
+| **Composer** | `library/composer` | `2.10.3` | `sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc` | Composer seri 2.10.x stabil terbaru, dipin untuk build stage development multi-stage PHP. |
+| **Web Server (Reverse Proxy)** | `nginxinc/nginx-unprivileged` | `1.30.6-alpine` | `sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03` | Nginx seri stabil terbaru 1.30.x-alpine (minimal 1.30.4). Seri 1.28 sudah EOL dan dilarang. Berjalan default sebagai unprivileged user UID 101. |
+| **Database Server** | `library/mariadb` | `12.3.3` | `sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf` | MariaDB 12.3 Long-Term Support (LTS) stabil terbaru. Seri 13.x dilarang (rolling release). |
+| **Node.js (Tooling & Vite Dev)** | `library/node` | `24.22.1-alpine` | `sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53` | Node.js Active LTS saat ini (seri 24.x). Seri 22 dilarang karena sudah masuk masa Maintenance, dan seri 26 belum berstatus LTS. Dijalankan dengan build image non-root UID/GID host dan volume cache npm yang dapat ditulis. |
+| **Secret Scanner (Hook & CI)** | `zricethezav/gitleaks` | `v8.30.1` | `sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f` | Standar industri untuk secret scanning pada pre-commit hook dan CI/CD pipeline. |
 
 ---
 
