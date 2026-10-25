@@ -40,8 +40,9 @@ if echo "$staged_diff" | grep -E '^\+[[:space:]]*APP_KEY=base64:' >/dev/null; th
     exit 1
 fi
 
-if echo "$staged_diff" | grep -Ei '^\+[[:space:]]*(DB_PASSWORD|PASSWORD|SECRET)[[:space:]]*=[[:space:]]*[^<[:space:]]{6,}' | grep -v 'EXAMPLE' >/dev/null; then
+if echo "$staged_diff" | grep -Ei '^\+[[:space:]]*(DB_APP_PASSWORD|DB_MIGRATOR_PASSWORD|DB_PASSWORD|DB_ROOT_PASSWORD|[A-Z0-9_]*_PASSWORD|[A-Z0-9_]*_SECRET|[A-Z0-9_]*_TOKEN)[[:space:]]*=[[:space:]]*['\''"]?[^<[:space:]'\''"]{6,}' | grep -vEi '(change_this|placeholder|example)' >/dev/null; then
     echo "ERROR: Detected potential hardcoded credentials in staged changes."
+    echo "Please use placeholders (e.g., change_this_*) in committed files."
     exit 1
 fi
 

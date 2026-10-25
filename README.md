@@ -24,27 +24,32 @@ Fase 0 berfokus pada penyiapan lingkungan kerja yang aman, reproducible, dan ter
 
 Ikuti langkah-langkah berikut untuk menjalankan dan memverifikasi lingkungan:
 
-### 1. Clone Repositori
+### 1. Clone Repositori & Konfigurasi Git Hooks
 Pastikan clone dilakukan di dalam filesystem Linux WSL native (mis. `~/projects/`):
 ```bash
 git clone git@github.com:widiartowahyu3/erp-laravel.git erp-trading
 cd erp-trading
+
+# Aktifkan hook keamanan Git lokal (Gitleaks, filter rahasia, conventional commits)
+make hooks
 ```
 
-### 2. Inisialisasi Berkas Lingkungan (`.env`)
-Salin berkas contoh dan buat kata sandi acak yang kuat:
+### 2. Inisialisasi Berkas Lingkungan & Rahasia
+Salin berkas template dan buat rahasia lokal aman:
 ```bash
 cp .env.example .env
 
-# Generate kata sandi aman lokal
-ROOT_PASS=$(openssl rand -hex 24)
+# Generate kata sandi acak kuat untuk user aplikasi & migrator
 APP_PASS=$(openssl rand -hex 24)
 MIGRATOR_PASS=$(openssl rand -hex 24)
 
-sed -i "s/change_this_to_a_secure_random_root_password/${ROOT_PASS}/" .env
 sed -i "s/change_this_to_a_secure_random_app_password/${APP_PASS}/" .env
 sed -i "s/change_this_to_a_secure_random_migrator_password/${MIGRATOR_PASS}/" .env
 chmod 600 .env
+
+# Buat berkas kata sandi root MariaDB terpisah (Docker Compose secrets)
+openssl rand -hex 24 > secrets/db_root_password.txt
+chmod 600 secrets/db_root_password.txt
 ```
 
 ### 3. Build & Jalankan Stack Docker

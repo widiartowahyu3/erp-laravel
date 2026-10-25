@@ -1,7 +1,8 @@
-.PHONY: up down build logs ps shell db composer npm verify fresh help
+.PHONY: up down build logs ps shell db composer npm verify fresh hooks help
 
 help:
 	@echo "Available commands:"
+	@echo "  make hooks     - Configure local git repository to use .githooks"
 	@echo "  make up        - Start the Docker stack"
 	@echo "  make down      - Stop the Docker stack"
 	@echo "  make build     - Build/rebuild Docker images"
@@ -13,6 +14,10 @@ help:
 	@echo "  make npm       - Run NPM inside Node container (e.g., make npm cmd='--version')"
 	@echo "  make verify    - Run the hardening verification script"
 	@echo "  make fresh     - Destroy containers and volumes (requires confirmation)"
+
+hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks configured successfully to .githooks"
 
 up:
 	docker compose up -d
