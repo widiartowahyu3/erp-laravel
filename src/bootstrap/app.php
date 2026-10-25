@@ -24,11 +24,16 @@ return Application::configure(basePath: dirname(__DIR__))
             '192.168.0.0/16',
         ]);
 
-        $middleware->trustHosts(at: fn () => array_values(array_filter([
-            'localhost',
-            '127.0.0.1',
-            parse_url((string) config('app.url'), PHP_URL_HOST),
-        ])));
+        $middleware->trustHosts(at: function () {
+            $hosts = [parse_url((string) config('app.url'), PHP_URL_HOST)];
+
+            if (! app()->isProduction()) {
+                $hosts[] = 'localhost';
+                $hosts[] = '127.0.0.1';
+            }
+
+            return array_values(array_filter($hosts));
+        });
 
         $middleware->appendToGroup('web', [
             SecurityHeaders::class,

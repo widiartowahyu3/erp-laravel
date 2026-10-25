@@ -31,6 +31,8 @@ test('env example files are production safe without hardcoded secrets', function
     expect($config['APP_ENV'] ?? null)->toBe('production');
     expect($config['APP_DEBUG'] ?? null)->toBe('false');
     expect($config['APP_KEY'] ?? '')->toBe('');
+    expect($config['LOG_CHANNEL'] ?? '')->toBe('stderr');
+    expect($config['MAIL_MAILER'] ?? '')->toBe('log');
 
     expect($config['DB_PASSWORD'] ?? '')->toBe('change_this_to_erp_app_password');
 
@@ -45,4 +47,26 @@ test('env example files are production safe without hardcoded secrets', function
 test('session configuration defaults enforce httponly and samesite lax', function () {
     expect(config('session.http_only'))->toBeTrue();
     expect(config('session.same_site'))->toBe('lax');
+});
+
+test('composer configuration enforces strict dependency isolation and minimal allow plugins', function () {
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
+
+    expect(isset($composer['require']['laravel/sail']))->toBeFalse();
+    expect(isset($composer['require-dev']['laravel/sail']))->toBeFalse();
+
+    expect(isset($composer['require']['laravel/tinker']))->toBeFalse();
+    expect(isset($composer['require-dev']['laravel/tinker']))->toBeTrue();
+
+    expect($composer['config']['allow-plugins'])->toBe([
+        'pestphp/pest-plugin' => true,
+    ]);
+});
+
+test('npmrc configuration enforces ignore-scripts', function () {
+    $npmrcPath = base_path('.npmrc');
+    expect(file_exists($npmrcPath))->toBeTrue();
+
+    $content = (string) file_get_contents($npmrcPath);
+    expect($content)->toContain('ignore-scripts=true');
 });
