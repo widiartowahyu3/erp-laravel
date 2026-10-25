@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
 
     /*
@@ -13,7 +15,9 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'ERP Distribusi'),
+
+    'vite_port' => (int) env('VITE_PORT', 5174),
 
     /*
     |--------------------------------------------------------------------------

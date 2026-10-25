@@ -62,7 +62,8 @@ migrate:
 	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php php artisan migrate --database=mariadb_migrator
 
 test:
-	docker compose run --rm php php artisan test
+	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
+	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php ./vendor/bin/pest
 
 lint:
 	docker compose run --rm php ./vendor/bin/pint --test
@@ -70,7 +71,7 @@ lint:
 analyse:
 	docker compose run --rm php ./vendor/bin/phpstan analyse
 
-check: lint test
+check: lint analyse test
 
 dev:
 	docker compose up

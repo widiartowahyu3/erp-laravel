@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+function parseEnvFile(string $filePath): array
+{
+    $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+    $data = [];
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+
+        if (str_contains($line, '=')) {
+            [$key, $value] = explode('=', $line, 2);
+            $data[trim($key)] = trim($value);
+        }
+    }
+
+    return $data;
+}
+
+test('env example files are production safe without hardcoded secrets', function (string $envFile) {
+    $path = base_path($envFile);
+    expect(file_exists($path))->toBeTrue();
+
+    $config = parseEnvFile($path);
+
+    expect($config['APP_ENV'] ?? null)->toBe('production');
+    expect($config['APP_DEBUG'] ?? null)->toBe('false');
+    expect($config['APP_KEY'] ?? '')->toBe('');
+
+    expect($config['DB_PASSWORD'] ?? '')->toBe('change_this_to_erp_app_password');
+
+    expect(array_key_exists('DB_ROOT_PASSWORD', $config))->toBeFalse();
+    expect(array_key_exists('DB_MIGRATOR_USERNAME', $config))->toBeFalse();
+    expect(array_key_exists('DB_MIGRATOR_PASSWORD', $config))->toBeFalse();
+})->with([
+    '.env.example',
+    '.env.production.example',
+]);
+
+test('session configuration defaults enforce httponly and samesite lax', function () {
+    expect(config('session.http_only'))->toBeTrue();
+    expect(config('session.same_site'))->toBe('lax');
+});

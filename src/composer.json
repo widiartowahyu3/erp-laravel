@@ -12,6 +12,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.13",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
@@ -48,9 +49,16 @@
             "Composer\\Config::disableProcessTimeout",
             "@php artisan dev"
         ],
-        "test": [
-            "@php artisan config:clear --ansi @no_additional_args",
-            "@php artisan test"
+        "lint": "pint --test",
+        "pint": "pint",
+        "analyse": "phpstan analyse",
+        "test": "pest",
+        "audit": "composer audit",
+        "check": [
+            "@lint",
+            "@analyse",
+            "@test",
+            "@audit"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
