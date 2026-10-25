@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "==> Running pre-commit security checks..."
+
+# 1. Check staged file paths for forbidden secrets and environment files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$staged_files" ]; then
+    while IFS= read -r file; do
+        # Check forbidden .env files
+        if [[ "$file" =~ ^(.*/)?\.env(\..+)?$ ]]; then
+            if [[ "$file" != ".env.example" && "$file" != ".env.production.example" && ! "$file" =~ /?\.env\.(example|production\.example)$ ]]; then
+                echo "ERROR: Attempting to commit environment file: $file"
+                echo "Only .env.example and .env.production.example are allowed."
+                exit 1
+            fi
+        fi
+
+        # Check private keys and certificate files
+        if [[ "$file" =~ (^|/)(id_rsa.*|id_ed25519.*|.*\.pem|.*\.key|.*\.crt)$ ]]; then
+            echo "ERROR: Attempting to commit cryptographic key or certificate: $file"
+            exit 1
+        fi
+    done <<< "$staged_files"
+fi
+
+# 2. Check diff content for leaked secret patterns (e.g., APP_KEY or hardcoded passwords)
+staged_diff=$(git diff --cached -U0)
+
+if echo "$staged_diff" | grep -E '^\+[[:space:]]*APP_KEY=base64:' >/dev/null; then
+    echo "ERROR: Detected active APP_KEY secret in staged changes."
+    exit 1
+fi
+
+if echo "$staged_diff" | grep -Ei '^\+[[:space:]]*(DB_PASSWORD|PASSWORD|SECRET)[[:space:]]*=[[:space:]]*[^<[:space:]]{6,}' | grep -v 'EXAMPLE' >/dev/null; then
+    echo "ERROR: Detected potential hardcoded credentials in staged changes."
+    exit 1
+fi
+
+# 3. Run Gitleaks scan on staged changes via official Docker image
+GITLEAKS_IMAGE="zricethezav/gitleaks:v8.30.1"
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "ERROR: Docker command not found. Gitleaks scan requires Docker."
+    exit 1
+fi
+
+if ! docker image inspect "$GITLEAKS_IMAGE" >/dev/null 2>&1; then
+    echo "Pulling Gitleaks image ($GITLEAKS_IMAGE)..."
+    if ! docker pull "$GITLEAKS_IMAGE" >/dev/null 2>&1; then
+        echo "ERROR: Failed to pull Gitleaks image: $GITLEAKS_IMAGE."
+        exit 1
+    fi
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+echo "==> Running Gitleaks ($GITLEAKS_IMAGE) on staged changes..."
+if ! docker run --rm -v "${REPO_ROOT}:/repo" -w /repo "$GITLEAKS_IMAGE" git --staged --verbose --no-banner; then
+    echo "ERROR: Gitleaks detected secrets in staged changes. Commit rejected."
+    exit 1
+fi
+
+echo "==> Pre-commit security checks passed."
+exit 0

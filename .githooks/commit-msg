@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+commit_msg_file="$1"
+commit_msg=$(head -n 1 "$commit_msg_file")
+
+# Allow merge commits
+if [[ "$commit_msg" =~ ^Merge.* ]]; then
+    exit 0
+fi
+
+# Conventional Commits regex pattern
+pattern="^(feat|fix|docs|chore|refactor|test|ci|build|perf|style)(\([a-zA-Z0-9_\-\./]+\))?(!)?:\ .+$"
+
+if ! [[ "$commit_msg" =~ $pattern ]]; then
+    echo "ERROR: Invalid commit message format."
+    echo "Message was: '$commit_msg'"
+    echo "Conventional Commits format is required: <type>(<scope>): <subject>"
+    echo "Allowed types: feat, fix, docs, chore, refactor, test, ci, build, perf, style"
+    echo "Example: chore(git): initialize repository and hooks"
+    exit 1
+fi
+
+exit 0
