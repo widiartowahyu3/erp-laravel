@@ -94,17 +94,20 @@ services:
       - ./docker/mariadb/conf.d/hardening.cnf:/etc/mysql/conf.d/hardening.cnf:ro
       - ./docker/mariadb/init/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
     environment:
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MARIADB_ROOT_HOST: localhost
       DB_APP_USERNAME: ${DB_APP_USERNAME}
       DB_APP_PASSWORD: ${DB_APP_PASSWORD}
       DB_MIGRATOR_USERNAME: ${DB_MIGRATOR_USERNAME}
       DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD}
+    secrets:
+      - db_root_password
     networks:
       - backend
     pids_limit: 150
     mem_limit: 1024m
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -148,3 +151,7 @@ volumes:
   mariadb_data:
   composer_cache:
   npm_cache:
+
+secrets:
+  db_root_password:
+    file: ./secrets/db_root_password.txt

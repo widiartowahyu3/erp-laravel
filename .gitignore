@@ -3,6 +3,8 @@
 .env.*
 !.env.example
 !.env.production.example
+secrets/*
+!secrets/README.md
 *.pem
 *.key
 *.crt

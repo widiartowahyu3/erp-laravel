@@ -33,7 +33,7 @@ shell:
 	docker compose exec php sh
 
 db:
-	docker compose exec db mariadb -u root -p"$$(grep DB_ROOT_PASSWORD .env | cut -d '=' -f2)"
+	docker compose exec db sh -c 'MYSQL_PWD="$$(cat /run/secrets/db_root_password)" mariadb -u root'
 
 composer:
 	docker compose run --rm php composer $(cmd)

@@ -65,11 +65,15 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (defense-in-depth) yang
    - Dibuat 2 pengguna database terpisah:
      - `erp_app`: Khusus request web aplikasi. Dibatasi **HANYA** DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Dilarang melakukan DDL (`CREATE`, `ALTER`, `DROP`).
      - `erp_migrator`: Khusus migrasi skema database. Memiliki izin DDL dan DML migrasi, tetapi **TIDAK** memiliki izin `FILE`, `SUPER`, `PROCESS`, atau `GRANT OPTION`.
-2. **Parameter Pengerasan MariaDB**:
+   - **Kebijakan Injeksi Kredensial**: Berkas `src/.env` milik Laravel hanya boleh berisi kredensial `erp_app`. Kredensial `erp_migrator` HANYA disuntikkan saat menjalankan migrasi (environment sekali jalan), tidak pernah disimpan di `src/.env` maupun environment container `php` yang berjalan.
+2. **Pengelolaan Rahasia Root & Pembatasan Host**:
+   - Kata sandi root MariaDB dikelola melalui berkas `secrets/db_root_password.txt` (permission 600, di-.gitignore) dan dipasang via Docker Compose `secrets` (`MARIADB_ROOT_PASSWORD_FILE`). Kata sandi root tidak dicantumkan di file `.env` infra maupun environment container mana pun.
+   - `MARIADB_ROOT_HOST=localhost` memastikan user `root` tidak dapat melakukan login melalui jaringan TCP/IP.
+3. **Parameter Pengerasan MariaDB**:
    - `local_infile = 0` memblokir pembacaan file lokal server melalui query SQL.
    - `symbolic-links = 0` menolak symlink database tables.
    - Menghapus seluruh user anonim saat inisialisasi.
-   - User `root` dibatasi hanya dapat diakses secara lokal dari dalam container.
+   - Healthcheck menggunakan skrip internal `/usr/local/bin/healthcheck.sh --connect --innodb_initialized` tanpa mengekspos kata sandi pada command line arguments.
 
 ---
 
