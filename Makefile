@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate test lint analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -13,6 +13,13 @@ help:
 	@echo "  make db        - Open MariaDB client shell"
 	@echo "  make composer  - Run Composer inside PHP container (e.g., make composer cmd='--version')"
 	@echo "  make npm       - Run NPM inside Node container (e.g., make npm cmd='--version')"
+	@echo "  make artisan   - Run Artisan inside PHP container (e.g., make artisan cmd='migrate:status')"
+	@echo "  make migrate   - Run DB migrations using mariadb_migrator connection"
+	@echo "  make test      - Run PHP test suite"
+	@echo "  make lint      - Run code style checks (Pint)"
+	@echo "  make analyse   - Run static analysis (PHPStan/Larastan)"
+	@echo "  make check     - Run all quality checks (lint, analyse, test)"
+	@echo "  make dev       - Start development environment"
 	@echo "  make verify    - Run the hardening verification script"
 	@echo "  make fresh     - Destroy containers and volumes (requires confirmation)"
 
@@ -46,6 +53,27 @@ composer:
 
 npm:
 	docker compose --profile tools run --rm node npm $(cmd)
+
+artisan:
+	docker compose run --rm php php artisan $(cmd)
+
+migrate:
+	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
+	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php php artisan migrate --database=mariadb_migrator
+
+test:
+	docker compose run --rm php php artisan test
+
+lint:
+	docker compose run --rm php ./vendor/bin/pint --test
+
+analyse:
+	docker compose run --rm php ./vendor/bin/phpstan analyse
+
+check: lint test
+
+dev:
+	docker compose up
 
 verify:
 	bash scripts/verify-hardening.sh

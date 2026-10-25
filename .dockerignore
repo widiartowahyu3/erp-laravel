@@ -8,6 +8,10 @@
 .env.*
 !.env.example
 !.env.production.example
+src/.env
+src/.env.*
+!src/.env.example
+!src/.env.production.example
 docs
 tests
 secrets

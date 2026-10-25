@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 !.env.production.example
+/src/.env
+/src/.env.*
+!/src/.env.example
+!/src/.env.production.example
 secrets/*
 !secrets/README.md
 *.pem
@@ -20,6 +24,7 @@ id_ed25519*
 
 # Builds & Generated Assets
 /src/public/build/
+/src/public/hot
 /src/public/storage
 /src/storage/app/*
 !/src/storage/app/.gitkeep
@@ -29,6 +34,10 @@ id_ed25519*
 !/src/storage/framework/sessions/.gitkeep
 /src/storage/framework/views/*
 !/src/storage/framework/views/.gitkeep
+/src/storage/logs/*
+!/src/storage/logs/.gitkeep
+/src/bootstrap/cache/*
+!/src/bootstrap/cache/.gitkeep
 
 # Databases & Logs
 *.sqlite
