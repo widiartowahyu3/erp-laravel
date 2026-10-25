@@ -38,9 +38,9 @@ fi
 
 # Ensure temporary probe files exist for HTTP verification during verification
 CLEANUP_PROBE=false
-if [ ! -f public/index.php ]; then
+if [ ! -f src/public/index.php ]; then
     CLEANUP_PROBE=true
-    cat << 'EOF' > public/index.php
+    cat << 'EOF' > src/public/index.php
 <?php
 if (isset($_GET['probe']) && $_GET['probe'] === '1') {
     header('Content-Type: application/json');
@@ -57,8 +57,8 @@ echo "ok\n";
 EOF
 fi
 
-if [ ! -f public/other.php ]; then
-    cat << 'EOF' > public/other.php
+if [ ! -f src/public/other.php ]; then
+    cat << 'EOF' > src/public/other.php
 <?php
 echo "forbidden";
 EOF
@@ -66,7 +66,7 @@ fi
 
 cleanup() {
     if [ "$CLEANUP_PROBE" = "true" ]; then
-        rm -f public/index.php public/other.php
+        rm -f src/public/index.php src/public/other.php
     fi
 }
 trap cleanup EXIT INT TERM

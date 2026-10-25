@@ -27,8 +27,9 @@ erp-trading/
 ├── scripts/
 │   └── verify-hardening.sh              # Skrip otomasi uji kepatuhan hardening
 ├── .env.example                         # Template variabel lingkungan non-rahasia
-└── public/
-    └── .gitkeep                         # Web root direktori publik
+└── src/
+    └── public/
+        └── .gitkeep                     # Web root direktori publik aplikasi (Laravel)
 ```
 
 ---

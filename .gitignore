@@ -8,25 +8,25 @@
 *.crt
 id_rsa*
 id_ed25519*
-/storage/*.key
+/src/storage/*.key
 
 # Dependencies & Package Managers
-/vendor/
-/node_modules/
+/src/vendor/
+/src/node_modules/
 .npm/
 .composer/
 
 # Builds & Generated Assets
-/public/build/
-/public/storage
-/storage/app/*
-!/storage/app/.gitkeep
-/storage/framework/cache/*
-!/storage/framework/cache/.gitkeep
-/storage/framework/sessions/*
-!/storage/framework/sessions/.gitkeep
-/storage/framework/views/*
-!/storage/framework/views/.gitkeep
+/src/public/build/
+/src/public/storage
+/src/storage/app/*
+!/src/storage/app/.gitkeep
+/src/storage/framework/cache/*
+!/src/storage/framework/cache/.gitkeep
+/src/storage/framework/sessions/*
+!/src/storage/framework/sessions/.gitkeep
+/src/storage/framework/views/*
+!/src/storage/framework/views/.gitkeep
 
 # Databases & Logs
 *.sqlite

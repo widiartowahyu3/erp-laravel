@@ -12,6 +12,9 @@ docs
 tests
 vendor
 node_modules
+src/vendor
+src/node_modules
+src/storage
 *.md
 *.log
 docker-compose*.yml
