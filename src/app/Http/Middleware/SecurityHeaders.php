@@ -26,16 +26,18 @@ class SecurityHeaders
         $isLocal = app()->environment('local');
         $vitePort = config('app.vite_port', 5174);
 
-        $scriptSrc = "'self' 'nonce-{$nonce}'";
-        $styleSrc = "'self' 'unsafe-inline' 'nonce-{$nonce}'";
-        $connectSrc = "'self'";
-
         if ($isLocal) {
+            // Local development: Vite dev server dynamically injects <style> tags for HMR
             $viteOrigin = "http://127.0.0.1:{$vitePort}";
             $viteWs = "ws://127.0.0.1:{$vitePort}";
-            $scriptSrc .= " {$viteOrigin}";
-            $styleSrc .= " {$viteOrigin}";
-            $connectSrc .= " {$viteWs} {$viteOrigin}";
+            $scriptSrc = "'self' 'nonce-{$nonce}' {$viteOrigin}";
+            $styleSrc = "'self' 'unsafe-inline' {$viteOrigin}";
+            $connectSrc = "'self' {$viteWs} {$viteOrigin}";
+        } else {
+            // Non-local (production/staging/testing): strictly 'self' for styles without unsafe-inline or nonce
+            $scriptSrc = "'self' 'nonce-{$nonce}'";
+            $styleSrc = "'self'";
+            $connectSrc = "'self'";
         }
 
         $cspDirectives = [

@@ -31,25 +31,41 @@ test('csp header contains unique nonce per request', function () {
     expect($matches1[1])->not->toBe($matches2[1]);
 });
 
-test('csp script-src directive strictly does not contain unsafe-eval', function () {
-    $response = $this->get('/');
-    $csp = (string) $response->headers->get('Content-Security-Policy');
-
-    expect($csp)->not->toContain("'unsafe-eval'");
-});
-
-test('upgrade-insecure-requests directive is present only in production', function () {
-    // Current test environment
+test('non-local environments strictly disallow unsafe-inline and unsafe-eval in csp', function () {
+    // 1. Testing environment (non-local)
     $responseTesting = $this->get('/');
     $cspTesting = (string) $responseTesting->headers->get('Content-Security-Policy');
-    expect($cspTesting)->not->toContain('upgrade-insecure-requests');
 
-    // Simulated production environment
+    expect($cspTesting)->toContain("style-src 'self'");
+    expect($cspTesting)->not->toContain("'unsafe-inline'");
+    expect($cspTesting)->not->toContain("'unsafe-eval'");
+    $responseTesting->assertHeaderMissing('Strict-Transport-Security');
+
+    // 2. Production environment (simulated non-local)
     app()->detectEnvironment(fn () => 'production');
     $responseProduction = $this->get('/');
     $cspProduction = (string) $responseProduction->headers->get('Content-Security-Policy');
-    expect($cspProduction)->toContain('upgrade-insecure-requests');
 
-    // Reset environment back to testing
+    expect($cspProduction)->toContain("style-src 'self'");
+    expect($cspProduction)->not->toContain("'unsafe-inline'");
+    expect($cspProduction)->not->toContain("'unsafe-eval'");
+    expect($cspProduction)->toContain('upgrade-insecure-requests');
+    $responseProduction->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+    // Reset back to testing
+    app()->detectEnvironment(fn () => 'testing');
+});
+
+test('local environment allows unsafe-inline for vite dev style injection without hsts', function () {
+    app()->detectEnvironment(fn () => 'local');
+    $responseLocal = $this->get('/');
+    $cspLocal = (string) $responseLocal->headers->get('Content-Security-Policy');
+
+    expect($cspLocal)->toContain("style-src 'self' 'unsafe-inline'");
+    expect($cspLocal)->not->toContain("'unsafe-eval'");
+    expect($cspLocal)->not->toContain('upgrade-insecure-requests');
+    $responseLocal->assertHeaderMissing('Strict-Transport-Security');
+
+    // Reset back to testing
     app()->detectEnvironment(fn () => 'testing');
 });

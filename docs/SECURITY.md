@@ -98,7 +98,9 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
 - Middleware `App\Http\Middleware\SecurityHeaders` secara otomatis membangkitkan nonce unik per-request menggunakan `Vite::useCspNonce()`.
 - Nonce disinkronkan langsung ke tag script dan link CSS Blade via directive `@vite`.
 - Policy script-src: `'self' 'nonce-...'` (bebas dari `'unsafe-eval'`). Di lingkungan lokal, mengizinkan koneksi WebSocket dan script origin Vite dev server `127.0.0.1:5174`.
-- Policy style-src: `'self' 'unsafe-inline' 'nonce-...'` (izin `'unsafe-inline'` diberikan karena kebutuhan reaktivitas dynamic inline style binding komponen Vue dan token CSS Tailwind, terdokumentasi secara transparan).
+- Policy style-src:
+  - Lingkungan non-local (production/staging/testing): Strictly `'self'`. Tanpa `'unsafe-inline'` dan tanpa nonce yang tidak diperlukan. Semua styling dimuat melalui file stylesheet statis hasil kompilasi Vite (`<link rel="stylesheet">`).
+  - Lingkungan lokal (`APP_ENV=local`): Mengizinkan `'unsafe-inline'` dan origin Vite (`http://127.0.0.1:5174`) semata-mata karena Vite development server menyuntikkan tag `<style>` secara dinamis untuk Hot Module Replacement (HMR). Tidak ada kompilasi runtime Tailwind di browser.
 - Policy object-src: `'none'`, base-uri `'self'`, form-action `'self'`, frame-ancestors `'none'`.
 - Directive `upgrade-insecure-requests` otomatis ditambahkan pada lingkungan production.
 
