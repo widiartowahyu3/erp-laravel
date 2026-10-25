@@ -676,6 +676,12 @@ else
     fail "Header Content-Security-Policy TIDAK hadir atau tidak memuat nonce"
 fi
 
+if echo "$ROOT_HEADERS" | grep -i "Content-Security-Policy" | grep -qE "style-src[^;]*'unsafe-inline'[^;]*'nonce-|style-src[^;]*'nonce-[^;]*'unsafe-inline'"; then
+    fail "Direktif style-src mencampur 'unsafe-inline' dengan nonce (menyebabkan browser mengabaikan unsafe-inline)!"
+else
+    pass "Direktif style-src tidak mencampur 'unsafe-inline' dengan nonce pada direktif yang sama"
+fi
+
 if echo "$ROOT_HEADERS" | grep -qi "X-Content-Type-Options:[[:space:]]*nosniff"; then
     pass "Header X-Content-Type-Options: nosniff terpasang dengan benar"
 else

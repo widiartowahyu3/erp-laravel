@@ -69,3 +69,25 @@ test('local environment allows unsafe-inline for vite dev style injection withou
     // Reset back to testing
     app()->detectEnvironment(fn () => 'testing');
 });
+
+test('no csp directive mixes unsafe-inline and nonce in any environment', function (string $environment) {
+    app()->detectEnvironment(fn () => $environment);
+    $response = $this->get('/');
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    $directives = array_filter(array_map('trim', explode(';', $csp)));
+    foreach ($directives as $directive) {
+        $hasUnsafeInline = str_contains($directive, "'unsafe-inline'");
+        $hasNonce = str_contains($directive, "'nonce-");
+
+        expect($hasUnsafeInline && $hasNonce)
+            ->toBeFalse("CSP directive [{$directive}] in [{$environment}] environment must NOT mix 'unsafe-inline' and nonce. In CSP Level 2/3, browsers ignore 'unsafe-inline' if a nonce is present.");
+    }
+
+    // Reset back to testing
+    app()->detectEnvironment(fn () => 'testing');
+})->with([
+    'local',
+    'testing',
+    'production',
+]);

@@ -99,8 +99,10 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
 - Nonce disinkronkan langsung ke tag script dan link CSS Blade via directive `@vite`.
 - Policy script-src: `'self' 'nonce-...'` (bebas dari `'unsafe-eval'`). Di lingkungan lokal, mengizinkan koneksi WebSocket dan script origin Vite dev server `127.0.0.1:5174`.
 - Policy style-src:
-  - Lingkungan non-local (production/staging/testing): Strictly `'self'`. Tanpa `'unsafe-inline'` dan tanpa nonce yang tidak diperlukan. Semua styling dimuat melalui file stylesheet statis hasil kompilasi Vite (`<link rel="stylesheet">`).
-  - Lingkungan lokal (`APP_ENV=local`): Mengizinkan `'unsafe-inline'` dan origin Vite (`http://127.0.0.1:5174`) semata-mata karena Vite development server menyuntikkan tag `<style>` secara dinamis untuk Hot Module Replacement (HMR). Tidak ada kompilasi runtime Tailwind di browser.
+  - Lingkungan non-local (production/staging/testing): Strictly `'self'`. Tanpa `'unsafe-inline'` dan tanpa nonce. Seluruh styling dimuat melalui berkas stylesheet statis hasil kompilasi Vite (`<link rel="stylesheet">`).
+  - Lingkungan lokal (`APP_ENV=local`): Mengizinkan `'self' 'unsafe-inline' http://127.0.0.1:5174` semata-mata karena Vite development server menyuntikkan tag `<style>` secara dinamis untuk Hot Module Replacement (HMR).
+  - Larangan pencampuran `'unsafe-inline'` dan `nonce`: Sesuai spesifikasi W3C CSP Level 2 dan Level 3, browser modern secara otomatis **mengabaikan** `'unsafe-inline'` jika terdapat `nonce` atau `hash` pada direktif yang sama. Oleh karena itu, direktif `style-src` dilarang keras memuat nonce berdampingan dengan `'unsafe-inline'`.
+  - Penanganan Indikator Progress Inertia: Konfigurasi `progress` pada `createInertiaApp` menetapkan `includeCSS: false` dan memindahkan seluruh styling NProgress ke `src/resources/css/app.css`, sehingga mengeliminasi injeksi tag `<style>` inline pada saat runtime. Tidak ada kompilasi runtime Tailwind di browser.
 - Policy object-src: `'none'`, base-uri `'self'`, form-action `'self'`, frame-ancestors `'none'`.
 - Directive `upgrade-insecure-requests` otomatis ditambahkan pada lingkungan production.
 
