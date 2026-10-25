@@ -1,12 +1,75 @@
 # ERP Distribusi / Trading (Laravel + Vue Monolith)
 
-## Gambaran Proyek
-Repositori ini merupakan implementasi sistem ERP untuk operasional distribusi dan trading berbasis monolitik (Laravel + Vue).
+Repositori sistem ERP untuk operasional distribusi dan trading berbasis monolitik (Laravel + Vue) dengan standar arsitektur dan hardening tingkat tinggi.
 
-## Status Fase: Fase 0 (Fondasi Lingkungan & Hardening Dasar)
-Saat ini proyek berada pada **Fase 0**. Fokus fase ini adalah:
-- Lingkungan kerja reproducible berbasis WSL Ubuntu + Docker Engine / Docker Desktop.
-- Repositori Git bersih dari rahasia dengan hook otomatis (Gitleaks, verifikasi rahasia, Conventional Commits).
-- Infrastruktur Docker hardened (PHP-FPM, Nginx Unprivileged, MariaDB 12.3 LTS, Node dev tooling) dengan pembuktian skrip verifikasi otomatis.
+---
 
-> **Catatan Arsitektur:** Pada Fase 0 tidak ada instalasi kode framework aplikasi (Laravel/Vue), pembuatan tabel database, maupun fitur bisnis. Implementasi aplikasi dimulai pada Fase 1 setelah Fase 0 terbukti lulus verifikasi.
+## Status Fase: Fase 0 - Fondasi Lingkungan & Hardening Dasar (LULUS VERIFIKASI)
+
+Fase 0 berfokus pada penyiapan lingkungan kerja yang aman, reproducible, dan terisolasi:
+- **Host**: WSL 2 Ubuntu + Docker Desktop / Docker Engine.
+- **Git Repository**: Bebas dari rahasia, dilindungi hook otomatis (Gitleaks, filter rahasia, Conventional Commits).
+- **Infrastruktur Docker**:
+  - PHP-FPM 8.4 hardened (Multi-stage, unprivileged UID 1000, read-only rootfs, no-new-privileges, cap-drop ALL, disable_functions pada FPM).
+  - Nginx Unprivileged 1.28 (Reverse proxy unprivileged, port 8080, pembatasan front controller, pemblokiran file sensitif).
+  - MariaDB 12.3 LTS (Hardened parameter, pemisahan hak akses `erp_app` DML strictly vs `erp_migrator` DDL, internal network).
+  - Node 22 LTS (Tooling dev/Vite terisolasi).
+  - Otomatisasi pengujian hardening 100% PASS via `make verify`.
+
+> **Catatan:** Sesuai spesifikasi Fase 0, belum ada instalasi Laravel, Vue, tabel aplikasi, maupun kode bisnis. Implementasi aplikasi dimulai pada Fase 1.
+
+---
+
+## Panduan Setup Lingkungan dari Nol (Quickstart)
+
+Ikuti langkah-langkah berikut untuk menjalankan dan memverifikasi lingkungan:
+
+### 1. Clone Repositori
+Pastikan clone dilakukan di dalam filesystem Linux WSL native (mis. `~/projects/`):
+```bash
+git clone git@github.com:widiartowahyu3/erp-laravel.git erp-trading
+cd erp-trading
+```
+
+### 2. Inisialisasi Berkas Lingkungan (`.env`)
+Salin berkas contoh dan buat kata sandi acak yang kuat:
+```bash
+cp .env.example .env
+
+# Generate kata sandi aman lokal
+ROOT_PASS=$(openssl rand -hex 24)
+APP_PASS=$(openssl rand -hex 24)
+MIGRATOR_PASS=$(openssl rand -hex 24)
+
+sed -i "s/change_this_to_a_secure_random_root_password/${ROOT_PASS}/" .env
+sed -i "s/change_this_to_a_secure_random_app_password/${APP_PASS}/" .env
+sed -i "s/change_this_to_a_secure_random_migrator_password/${MIGRATOR_PASS}/" .env
+chmod 600 .env
+```
+
+### 3. Build & Jalankan Stack Docker
+```bash
+# Build image PHP dev
+make build
+
+# Jalankan stack container
+make up
+
+# Periksa status kontainer
+make ps
+```
+
+### 4. Jalankan Skrip Verifikasi Hardening
+Pastikan seluruh 38 butir pemeriksaan berstatus **PASS 100%**:
+```bash
+make verify
+```
+
+---
+
+## Dokumentasi Teknis
+
+- [Daftar Stack & Versi Image / Tool](docs/STACK.md)
+- [Panduan Docker & Operasional WSL](docs/DOCKER.md)
+- [Kebijakan & Standar Hardening Keamanan](docs/SECURITY.md)
+- [Kebijakan & Alur Kerja Git](docs/GIT.md)
