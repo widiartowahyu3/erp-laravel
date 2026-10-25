@@ -25,10 +25,10 @@ Tanggal Pengecekan & Verifikasi: **2026-10-25**
 |---|---|---|---|
 | **Laravel Framework** | `13.38.0` | Backend Core | Framework monolith inti modern |
 | **Laravel Skeleton** | `13.11.0` | Skeleton App | Struktur dasar boilerplate aplikasi di `src/` |
-| **Inertia Laravel** | `v3.5.2` | Adapter Inertia | Adapter server-side Inertia.js untuk monolith Laravel + Vue |
+| **Inertia Laravel** | `3.5.2` | Adapter Inertia | Adapter server-side Inertia.js untuk monolith Laravel + Vue |
 | **Carbon** | `3.12.0` | Utility | Penanganan tanggal dan waktu immutable (`CarbonImmutable`) |
 | **Roave Security Advisories**| `dev-latest` | Security Dev | Mencegah instalasi paket Composer dengan celah keamanan yang diketahui |
-| **Laravel Tinker** | `v3.0.0` | Dev Tooling | REPL interaktif, terisolasi pada `require-dev` (tidak masuk ke image production) |
+| **Laravel Tinker** | `3.0.2` | Dev Tooling | REPL interaktif, terisolasi pada `require-dev` (tidak masuk ke image production) |
 
 ---
 
@@ -36,13 +36,13 @@ Tanggal Pengecekan & Verifikasi: **2026-10-25**
 
 | Alat / Paket | Versi Terkunci (Lock) | Kategori | Keterangan & Standar |
 |---|---|---|---|
-| **Pest PHP** | `v4.7.8` | Testing Framework | Framework pengujian modern elegan |
-| **Pest Plugin Laravel** | `v4.1.0` | Testing Integration | Integrasi helper dan testing assertion Laravel |
-| **Pest Plugin Arch** | `v4.0.2` | Architecture Test | Pengujian arsitektur & larangan fungsi berbahaya di `app/` |
+| **Pest PHP** | `4.7.8` | Testing Framework | Framework pengujian modern elegan |
+| **Pest Plugin Laravel** | `4.1.0` | Testing Integration | Integrasi helper dan testing assertion Laravel |
+| **Pest Plugin Arch** | `4.0.2` | Architecture Test | Pengujian arsitektur & larangan fungsi berbahaya di `app/` |
 | **PHPUnit** | `12.5.33` | Testing Core | Runner pengujian inti di bawah Pest |
-| **Larastan** | `v3.13.2` | Static Analysis | Extension PHPStan untuk Laravel (level 6 strict) |
+| **Larastan** | `3.13.2` | Static Analysis | Extension PHPStan untuk Laravel (level 6 strict) |
 | **PHPStan** | `2.3.2` | Static Analysis Engine | Mesin analisis statis kode PHP |
-| **Laravel Pint** | `v1.27.1` | Code Formatter | Penegakan standar gaya koding Laravel & PSR-12 |
+| **Laravel Pint** | `1.32.1` | Code Formatter | Penegakan standar gaya koding Laravel & PSR-12 |
 
 ---
 
@@ -52,10 +52,10 @@ Tanggal Pengecekan & Verifikasi: **2026-10-25**
 |---|---|---|---|
 | **Vue.js** | `3.5.44` | UI Framework | Reaktif frontend framework (Composition API, `<script setup>`) |
 | **@inertiajs/vue3** | `3.9.1` | Client Adapter | Client-side routing Inertia tanpa rendering SPA router terpisah |
-| **Tailwind CSS** | `4.0.0` | Styling Engine | Utilitas styling modern via `@theme` tokens |
-| **@tailwindcss/vite** | `4.0.0` | Vite Integration | Integrasi langsung Tailwind CSS v4 ke dalam Vite |
+| **Tailwind CSS** | `4.3.3` | Styling Engine | Utilitas styling modern seri 4 via `@theme` tokens (versi stabil terbaru) |
+| **@tailwindcss/vite** | `4.3.3` | Vite Integration | Integrasi langsung Tailwind CSS v4 ke dalam Vite (versi stabil terbaru) |
 | **Vite** | `8.3.5` | Bundler & Dev Server | Build tool performa tinggi dengan dukungan HMR container |
-| **laravel-vite-plugin** | `3.1.2` | Vite Integration | Plugin integrasi Vite untuk asset bundling Laravel |
+| **laravel-vite-plugin** | `3.2.0` | Vite Integration | Plugin integrasi Vite untuk asset bundling Laravel |
 | **lucide-vue-next** | `1.0.0` | UI Icons | Kumpulan ikon SVG konsisten untuk interface pengguna |
 | **@fontsource-variable/inter**| `5.3.0` | Self-hosted Font | Font Inter Variable self-hosted (tanpa Google Fonts/CDN) |
 
