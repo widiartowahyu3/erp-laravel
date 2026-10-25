@@ -42,12 +42,39 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            $status = $response->getStatusCode();
+
+            // Always ensure 404 does not leak stack traces or internal paths
+            if ($status === 404) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => 'Halaman tidak ditemukan.',
+                    ], 404);
+                }
+
+                if ($request->header('X-Inertia')) {
+                    return response()->json([
+                        'component' => 'Errors/Error',
+                        'props' => [
+                            'status' => 404,
+                            'message' => 'Halaman tidak ditemukan.',
+                        ],
+                        'url' => $request->getRequestUri(),
+                        'version' => '',
+                    ], 404, ['X-Inertia' => 'true']);
+                }
+
+                return response()->view('errors.minimal', [
+                    'status' => 404,
+                    'message' => 'Halaman tidak ditemukan.',
+                ], 404);
+            }
+
             if (! app()->isProduction()) {
                 return $response;
             }
 
-            $status = $response->getStatusCode();
-            $handledStatuses = [403, 404, 419, 429, 500, 503];
+            $handledStatuses = [403, 419, 429, 500, 503];
 
             if (in_array($status, $handledStatuses, true)) {
                 $messages = [

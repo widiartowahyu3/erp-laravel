@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $status }} - {{ $message }}</title>
+    <title>@yield('code', $status ?? '404') - @yield('message', $message ?? 'Halaman tidak ditemukan.')</title>
     <style>
         body {
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -47,8 +47,8 @@
 </head>
 <body>
     <div class="container">
-        <div class="status">{{ $status }}</div>
-        <div class="message">{{ $message }}</div>
+        <div class="status">@yield('code', $status ?? '404')</div>
+        <div class="message">@yield('message', $message ?? 'Halaman tidak ditemukan.')</div>
         <a href="/" class="btn">Kembali ke Beranda</a>
     </div>
 </body>

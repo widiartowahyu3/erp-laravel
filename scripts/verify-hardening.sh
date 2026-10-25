@@ -694,6 +694,45 @@ else
     fail "Header Referrer-Policy: strict-origin-when-cross-origin TIDAK ditemukan"
 fi
 
+if echo "$ROOT_HEADERS" | grep -qi "Permissions-Policy:"; then
+    pass "Header Permissions-Policy terpasang dengan benar pada respons GET /"
+else
+    fail "Header Permissions-Policy TIDAK ditemukan pada respons GET /"
+fi
+
+if echo "$ROOT_HEADERS" | grep -qi "Cross-Origin-Opener-Policy:[[:space:]]*same-origin"; then
+    pass "Header Cross-Origin-Opener-Policy: same-origin terpasang dengan benar"
+else
+    fail "Header Cross-Origin-Opener-Policy: same-origin TIDAK ditemukan"
+fi
+
+if echo "$ROOT_HEADERS" | grep -qi "Strict-Transport-Security"; then
+    fail "Header Strict-Transport-Security TIDAK boleh hadir pada lingkungan APP_ENV=local"
+else
+    pass "Header Strict-Transport-Security tidak hadir pada lingkungan APP_ENV=local (sesuai spesifikasi)"
+fi
+
+NOT_FOUND_RESP=$(curl -s -i http://127.0.0.1:8080/halaman-tidak-ada)
+NOT_FOUND_CODE=$(echo "$NOT_FOUND_RESP" | head -n 1 | awk '{print $2}')
+if [ "$NOT_FOUND_CODE" = "404" ]; then
+    pass "Endpoint URL tidak terdaftar mengembalikan status HTTP 404"
+else
+    fail "Endpoint URL tidak terdaftar TIDAK mengembalikan status HTTP 404 (HTTP $NOT_FOUND_CODE)"
+fi
+
+if echo "$NOT_FOUND_RESP" | grep -qiE "Stack trace|/var/www/html"; then
+    fail "Halaman 404 membocorkan Stack trace atau path internal sistem (/var/www/html)!"
+else
+    pass "Halaman 404 aman dan tidak membocorkan Stack trace atau path internal"
+fi
+
+ABOUT_PROD_OUTPUT=$(docker compose run --rm -e APP_ENV=production php php artisan about --only=environment 2>&1)
+if echo "$ABOUT_PROD_OUTPUT" | grep -i "Debug Mode" | grep -qi "OFF"; then
+    pass "php artisan about mengonfirmasi Debug Mode OFF saat dijalankan dengan APP_ENV=production sementara"
+else
+    fail "php artisan about TIDAK menonaktifkan Debug Mode saat APP_ENV=production!"
+fi
+
 if echo "$ROOT_HEADERS" | grep -i "Set-Cookie" | grep -qi "HttpOnly"; then
     pass "Cookie sesi Laravel mengonfigurasi atribut HttpOnly"
 else
