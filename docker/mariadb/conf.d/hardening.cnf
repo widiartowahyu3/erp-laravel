@@ -1,0 +1,17 @@
+[mariadbd]
+# Character sets & Collation
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Security & Hardening
+local_infile = 0
+skip-name-resolve
+symbolic-links = 0
+default-time-zone = '+07:00'
+
+# Engine & Connections
+default_storage_engine = InnoDB
+max_connections = 100
+
+# Logging
+log_error = /var/log/mysql/error.log
