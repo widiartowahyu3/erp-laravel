@@ -27,7 +27,7 @@ info() {
 }
 
 echo "================================================================="
-echo "       FASE 0: SECURITY & HARDENING VERIFICATION SUITE           "
+echo "       FASE 1: SECURITY & HARDENING VERIFICATION SUITE           "
 echo "================================================================="
 
 # Source .env
@@ -43,21 +43,53 @@ fi
 
 DB_ROOT_SECRET="$(cat secrets/db_root_password.txt | tr -d '\r\n')"
 
-# Cleanup trap for all temporary test files
-cleanup() {
-    info "Running cleanup of temporary test files and probes..."
-    rm -rf src/public/.env \
-           src/public/composer.json \
-           src/public/vendor \
-           src/public/storage \
-           src/public/uploads \
-           src/public/sub \
-           src/public/build \
-           src/public/ok.txt 2>/dev/null || true
+# Non-destructive tracking for temporary test files and directories
+CREATED_FILES=()
+CREATED_DIRS=()
+PROBE_ID="probe_${$}_${RANDOM}"
+PROBE_FPM_FILE="/tmp/fpm_probe_${PROBE_ID}.php"
+PROBE_COMPOSER_WRITE="/tmp/composer/test_write_${PROBE_ID}"
+PROBE_NPM_WRITE="/home/node/.npm/test_write_${PROBE_ID}"
 
-    docker compose exec php rm -f /tmp/fpm_probe.php 2>/dev/null || true
-    docker compose exec php rm -f /tmp/composer/test_write 2>/dev/null || true
-    docker compose --profile tools exec node rm -f /home/node/.npm/test_write 2>/dev/null || true
+safe_create_dir() {
+    local dir="$1"
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+        CREATED_DIRS+=("$dir")
+    fi
+}
+
+safe_create_file() {
+    local file="$1"
+    local content="$2"
+    if [ ! -f "$file" ]; then
+        echo "$content" > "$file"
+        CREATED_FILES+=("$file")
+    fi
+}
+
+cleanup() {
+    info "Running non-destructive cleanup of temporary test files and probes..."
+    for f in "${CREATED_FILES[@]:-}"; do
+        if [ -n "$f" ] && [ -f "$f" ]; then
+            rm -f "$f" 2>/dev/null || true
+        fi
+    done
+
+    # Remove directories created exclusively by this script (reverse order)
+    if [ ${#CREATED_DIRS[@]} -gt 0 ]; then
+        for ((idx=${#CREATED_DIRS[@]}-1; idx>=0; idx--)); do
+            local d="${CREATED_DIRS[idx]}"
+            if [ -d "$d" ]; then
+                rmdir "$d" 2>/dev/null || rm -rf "$d" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Container probe cleanup
+    docker compose exec php rm -f "$PROBE_FPM_FILE" 2>/dev/null || true
+    docker compose exec php rm -f "$PROBE_COMPOSER_WRITE" 2>/dev/null || true
+    docker compose --profile tools exec node rm -f "$PROBE_NPM_WRITE" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -157,7 +189,7 @@ for svc in web php db node; do
 done
 
 # ------------------------------------------------------------------------------
-# 3. Port terbuka di host: hanya 127.0.0.1 (web: 8080, node: 5173); db tidak terpublikasi
+# 3. Port terbuka di host: hanya 127.0.0.1 (web: 8080, node: 5173/5174); db tidak terpublikasi
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 3: Verifikasi Port Binding Host ---"
@@ -206,22 +238,28 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Uji Aturan Nginx dengan Berkas Nyata (R6b)
+# 5. Uji Aturan Nginx dengan Berkas Nyata (Non-Destruktif)
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 5: Verifikasi Pemblokiran Nginx dengan Berkas Nyata ---"
 
 # Buat berkas-berkas pengujian di src/public
-echo "SECRET_KEY=leak" > src/public/.env
-echo '{"name": "test"}' > src/public/composer.json
-mkdir -p src/public/vendor && echo "sensitive" > src/public/vendor/x.txt
-mkdir -p src/public/storage && echo "sensitive" > src/public/storage/x.txt
-mkdir -p src/public/uploads && echo "<?php echo 'shell';" > src/public/uploads/x.php
-mkdir -p src/public/sub && echo "<?php echo 'shell';" > src/public/sub/shell.php
+safe_create_file "src/public/.env" "SECRET_KEY=leak"
+safe_create_file "src/public/composer.json" '{"name": "test"}'
+safe_create_dir "src/public/vendor"
+safe_create_file "src/public/vendor/x_${PROBE_ID}.txt" "sensitive"
+safe_create_dir "src/public/storage"
+safe_create_file "src/public/storage/x_${PROBE_ID}.txt" "sensitive"
+safe_create_dir "src/public/uploads"
+safe_create_file "src/public/uploads/x_${PROBE_ID}.php" "<?php echo 'shell';"
+safe_create_dir "src/public/sub"
+safe_create_file "src/public/sub/shell_${PROBE_ID}.php" "<?php echo 'shell';"
 
-# Kontrol positif
-mkdir -p src/public/build/assets && echo "console.log('vendor-test');" > src/public/build/assets/vendor-test.js
-echo "all good" > src/public/ok.txt
+# Kontrol positif: letakkan probe di build/assets jika sudah ada, atau buat jika belum
+safe_create_dir "src/public/build"
+safe_create_dir "src/public/build/assets"
+safe_create_file "src/public/build/assets/vendor-test-${PROBE_ID}.js" "console.log('vendor-test');"
+safe_create_file "src/public/ok_${PROBE_ID}.txt" "all good"
 
 check_http_code() {
     local path="$1"
@@ -238,49 +276,65 @@ check_http_code() {
 
 check_http_code "/.env" "^(403|404)$" "Berkas sensitif .env diblokir"
 check_http_code "/composer.json" "^(403|404)$" "Berkas composer.json diblokir"
-check_http_code "/vendor/x.txt" "^(403|404)$" "Direktori vendor diblokir"
-check_http_code "/storage/x.txt" "^(403|404)$" "Direktori storage diblokir"
-check_http_code "/uploads/x.php" "^(403|404)$" "Direktori uploads diblokir"
-check_http_code "/sub/shell.php" "^404$" "Skrip PHP selain /index.php diblokir (404)"
+check_http_code "/vendor/x_${PROBE_ID}.txt" "^(403|404)$" "Direktori vendor diblokir"
+check_http_code "/storage/x_${PROBE_ID}.txt" "^(403|404)$" "Direktori storage diblokir"
+check_http_code "/uploads/x_${PROBE_ID}.php" "^(403|404)$" "Direktori uploads diblokir"
+check_http_code "/sub/shell_${PROBE_ID}.php" "^404$" "Skrip PHP selain /index.php diblokir (404)"
 
 # Uji Kontrol Positif
-check_http_code "/build/assets/vendor-test.js" "^200$" "Aset valid build/assets/vendor-*.js dapat diakses (200)"
-check_http_code "/ok.txt" "^200$" "Berkas statis publik normal dapat diakses (200)"
+check_http_code "/build/assets/vendor-test-${PROBE_ID}.js" "^200$" "Aset valid build/assets/vendor-*.js dapat diakses (200)"
+check_http_code "/ok_${PROBE_ID}.txt" "^200$" "Berkas statis publik normal dapat diakses (200)"
 
 # ------------------------------------------------------------------------------
-# 6. Probe PHP-FPM Independen via cgi-fcgi (R6a)
+# 6. Probe PHP-FPM Independen via cgi-fcgi & Verifikasi Ekstensi (F2)
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 6: Verifikasi PHP Hardening (FPM via cgi-fcgi & CLI) ---"
 
 # Buat berkas probe di tmpfs /tmp container php
-docker compose exec php sh -c 'cat << "EOF" > /tmp/fpm_probe.php
+docker compose exec php sh -c "cat << 'EOF' > $PROBE_FPM_FILE
 <?php
 echo json_encode([
-    "disable_functions" => ini_get("disable_functions"),
-    "exec_exists" => function_exists("exec"),
-    "proc_open_exists" => function_exists("proc_open"),
-    "open_basedir" => ini_get("open_basedir"),
-    "allow_url_fopen" => ini_get("allow_url_fopen"),
-    "expose_php" => ini_get("expose_php"),
+    'disable_functions' => ini_get('disable_functions'),
+    'exec_exists' => function_exists('exec'),
+    'proc_open_exists' => function_exists('proc_open'),
+    'open_basedir' => ini_get('open_basedir'),
+    'allow_url_fopen' => ini_get('allow_url_fopen'),
+    'expose_php' => ini_get('expose_php'),
+    'extensions' => get_loaded_extensions(),
 ]);
-EOF'
+EOF"
 
-FPM_RAW=$(docker compose exec php sh -c 'SCRIPT_FILENAME=/tmp/fpm_probe.php REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000' 2>/dev/null || true)
-docker compose exec php rm -f /tmp/fpm_probe.php 2>/dev/null || true
+FPM_RAW=$(docker compose exec php sh -c "SCRIPT_FILENAME=$PROBE_FPM_FILE REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000" 2>/dev/null || true)
+docker compose exec php rm -f "$PROBE_FPM_FILE" 2>/dev/null || true
 
 FPM_JSON=$(echo "$FPM_RAW" | tr -d '\r' | grep -m 1 '^{' || true)
 
-if echo "$FPM_JSON" | grep -q "exec"; then
-    pass "disable_functions pada FPM memuat 'exec'"
-else
-    fail "disable_functions pada FPM tidak memuat 'exec' ($FPM_RAW)"
-fi
+# Parse disable_functions secara spesifik dari JSON (bukan grep exec yang bisa cocok ke key exec_exists)
+FPM_DISABLE_FUNCS=$(docker compose exec php php -r '
+    $raw = @file_get_contents("php://stdin");
+    $data = json_decode($raw, true);
+    echo $data["disable_functions"] ?? "";
+' <<< "$FPM_JSON" 2>/dev/null || true)
+
+for fn in exec passthru shell_exec system proc_open popen pcntl_exec; do
+    if echo ",$FPM_DISABLE_FUNCS," | grep -q ",$fn,"; then
+        pass "FPM disable_functions memuat '$fn'"
+    else
+        fail "FPM disable_functions TIDAK memuat '$fn' ($FPM_DISABLE_FUNCS)"
+    fi
+done
 
 if echo "$FPM_JSON" | grep -q '"exec_exists":false'; then
     pass "function_exists('exec') pada FPM bernilai false"
 else
     fail "function_exists('exec') pada FPM TIDAK bernilai false ($FPM_JSON)"
+fi
+
+if echo "$FPM_JSON" | grep -q '"proc_open_exists":false'; then
+    pass "function_exists('proc_open') pada FPM bernilai false"
+else
+    fail "function_exists('proc_open') pada FPM TIDAK bernilai false ($FPM_JSON)"
 fi
 
 if echo "$FPM_JSON" | tr -d '\\' | grep -q '/var/www/html'; then
@@ -301,6 +355,42 @@ else
     fail "expose_php pada FPM belum Off ($FPM_JSON)"
 fi
 
+# Verifikasi ekstensi wajib ADA pada FPM dan CLI
+FPM_EXTS=$(docker compose exec php php -r '
+    $raw = @file_get_contents("php://stdin");
+    $data = json_decode($raw, true);
+    echo implode(",", $data["extensions"] ?? []);
+' <<< "$FPM_JSON" 2>/dev/null || true)
+
+CLI_EXTS=$(docker compose exec php php -r 'echo implode(",", get_loaded_extensions());' 2>/dev/null || true)
+
+for ext in pdo_mysql intl bcmath zip "Zend OPcache"; do
+    if echo ",$FPM_EXTS," | grep -qi ",$ext,"; then
+        pass "Ekstensi wajib '$ext' aktif pada FPM"
+    else
+        fail "Ekstensi wajib '$ext' TIDAK aktif pada FPM"
+    fi
+
+    if echo ",$CLI_EXTS," | grep -qi ",$ext,"; then
+        pass "Ekstensi wajib '$ext' aktif pada CLI"
+    else
+        fail "Ekstensi wajib '$ext' TIDAK aktif pada CLI"
+    fi
+done
+
+# Verifikasi ekstensi berbahaya pcntl TIDAK ADA pada FPM maupun CLI
+if echo ",$FPM_EXTS," | grep -qi ",pcntl,"; then
+    fail "Ekstensi terlarang pcntl TERPASANG pada FPM!"
+else
+    pass "Ekstensi terlarang pcntl TIDAK ADA pada FPM"
+fi
+
+if echo ",$CLI_EXTS," | grep -qi ",pcntl,"; then
+    fail "Ekstensi terlarang pcntl TERPASANG pada CLI!"
+else
+    pass "Ekstensi terlarang pcntl TIDAK ADA pada CLI"
+fi
+
 # Cek ketersediaan proc_open di CLI
 CLI_PROC_OPEN=$(docker compose exec php php -r "echo function_exists('proc_open') ? 'yes' : 'no';" 2>/dev/null | tr -d '\r')
 if [ "$CLI_PROC_OPEN" = "yes" ]; then
@@ -310,7 +400,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 7. Verifikasi Composer, NPM, & Cache Writability pada Read-Only Rootfs (R6d)
+# 7. Verifikasi Composer, NPM, & Cache Writability pada Read-Only Rootfs
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 7: Verifikasi Composer CLI, NPM, & Cache Writability ---"
@@ -323,7 +413,7 @@ else
 fi
 
 # Uji writability direktori cache composer
-if docker compose run --rm php touch /tmp/composer/test_write 2>/dev/null; then
+if docker compose run --rm php touch "$PROBE_COMPOSER_WRITE" 2>/dev/null; then
     pass "Cache COMPOSER_HOME (/tmp/composer) dapat ditulis (writable) pada rootfs read-only"
 else
     fail "Cache COMPOSER_HOME TIDAK dapat ditulis pada rootfs read-only"
@@ -337,14 +427,14 @@ else
 fi
 
 # Uji writability direktori cache npm
-if docker compose --profile tools run --rm node touch /home/node/.npm/test_write 2>/dev/null; then
+if docker compose --profile tools run --rm node touch "$PROBE_NPM_WRITE" 2>/dev/null; then
     pass "Cache NPM (~/.npm) dapat ditulis (writable) pada rootfs read-only"
 else
     fail "Cache NPM TIDAK dapat ditulis pada rootfs read-only"
 fi
 
 # ------------------------------------------------------------------------------
-# 8. Verifikasi Hardening Database MariaDB (R6c & R6d)
+# 8. Verifikasi Hardening Database MariaDB (F4: Tanpa password di argumen CLI)
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 8: Verifikasi Hardening Database MariaDB ---"
@@ -390,16 +480,16 @@ else
     fail "User root MariaDB memiliki host yang tidak aman ($ROOT_HOSTS_TRIM)"
 fi
 
-# erp_app TIDAK bisa CREATE TABLE
-APP_CREATE_RES=$(docker compose exec db mariadb -u "${DB_APP_USERNAME}" -p"${DB_APP_PASSWORD}" -e "CREATE TABLE erp_trading.probe_app (id INT);" 2>&1 || true)
+# erp_app TIDAK bisa CREATE TABLE (F4: via MYSQL_PWD)
+APP_CREATE_RES=$(docker compose exec -e MYSQL_PWD="${DB_APP_PASSWORD}" db mariadb -u "${DB_APP_USERNAME}" -e "CREATE TABLE erp_trading.probe_app (id INT);" 2>&1 || true)
 if echo "$APP_CREATE_RES" | grep -Eiq "denied|access denied"; then
     pass "erp_app DITOLAK saat melakukan CREATE TABLE (Command denied to user)"
 else
     fail "erp_app SEHARUSNYA TIDAK BISA CREATE TABLE ($APP_CREATE_RES)"
 fi
 
-# erp_migrator bisa DDL & DML
-if docker compose exec db mariadb -u "${DB_MIGRATOR_USERNAME}" -p"${DB_MIGRATOR_PASSWORD}" -e "
+# erp_migrator bisa DDL & DML (F4: via MYSQL_PWD)
+if docker compose exec -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_MIGRATOR_USERNAME}" -e "
     DROP TABLE IF EXISTS erp_trading.probe_migrator;
     CREATE TABLE erp_trading.probe_migrator (id INT PRIMARY KEY, name VARCHAR(50));
 " >/dev/null 2>&1; then
@@ -408,8 +498,8 @@ else
     fail "erp_migrator GAGAL membuat tabel migrasi (DDL)"
 fi
 
-# erp_app bisa DML pada tabel tersebut
-if docker compose exec db mariadb -u "${DB_APP_USERNAME}" -p"${DB_APP_PASSWORD}" -e "
+# erp_app bisa DML pada tabel tersebut (F4: via MYSQL_PWD)
+if docker compose exec -e MYSQL_PWD="${DB_APP_PASSWORD}" db mariadb -u "${DB_APP_USERNAME}" -e "
     INSERT INTO erp_trading.probe_migrator VALUES (1, 'test');
     UPDATE erp_trading.probe_migrator SET name = 'updated' WHERE id = 1;
     SELECT * FROM erp_trading.probe_migrator;
@@ -420,8 +510,8 @@ else
     fail "erp_app GAGAL melakukan operasi DML pada tabel migrasi"
 fi
 
-# Cleanup probe table
-docker compose exec db mariadb -u "${DB_MIGRATOR_USERNAME}" -p"${DB_MIGRATOR_PASSWORD}" -e "
+# Cleanup probe table (F4: via MYSQL_PWD)
+docker compose exec -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_MIGRATOR_USERNAME}" -e "
     DROP TABLE IF EXISTS erp_trading.probe_migrator;
 " >/dev/null 2>&1 || true
 
@@ -442,7 +532,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 9. Verifikasi Kebocoran Rahasia & Isolasi Container PHP (R6d)
+# 9. Verifikasi Kebocoran Rahasia & Isolasi Container PHP (F3)
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 9: Verifikasi Kebocoran Rahasia & Isolasi Direktori PHP ---"
@@ -468,37 +558,81 @@ else
     pass "Password root MariaDB TIDAK bocor di environment container php"
 fi
 
-# Container PHP TIDAK boleh melihat .git, secrets/, docker/, compose.yaml, atau .env infra
-PHP_HTML_FILES=$(docker compose exec php ls -a /var/www/html 2>/dev/null | tr '\n' ' ')
+# Periksa apakah kredensial erp_migrator bocor di environment container php (F3)
+if echo "$PHP_ENV" | grep -Eiq "${DB_MIGRATOR_USERNAME}|${DB_MIGRATOR_PASSWORD}"; then
+    fail "Kredensial erp_migrator BOCOR di environment container php yang berjalan!"
+else
+    pass "Environment container php bersih dari kredensial erp_migrator"
+fi
+
+# Container PHP TIDAK boleh melihat berkas infra: .git, secrets/, docker/, compose.yaml
 ISOLATED=true
-for forbidden in .git secrets docker compose.yaml compose.yml .env; do
+for forbidden in .git secrets docker compose.yaml compose.yml; do
     if docker compose exec php test -e "/var/www/html/${forbidden}"; then
         fail "Container php DAPAT melihat berkas infra '${forbidden}' di /var/www/html"
         ISOLATED=false
     fi
 done
 if [ "$ISOLATED" = "true" ]; then
-    pass "Container php terisolasi sempurna: tidak dapat melihat .git, secrets, docker, compose.yaml, atau .env infra"
+    pass "Container php terisolasi dari berkas infra (.git, secrets, docker, compose.yaml)"
+fi
+
+# Jika src/.env milik Laravel ada, verifikasi isinya TIDAK memuat root password atau kredensial erp_migrator (F3)
+if [ -f "src/.env" ]; then
+    if grep -q "$DB_ROOT_SECRET" src/.env; then
+        fail "src/.env MEMUAT password root MariaDB!"
+    elif grep -Eiq "${DB_MIGRATOR_USERNAME}|${DB_MIGRATOR_PASSWORD}" src/.env; then
+        fail "src/.env MEMUAT kredensial erp_migrator!"
+    else
+        pass "src/.env milik Laravel terverifikasi bersih dari password root dan kredensial erp_migrator"
+    fi
+else
+    pass "src/.env belum ada pada tahap pra-instalasi Laravel (bersih)"
 fi
 
 # ------------------------------------------------------------------------------
-# 10. Gitleaks lolos pada seluruh repo
+# 10. Verifikasi Hak Akses Direktori secrets (F5)
 # ------------------------------------------------------------------------------
 echo ""
-echo "--- Butir 10: Verifikasi Pemindaian Rahasia Gitleaks ---"
+echo "--- Butir 10: Verifikasi Hak Akses Direktori secrets ---"
+
+SECRETS_PERM=$(stat -c '%a' secrets 2>/dev/null || stat -f '%A' secrets 2>/dev/null || true)
+if [ "$SECRETS_PERM" = "700" ]; then
+    pass "Direktori secrets/ memiliki hak akses ketat 700 ($SECRETS_PERM)"
+else
+    fail "Direktori secrets/ TIDAK memiliki mode 700 ($SECRETS_PERM)"
+fi
+
+# ------------------------------------------------------------------------------
+# 11. Uji Fungsional Git Hooks (F6)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 11: Uji Fungsional Git Hooks ---"
+
+if bash scripts/test-hooks.sh >/dev/null 2>&1; then
+    pass "Seluruh uji fungsional Git hooks (pre-commit & commit-msg) berhasil"
+else
+    fail "Uji fungsional Git hooks GAGAL"
+fi
+
+# ------------------------------------------------------------------------------
+# 12. Gitleaks lolos pada seluruh repo (F5: :ro dan --network none)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 12: Verifikasi Pemindaian Rahasia Gitleaks ---"
 
 GITLEAKS_IMG="zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
-if docker run --rm -v "$(pwd):/repo" -w /repo "$GITLEAKS_IMG" git --verbose --no-banner >/dev/null 2>&1; then
+if docker run --rm --network none -v "$(pwd):/repo:ro" -w /repo "$GITLEAKS_IMG" git --verbose --no-banner >/dev/null 2>&1; then
     pass "Gitleaks lolos tanpa temuan rahasia pada seluruh repositori"
 else
     fail "Gitleaks mendeteksi rahasia pada repositori"
 fi
 
 # ------------------------------------------------------------------------------
-# 11. git ls-files tidak memuat .env atau key
+# 13. git ls-files tidak memuat .env atau key
 # ------------------------------------------------------------------------------
 echo ""
-echo "--- Butir 11: Verifikasi File Rahasia di Git Index ---"
+echo "--- Butir 13: Verifikasi File Rahasia di Git Index ---"
 
 FORBIDDEN_FILES=$(git ls-files | grep -Ei '\.env|\.pem|\.key|\.crt|id_rsa|id_ed25519' | grep -v '\.env\.example' | grep -v '\.env\.production\.example' || true)
 if [ -z "$FORBIDDEN_FILES" ]; then

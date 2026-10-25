@@ -73,10 +73,12 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (defense-in-depth) yang
    - `php_admin_flag[allow_url_fopen] = off` memblokir SSRF / remote inclusion.
    - `open_basedir = /var/www/html:/tmp` mengurung eksekusi file PHP di lingkup proyek.
    - CLI (`php-cli.ini`) tetap mempertahankan fungsi `proc_open` agar Composer dan Artisan dapat berjalan lancar.
-2. **Ketiadaan Ekstensi `pcntl`**:
-   - Ekstensi `pcntl` tidak dikompilasi pada runtime PHP web untuk mencegah forking proses berbahaya.
+2. **Ketiadaan Ekstensi `pcntl` & Verifikasi Ekstensi**:
+   - Ekstensi `pcntl` tidak dikompilasi pada runtime PHP (baik FPM maupun CLI) untuk mencegah forking proses berbahaya.
+   - Ekstensi wajib (`pdo_mysql`, `intl`, `bcmath`, `zip`, `Zend OPcache`) terverifikasi aktif pada runtime FPM dan CLI.
 3. **Probe Independen FPM via `cgi-fcgi`**:
-   - Kakas `fcgi` (`cgi-fcgi`) dipasang pada stage dev PHP untuk memanggil pool FastCGI 127.0.0.1:9000 secara independen via `/tmp/fpm_probe.php` tanpa bergantung pada keberadaan berkas web root publik.
+   - Kakas `fcgi` (`cgi-fcgi`) dipasang pada stage dev PHP untuk memanggil pool FastCGI 127.0.0.1:9000 secara independen via berkas probe sementara di `/tmp` (non-destruktif) tanpa bergantung pada keberadaan berkas web root publik.
+   - Memverifikasi fungsi kritis FPM: `disable_functions` menonaktifkan fungsi berbahaya, `exec_exists=false`, `proc_open_exists=false`, `open_basedir=/var/www/html:/tmp`, `allow_url_fopen=0`, dan `expose_php=""`.
 
 ### E. Lapisan Database (MariaDB 12.3 LTS)
 1. **Pemisahan Hak Akses Aplikasi (Principle of Least Privilege)**:

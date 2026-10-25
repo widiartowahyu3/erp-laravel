@@ -10,6 +10,7 @@
 !.env.production.example
 docs
 tests
+secrets
 vendor
 node_modules
 src/vendor

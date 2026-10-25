@@ -64,7 +64,7 @@ fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 echo "==> Running Gitleaks ($GITLEAKS_IMAGE) on staged changes..."
-if ! docker run --rm -v "${REPO_ROOT}:/repo" -w /repo "$GITLEAKS_IMAGE" git --staged --verbose --no-banner; then
+if ! docker run --rm --network none -v "${REPO_ROOT}:/repo:ro" -w /repo "$GITLEAKS_IMAGE" git --staged --verbose --no-banner; then
     echo "ERROR: Gitleaks detected secrets in staged changes. Commit rejected."
     exit 1
 fi

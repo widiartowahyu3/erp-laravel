@@ -1,9 +1,10 @@
-.PHONY: up down build logs ps shell db composer npm verify fresh hooks help
+.PHONY: up down build logs ps shell db composer npm verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
-	@echo "  make hooks     - Configure local git repository to use .githooks"
-	@echo "  make up        - Start the Docker stack"
+	@echo "  make hooks      - Configure local git repository to use .githooks"
+	@echo "  make test-hooks - Run functional tests on Git hooks"
+	@echo "  make up         - Start the Docker stack"
 	@echo "  make down      - Stop the Docker stack"
 	@echo "  make build     - Build/rebuild Docker images"
 	@echo "  make logs      - View logs from all services"
@@ -48,6 +49,9 @@ npm:
 
 verify:
 	bash scripts/verify-hardening.sh
+
+test-hooks:
+	bash scripts/test-hooks.sh
 
 fresh:
 	@echo "WARNING: This will destroy all containers and volumes (database data will be lost)!"
