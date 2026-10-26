@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -92,37 +93,43 @@ class CreateAdminCommand extends Command
             }
         );
 
-        $pwdConfirm = password(
+        password(
             label: 'Konfirmasi Kata Sandi:',
             required: true,
             validate: fn (string $c): ?string => $c === $pwd ? null : 'Konfirmasi kata sandi tidak cocok.'
         );
 
-        $user = User::create([
-            'name' => trim($name),
-            'email' => $normalizedEmail,
-            'password' => $pwd,
-            'is_active' => true,
-        ]);
-
         $superAdminRole = Role::where('name', 'super_admin')->first();
-        if ($superAdminRole !== null) {
-            $user->roles()->attach($superAdminRole->id, ['created_at' => now()]);
+        if ($superAdminRole === null) {
+            error('Jalankan make seed atau erp:permissions:sync terlebih dahulu.');
+
+            return self::FAILURE;
         }
 
-        AuditLogger::record(
-            event: 'user.created',
-            auditableType: User::class,
-            auditableId: (int) $user->id,
-            old: null,
-            new: [
-                'id' => (int) $user->id,
-                'name' => $user->name,
-                'email_hash' => hash('sha256', $normalizedEmail),
-                'role' => 'super_admin',
-            ],
-            userId: null
-        );
+        DB::transaction(function () use ($name, $normalizedEmail, $pwd, $superAdminRole): void {
+            $user = User::create([
+                'name' => trim($name),
+                'email' => $normalizedEmail,
+                'password' => $pwd,
+                'is_active' => true,
+            ]);
+
+            $user->roles()->attach($superAdminRole->id, ['created_at' => now()]);
+
+            AuditLogger::record(
+                event: 'user.created',
+                auditableType: User::class,
+                auditableId: (int) $user->id,
+                old: null,
+                new: [
+                    'id' => (int) $user->id,
+                    'name' => $user->name,
+                    'email_hash' => hash('sha256', $normalizedEmail),
+                    'role' => 'super_admin',
+                ],
+                userId: null
+            );
+        });
 
         info("Pengguna admin [{$normalizedEmail}] berhasil dibuat dengan role super_admin.");
 

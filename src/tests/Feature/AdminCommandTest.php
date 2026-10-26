@@ -47,6 +47,25 @@ test('erp:admin:create creates super_admin and rejects duplicates', function () 
         ->assertFailed();
 });
 
+test('erp:admin:create fails atomically without creating users when super_admin role is missing', function () {
+    // Delete super_admin role
+    DB::table('permission_role')->whereIn('role_id', function ($query) {
+        $query->select('id')->from('roles')->where('name', 'super_admin');
+    })->delete();
+    DB::table('roles')->where('name', 'super_admin')->delete();
+
+    $email = 'missing.role@example.com';
+
+    $this->artisan('erp:admin:create')
+        ->expectsQuestion('Nama Admin:', 'No Role Admin')
+        ->expectsQuestion('Email Admin:', $email)
+        ->expectsQuestion('Kata Sandi:', 'Admin#SecurePass2026')
+        ->expectsQuestion('Konfirmasi Kata Sandi:', 'Admin#SecurePass2026')
+        ->assertFailed();
+
+    expect(User::where('email', $email)->count())->toBe(0);
+});
+
 test('erp:user:reset-password resets password and invalidates user sessions', function () {
     $email = fake()->unique()->safeEmail();
     $user = User::factory()->create([
