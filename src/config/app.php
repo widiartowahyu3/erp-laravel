@@ -128,4 +128,20 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted Proxies
+    |--------------------------------------------------------------------------
+    |
+    | The IP addresses or CIDR blocks of trusted reverse proxies / load balancers.
+    | When empty, no proxies are trusted and client IPs are resolved directly
+    | from REMOTE_ADDR, preventing X-Forwarded-For spoofing attacks.
+    |
+    */
+
+    'trusted_proxies' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('TRUSTED_PROXIES', ''))
+    ))),
+
 ];

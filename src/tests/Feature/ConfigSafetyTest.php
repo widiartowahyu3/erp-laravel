@@ -37,6 +37,7 @@ test('env example files are production safe without hardcoded secrets', function
     expect($config['DB_PASSWORD'] ?? '')->toBe('change_this_to_erp_app_password');
     expect($config['HASH_DRIVER'] ?? '')->toBe('argon2id');
     expect($config['SESSION_ABSOLUTE_LIFETIME'] ?? '')->toBe('480');
+    expect($config['TRUSTED_PROXIES'] ?? null)->toBe('');
 
     expect(array_key_exists('DB_ROOT_PASSWORD', $config))->toBeFalse();
     expect(array_key_exists('DB_MIGRATOR_USERNAME', $config))->toBeFalse();
@@ -75,4 +76,17 @@ test('npmrc configuration enforces ignore-scripts', function () {
 
     $content = (string) file_get_contents($npmrcPath);
     expect($content)->toContain('ignore-scripts=true');
+});
+
+test('trusted proxies configuration is empty by default and does not trust private ranges', function () {
+    $trustedProxies = config('trustedproxy.proxies') ?? config('app.trusted_proxies');
+
+    expect($trustedProxies)->toBeEmpty();
+    expect(empty(env('TRUSTED_PROXIES')))->toBeTrue();
+
+    // Verify bootstrap/app.php does not hardcode private CIDRs
+    $bootstrapApp = (string) file_get_contents(base_path('bootstrap/app.php'));
+    expect($bootstrapApp)->not->toContain('10.0.0.0/8');
+    expect($bootstrapApp)->not->toContain('172.16.0.0/12');
+    expect($bootstrapApp)->not->toContain('192.168.0.0/16');
 });

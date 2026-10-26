@@ -161,6 +161,43 @@ test('rate limiting throttles after 5 consecutive failures and resets after succ
     $this->assertAuthenticatedAs($user);
 });
 
+test('spoofed x-forwarded-for header does not alter client ip when remote_addr is private range', function () {
+    $this->withServerVariables(['REMOTE_ADDR' => '172.18.0.1'])
+        ->withHeaders(['X-Forwarded-For' => '203.0.113.195'])
+        ->get('/login');
+
+    expect(request()->ip())->toBe('172.18.0.1');
+});
+
+test('login rate limiting cannot be bypassed with rotating x-forwarded-for headers', function () {
+    $email = fake()->unique()->safeEmail();
+    $remoteIp = '172.18.0.1';
+
+    for ($i = 1; $i <= 5; $i++) {
+        $response = $this->withServerVariables(['REMOTE_ADDR' => $remoteIp])
+            ->withHeaders(['X-Forwarded-For' => "198.51.100.{$i}"])
+            ->from('/login')
+            ->post('/login', [
+                'email' => $email,
+                'password' => "WrongPass{$i}!",
+            ]);
+
+        $response->assertRedirect('/login');
+    }
+
+    // 6th attempt with another spoofed X-Forwarded-For IP must trigger rate limiting
+    $response = $this->withServerVariables(['REMOTE_ADDR' => $remoteIp])
+        ->withHeaders(['X-Forwarded-For' => '198.51.100.99'])
+        ->from('/login')
+        ->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPass6!',
+        ]);
+
+    $response->assertStatus(429);
+    $response->assertSessionHasErrors('email');
+});
+
 test('GET logout returns 405 Method Not Allowed', function () {
     $user = User::factory()->create();
 
