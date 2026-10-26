@@ -35,6 +35,11 @@ return Application::configure(basePath: dirname(__DIR__))
             return array_values(array_filter($hosts));
         });
 
+        $middleware->redirectTo(
+            guests: '/login',
+            users: '/'
+        );
+
         $middleware->append(SecurityHeaders::class);
 
         $middleware->appendToGroup('web', [
