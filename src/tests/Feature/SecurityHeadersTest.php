@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 test('all required security headers are present in response', function () {
-    $response = $this->get('/');
+    $response = $this->get('/login');
 
     $response->assertOk();
     $response->assertHeader('X-Content-Type-Options', 'nosniff');

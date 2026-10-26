@@ -10,6 +10,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -50,6 +51,10 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            if ($e instanceof ValidationException && $e->status === 429) {
+                return $response->setStatusCode(429);
+            }
+
             $status = $response->getStatusCode();
 
             // Intercept 403 Forbidden to record audit log and render Errors/Error
@@ -57,9 +62,24 @@ return Application::configure(basePath: dirname(__DIR__))
                 $user = $request->user();
                 $userId = $user !== null ? (int) $user->id : 0;
                 $permission = '';
-                if ($e instanceof AuthorizationException) {
-                    $permission = $e->ability() ?? $e->getMessage();
-                } else {
+                if ($e instanceof AuthorizationException && method_exists($e, 'ability') && $e->ability()) {
+                    $permission = (string) $e->ability();
+                }
+
+                if ($permission === '') {
+                    $route = $request->route();
+                    if ($route !== null) {
+                        foreach ($route->gatherMiddleware() as $m) {
+                            if (is_string($m) && str_starts_with($m, 'can:')) {
+                                $parts = explode(',', substr($m, 4));
+                                $permission = trim($parts[0]);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if ($permission === '') {
                     $permission = $e->getMessage();
                 }
 

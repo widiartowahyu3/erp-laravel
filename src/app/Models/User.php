@@ -25,6 +25,17 @@ class User extends Authenticatable
     protected ?array $permissionsCache = null;
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_active' => true,
+        'deleted_at' => null,
+        'remember_token' => null,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
