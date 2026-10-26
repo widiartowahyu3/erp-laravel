@@ -337,3 +337,109 @@ test('password hashing uses argon2id', function () {
 
     expect($info['algoName'])->toBe('argon2id');
 });
+
+test('current password verification throttles after 5 consecutive failures', function () {
+    $user = User::factory()->create([
+        'password' => 'Initial#SecurePass123',
+    ]);
+
+    RateLimiter::clear("pwd_fail_user|{$user->id}");
+    RateLimiter::clear('pwd_fail_ip|127.0.0.1');
+
+    // 5 consecutive failed attempts
+    for ($i = 1; $i <= 5; $i++) {
+        $res = $this->actingAs($user)->from('/account/password')->put('/account/password', [
+            'current_password' => "WrongCurrent#{$i}",
+            'password' => 'New#SecurePass123',
+            'password_confirmation' => 'New#SecurePass123',
+        ]);
+        $res->assertRedirect('/account/password');
+        $res->assertSessionHasErrors('current_password');
+    }
+
+    // 6th attempt with CORRECT current password must be rejected with 429
+    $resThrottled = $this->actingAs($user)->from('/account/password')->put('/account/password', [
+        'current_password' => 'Initial#SecurePass123',
+        'password' => 'New#SecurePass123',
+        'password_confirmation' => 'New#SecurePass123',
+    ]);
+    $resThrottled->assertStatus(429);
+    $resThrottled->assertSessionHasErrors('current_password');
+    expect(session('errors')->first('current_password'))->toContain('Terlalu banyak percobaan');
+});
+
+test('current password throttling is isolated between users', function () {
+    $userA = User::factory()->create([
+        'password' => 'UserA#SecurePass123',
+    ]);
+    $userB = User::factory()->create([
+        'password' => 'UserB#SecurePass123',
+    ]);
+
+    RateLimiter::clear("pwd_fail_user|{$userA->id}");
+    RateLimiter::clear("pwd_fail_user|{$userB->id}");
+    RateLimiter::clear('pwd_fail_ip|192.0.2.1');
+    RateLimiter::clear('pwd_fail_ip|192.0.2.2');
+
+    // User A fails 5 times
+    for ($i = 1; $i <= 5; $i++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+            ->actingAs($userA)
+            ->from('/account/password')
+            ->put('/account/password', [
+                'current_password' => "WrongPass{$i}",
+                'password' => 'BrandNew#Pass123',
+                'password_confirmation' => 'BrandNew#Pass123',
+            ]);
+    }
+
+    // User B on different IP should be able to update password successfully
+    $this->flushSession();
+    $resUserB = $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.2'])
+        ->actingAs($userB)
+        ->from('/account/password')
+        ->put('/account/password', [
+            'current_password' => 'UserB#SecurePass123',
+            'password' => 'BrandNew#Pass123',
+            'password_confirmation' => 'BrandNew#Pass123',
+        ]);
+
+    $resUserB->assertRedirect('/account/password');
+    $resUserB->assertSessionHas('status', 'Kata sandi berhasil diperbarui.');
+});
+
+test('successful password change resets current password failure counter', function () {
+    $user = User::factory()->create([
+        'password' => 'Initial#Pass12345',
+    ]);
+
+    RateLimiter::clear("pwd_fail_user|{$user->id}");
+    RateLimiter::clear('pwd_fail_ip|127.0.0.1');
+
+    // Fail 4 times (1 below throttle limit of 5)
+    for ($i = 1; $i <= 4; $i++) {
+        $this->actingAs($user)->from('/account/password')->put('/account/password', [
+            'current_password' => "WrongPass{$i}",
+            'password' => 'BrandNew#Pass999',
+            'password_confirmation' => 'BrandNew#Pass999',
+        ]);
+    }
+
+    // Now succeed with correct current password
+    $resSuccess = $this->actingAs($user)->from('/account/password')->put('/account/password', [
+        'current_password' => 'Initial#Pass12345',
+        'password' => 'BrandNew#Pass999',
+        'password_confirmation' => 'BrandNew#Pass999',
+    ]);
+    $resSuccess->assertRedirect('/account/password');
+
+    // After success, user should be able to fail again without immediately hitting 429
+    $resFailAgain = $this->actingAs($user)->from('/account/password')->put('/account/password', [
+        'current_password' => 'WrongPassAgain',
+        'password' => 'AnotherNew#Pass1',
+        'password_confirmation' => 'AnotherNew#Pass1',
+    ]);
+    $resFailAgain->assertRedirect('/account/password');
+    $resFailAgain->assertSessionHasErrors('current_password');
+    expect(session('errors')->first('current_password'))->toBe('Kata sandi saat ini tidak sesuai.');
+});

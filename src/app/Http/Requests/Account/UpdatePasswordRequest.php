@@ -6,6 +6,8 @@ namespace App\Http\Requests\Account;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 class UpdatePasswordRequest extends FormRequest
@@ -53,22 +55,43 @@ class UpdatePasswordRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $v): void {
+            if ($v->errors()->has('current_password')) {
+                return;
+            }
+
             $user = $this->user();
             if ($user === null) {
                 return;
             }
 
+            $userId = (int) $user->id;
+            $ip = (string) $this->ip();
+            $userKey = 'pwd_fail_user|'.$userId;
+            $ipKey = 'pwd_fail_ip|'.$ip;
+
+            // 1. Rate limiter check before current password verification
+            if (RateLimiter::tooManyAttempts($userKey, 5) || RateLimiter::tooManyAttempts($ipKey, 20)) {
+                $seconds = max(RateLimiter::availableIn($userKey), RateLimiter::availableIn($ipKey));
+
+                throw ValidationException::withMessages([
+                    'current_password' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
+                ])->status(429);
+            }
+
             $currentPassword = (string) $this->input('current_password');
             $newPassword = (string) $this->input('password');
 
-            // 1. Verify current password
+            // 2. Verify current password
             if (! Hash::check($currentPassword, (string) $user->password)) {
+                RateLimiter::hit($userKey, 60);
+                RateLimiter::hit($ipKey, 60);
+
                 $v->errors()->add('current_password', 'Kata sandi saat ini tidak sesuai.');
 
                 return;
             }
 
-            // 2. Uppercase letter requirement
+            // 3. Uppercase letter requirement
             if (preg_match('/[A-Z]/', $newPassword) !== 1) {
                 $v->errors()->add('password', 'Kata sandi baru harus mengandung setidaknya satu huruf besar.');
             }

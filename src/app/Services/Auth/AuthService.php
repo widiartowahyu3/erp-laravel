@@ -150,6 +150,8 @@ final class AuthService
             'password' => $newPassword,
         ])->save();
 
+        RateLimiter::clear('pwd_fail_user|'.$user->id);
+
         Auth::logoutOtherDevices($newPassword);
 
         AuditLogger::record(
