@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\Auth\AuthService;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
@@ -29,7 +30,7 @@ test('guests can view login page', function () {
 
 test('successful login redirects to home and regenerates session id', function () {
     $email = fake()->unique()->safeEmail();
-    RateLimiter::clear("login|{$email}|127.0.0.1");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, '127.0.0.1'));
 
     $user = User::factory()->create([
         'email' => $email,
@@ -60,10 +61,10 @@ test('wrong password, unknown email, inactive user, and soft-deleted user produc
     $deletedEmail = fake()->unique()->safeEmail();
     $unknownEmail = fake()->unique()->safeEmail();
 
-    RateLimiter::clear("login|{$activeEmail}|127.0.0.1");
-    RateLimiter::clear("login|{$inactiveEmail}|127.0.0.1");
-    RateLimiter::clear("login|{$deletedEmail}|127.0.0.1");
-    RateLimiter::clear("login|{$unknownEmail}|127.0.0.1");
+    RateLimiter::clear(AuthService::loginThrottleKey($activeEmail, '127.0.0.1'));
+    RateLimiter::clear(AuthService::loginThrottleKey($inactiveEmail, '127.0.0.1'));
+    RateLimiter::clear(AuthService::loginThrottleKey($deletedEmail, '127.0.0.1'));
+    RateLimiter::clear(AuthService::loginThrottleKey($unknownEmail, '127.0.0.1'));
 
     $activeUser = User::factory()->create([
         'email' => $activeEmail,
@@ -126,7 +127,7 @@ test('wrong password, unknown email, inactive user, and soft-deleted user produc
 test('rate limiting throttles after 5 consecutive failures and resets after success', function () {
     $email = fake()->unique()->safeEmail();
     $ip = '127.0.0.1';
-    RateLimiter::clear("login|{$email}|{$ip}");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
 
     for ($i = 0; $i < 5; $i++) {
         $response = $this->from('/login')->post('/login', [
@@ -145,7 +146,7 @@ test('rate limiting throttles after 5 consecutive failures and resets after succ
     $response->assertHeader('Retry-After');
 
     // Reset limiter and login with valid user
-    RateLimiter::clear("login|{$email}|{$ip}");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
     $user = User::factory()->create([
         'email' => $email,
         'password' => 'Valid#Password123',
@@ -445,7 +446,7 @@ test('successful password change resets current password failure counter', funct
 test('inertia login requests when throttled return redirect 303 with session errors', function () {
     $email = fake()->unique()->safeEmail();
     $ip = '127.0.0.1';
-    RateLimiter::clear("login|{$email}|{$ip}");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
 
     for ($i = 0; $i < 5; $i++) {
         $this->withHeader('X-Inertia', 'true')
@@ -508,7 +509,7 @@ test('inertia password update when throttled returns redirect 303 with session e
 test('non-inertia and json requests when throttled return 429 with retry-after header', function () {
     $email = fake()->unique()->safeEmail();
     $ip = '127.0.0.1';
-    RateLimiter::clear("login|{$email}|{$ip}");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
 
     for ($i = 0; $i < 5; $i++) {
         $this->post('/login', [
@@ -525,4 +526,36 @@ test('non-inertia and json requests when throttled return 429 with retry-after h
     $response->assertStatus(429);
     $response->assertHeader('Retry-After');
     $response->assertJsonStructure(['message', 'errors' => ['email']]);
+});
+
+test('rate limiter cache keys do not contain raw email strings', function () {
+    RateLimiter::swap(new Illuminate\Cache\RateLimiter(app('cache')->driver('database')));
+
+    $email = 'plaintext.secret.user@example.com';
+    $ip = '127.0.0.1';
+
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
+
+    // Run failed login attempts
+    for ($i = 0; $i < 3; $i++) {
+        $this->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPassword123!',
+        ]);
+    }
+
+    // Inspect the database cache table directly: ensure NO raw email string exists
+    $rawEmailFound = DB::table('cache')
+        ->where('key', 'like', "%{$email}%")
+        ->count();
+
+    expect($rawEmailFound)->toBe(0);
+
+    // Verify hashed email key exists in cache table
+    $emailHash = hash('sha256', $email);
+    $hashedKeyCount = DB::table('cache')
+        ->where('key', 'like', "%{$emailHash}%")
+        ->count();
+
+    expect($hashedKeyCount)->toBeGreaterThan(0);
 });

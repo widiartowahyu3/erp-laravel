@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\AuthService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ beforeEach(function () {
 
 test('login success records audit log without sensitive data or raw email', function () {
     $email = fake()->unique()->safeEmail();
-    RateLimiter::clear("login|{$email}|127.0.0.1");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, '127.0.0.1'));
 
     $user = User::factory()->create([
         'email' => $email,
@@ -48,7 +49,7 @@ test('login success records audit log without sensitive data or raw email', func
 
 test('login failed records audit log with email hash and user id if available', function () {
     $email = fake()->unique()->safeEmail();
-    RateLimiter::clear("login|{$email}|127.0.0.1");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, '127.0.0.1'));
 
     $user = User::factory()->create([
         'email' => $email,
@@ -75,7 +76,7 @@ test('login failed records audit log with email hash and user id if available', 
 test('login throttled records audit log with email hash and ip', function () {
     $email = fake()->unique()->safeEmail();
     $ip = '127.0.0.1';
-    RateLimiter::clear("login|{$email}|{$ip}");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
 
     for ($i = 0; $i < 6; $i++) {
         $this->post('/login', [
@@ -238,7 +239,7 @@ test('audit failure does not break authentication flow and is logged to error lo
 test('consecutive throttled login requests produce at most one audit log row within 60 seconds', function () {
     $email = fake()->unique()->safeEmail();
     $ip = '127.0.0.1';
-    RateLimiter::clear("login|{$email}|{$ip}");
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
     $emailHash = hash('sha256', $email);
     Cache::forget("audit_dedup|login.throttled|{$emailHash}|{$ip}");
 

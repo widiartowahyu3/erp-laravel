@@ -22,6 +22,14 @@ final class AuthService
     private const DUMMY_ARGON2ID_HASH = '$argon2id$v=19$m=65536,t=4,p=1$UksxWGZmZE1UNDE0ZjM3Lg$jW8kZBUWp60BT4085QzlQVSvEqTwwkuE5m5pyksGQ+Q';
 
     /**
+     * Build the login rate limiter key using sha256 hashed email.
+     */
+    public static function loginThrottleKey(string $email, string $ip): string
+    {
+        return 'login|'.hash('sha256', strtolower(trim($email))).'|'.$ip;
+    }
+
+    /**
      * Attempt to authenticate a user with rate limiting and timing-attack mitigation.
      *
      * @throws ValidationException
@@ -29,15 +37,15 @@ final class AuthService
     public function login(string $email, string $password, Request $request): void
     {
         $normalizedEmail = strtolower(trim($email));
+        $emailHash = hash('sha256', $normalizedEmail);
         $ip = (string) $request->ip();
 
-        $emailIpKey = 'login|'.$normalizedEmail.'|'.$ip;
+        $emailIpKey = self::loginThrottleKey($normalizedEmail, $ip);
         $ipKey = 'login_ip|'.$ip;
 
         // 1. Rate Limiting Check (max 5 per min for email+ip, max 30 per min for ip)
         if (RateLimiter::tooManyAttempts($emailIpKey, 5) || RateLimiter::tooManyAttempts($ipKey, 30)) {
             $seconds = max(RateLimiter::availableIn($emailIpKey), RateLimiter::availableIn($ipKey));
-            $emailHash = hash('sha256', $normalizedEmail);
 
             $dedupKey = "audit_dedup|login.throttled|{$emailHash}|{$ip}";
             if (Cache::add($dedupKey, true, 60)) {
