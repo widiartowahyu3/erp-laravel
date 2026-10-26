@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Account;
 
 use App\Exceptions\TooManyAttemptsException;
+use App\Support\PasswordPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -94,29 +95,12 @@ class UpdatePasswordRequest extends FormRequest
                 return;
             }
 
-            // 3. Uppercase letter requirement
-            if (preg_match('/[A-Z]/', $newPassword) !== 1) {
-                $v->errors()->add('password', 'Kata sandi baru harus mengandung setidaknya satu huruf besar.');
+            // 3. Centralized password policy validation
+            foreach (PasswordPolicy::errors($newPassword, (string) $user->email) as $policyError) {
+                $v->errors()->add('password', $policyError);
             }
 
-            // 3. Lowercase letter requirement
-            if (preg_match('/[a-z]/', $newPassword) !== 1) {
-                $v->errors()->add('password', 'Kata sandi baru harus mengandung setidaknya satu huruf kecil.');
-            }
-
-            // 4. Number requirement
-            if (preg_match('/[0-9]/', $newPassword) !== 1) {
-                $v->errors()->add('password', 'Kata sandi baru harus mengandung setidaknya satu angka.');
-            }
-
-            // 5. Must not contain the local-part of the user's email
-            $emailParts = explode('@', (string) $user->email);
-            $localPart = strtolower($emailParts[0]);
-            if ($localPart !== '' && str_contains(strtolower($newPassword), $localPart)) {
-                $v->errors()->add('password', 'Kata sandi baru tidak boleh mengandung nama pengguna/email Anda.');
-            }
-
-            // 6. Must be different from the old password
+            // 4. Must be different from the old password
             if (Hash::check($newPassword, (string) $user->password)) {
                 $v->errors()->add('password', 'Kata sandi baru harus berbeda dari kata sandi saat ini.');
             }

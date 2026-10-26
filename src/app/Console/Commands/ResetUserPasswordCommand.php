@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Support\PasswordPolicy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -47,37 +48,13 @@ class ResetUserPasswordCommand extends Command
             return self::FAILURE;
         }
 
-        $emailParts = explode('@', $normalizedEmail);
-        $localPart = $emailParts[0];
-
         $pwd = password(
             label: "Kata Sandi Baru untuk [{$normalizedEmail}]:",
             required: true,
-            validate: function (string $p) use ($localPart): ?string {
-                if (strlen($p) < 12) {
-                    return 'Kata sandi minimal 12 karakter.';
-                }
-                if (strlen($p) > 128) {
-                    return 'Kata sandi maksimal 128 karakter.';
-                }
-                if (preg_match('/[A-Z]/', $p) !== 1) {
-                    return 'Kata sandi harus mengandung setidaknya satu huruf besar.';
-                }
-                if (preg_match('/[a-z]/', $p) !== 1) {
-                    return 'Kata sandi harus mengandung setidaknya satu huruf kecil.';
-                }
-                if (preg_match('/[0-9]/', $p) !== 1) {
-                    return 'Kata sandi harus mengandung setidaknya satu angka.';
-                }
-                if ($localPart !== '' && str_contains(strtolower($p), strtolower($localPart))) {
-                    return 'Kata sandi tidak boleh mengandung bagian email pengguna.';
-                }
-
-                return null;
-            }
+            validate: fn (string $p): ?string => PasswordPolicy::validate($p, $normalizedEmail)
         );
 
-        $pwdConfirm = password(
+        password(
             label: 'Konfirmasi Kata Sandi Baru:',
             required: true,
             validate: fn (string $c): ?string => $c === $pwd ? null : 'Konfirmasi kata sandi tidak cocok.'
