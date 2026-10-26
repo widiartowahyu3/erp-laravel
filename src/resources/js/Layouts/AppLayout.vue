@@ -12,8 +12,10 @@ import {
     X,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     User,
-    ShieldCheck,
+    KeyRound,
+    LogOut,
 } from 'lucide-vue-next';
 import { navigationItems } from '../config/navigation.js';
 
@@ -24,8 +26,30 @@ const props = defineProps({
     },
 });
 
+const page = usePage();
 const isSidebarCollapsed = ref(false);
 const isMobileDrawerOpen = ref(false);
+const isUserMenuOpen = ref(false);
+
+const user = computed(() => page.props.auth?.user || null);
+const userInitials = computed(() => {
+    if (!user.value?.name) return 'U';
+    const parts = user.value.name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return user.value.name.substring(0, 2).toUpperCase();
+});
+
+const filteredNavigationItems = computed(() => {
+    const permissions = page.props.auth?.permissions || [];
+    return navigationItems.filter((item) => {
+        if (!item.permission) {
+            return true;
+        }
+        return permissions.includes(item.permission);
+    });
+});
 
 const iconMap = {
     LayoutDashboard,
@@ -46,6 +70,14 @@ function toggleMobileDrawer() {
 
 function closeMobileDrawer() {
     isMobileDrawerOpen.value = false;
+}
+
+function toggleUserMenu() {
+    isUserMenuOpen.value = !isUserMenuOpen.value;
+}
+
+function closeUserMenu() {
+    isUserMenuOpen.value = false;
 }
 </script>
 
@@ -124,7 +156,7 @@ function closeMobileDrawer() {
             </div>
 
             <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                <template v-for="item in navigationItems" :key="item.name">
+                <template v-for="item in filteredNavigationItems" :key="item.name">
                     <Link
                         v-if="!item.disabled"
                         :href="item.href"
@@ -164,6 +196,36 @@ function closeMobileDrawer() {
                     </div>
                 </template>
             </nav>
+
+            <!-- Mobile Drawer User Profile -->
+            <div class="p-3 border-t border-slate-200 bg-slate-50/50 space-y-1">
+                <div class="px-3 py-2">
+                    <p class="text-sm font-semibold text-slate-900 truncate">
+                        {{ user?.name || 'Pengguna' }}
+                    </p>
+                    <p class="text-xs text-slate-500 truncate">
+                        {{ user?.email || '' }}
+                    </p>
+                </div>
+                <Link
+                    href="/account/password"
+                    class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+                    @click="closeMobileDrawer"
+                >
+                    <KeyRound class="w-4 h-4 text-slate-500" aria-hidden="true" />
+                    <span>Ubah Kata Sandi</span>
+                </Link>
+                <Link
+                    href="/logout"
+                    method="post"
+                    as="button"
+                    class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
+                    @click="closeMobileDrawer"
+                >
+                    <LogOut class="w-4 h-4 text-rose-500" aria-hidden="true" />
+                    <span>Keluar</span>
+                </Link>
+            </div>
         </aside>
 
         <!-- Main Layout with Desktop Sidebar -->
@@ -205,7 +267,7 @@ function closeMobileDrawer() {
 
                 <!-- Nav Items -->
                 <nav class="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-                    <template v-for="item in navigationItems" :key="item.name">
+                    <template v-for="item in filteredNavigationItems" :key="item.name">
                         <Link
                             v-if="!item.disabled"
                             :href="item.href"
@@ -313,27 +375,97 @@ function closeMobileDrawer() {
                         </slot>
                     </div>
 
-                    <!-- User Placeholder Info -->
-                    <div class="flex items-center gap-4">
-                        <div
-                            class="flex items-center gap-3 pl-3 border-l border-slate-200"
+                    <!-- User Menu Dropdown -->
+                    <div class="relative">
+                        <button
+                            type="button"
+                            class="flex items-center gap-3 pl-3 py-1.5 pr-2 rounded-lg hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 cursor-pointer transition-colors"
+                            :aria-expanded="isUserMenuOpen ? 'true' : 'false'"
+                            aria-haspopup="true"
+                            aria-label="Menu pengguna"
+                            @click="toggleUserMenu"
                         >
                             <div
-                                class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-semibold flex items-center justify-center text-sm"
-                                aria-label="Avatar Pengguna Demo"
+                                class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-semibold flex items-center justify-center text-xs shadow-xs"
+                                aria-hidden="true"
                             >
-                                PD
+                                {{ userInitials }}
                             </div>
-                            <div class="text-left">
+                            <div class="text-left hidden sm:block">
                                 <div
                                     class="text-sm font-semibold text-slate-900 leading-tight"
                                 >
-                                    Pengguna Demo
+                                    {{ user?.name || 'Pengguna' }}
                                 </div>
-                                <div class="text-xs text-slate-500">
-                                    Administrator
+                                <div class="text-xs text-slate-500 truncate max-w-36">
+                                    {{ user?.email || '' }}
                                 </div>
                             </div>
+                            <ChevronDown
+                                class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                                :class="{ 'rotate-180': isUserMenuOpen }"
+                                aria-hidden="true"
+                            />
+                        </button>
+
+                        <!-- Dropdown Backdrop -->
+                        <div
+                            v-if="isUserMenuOpen"
+                            class="fixed inset-0 z-20"
+                            aria-hidden="true"
+                            @click="closeUserMenu"
+                        />
+
+                        <!-- Dropdown Panel -->
+                        <div
+                            v-if="isUserMenuOpen"
+                            class="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-30 focus:outline-none"
+                            role="menu"
+                            aria-orientation="vertical"
+                        >
+                            <div class="px-4 py-2 border-b border-slate-100">
+                                <p class="text-xs font-medium text-slate-400">
+                                    Masuk sebagai
+                                </p>
+                                <p
+                                    class="text-sm font-semibold text-slate-900 truncate"
+                                >
+                                    {{ user?.name || 'Pengguna' }}
+                                </p>
+                                <p class="text-xs text-slate-500 truncate">
+                                    {{ user?.email || '' }}
+                                </p>
+                            </div>
+
+                            <Link
+                                href="/account/password"
+                                class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                                role="menuitem"
+                                @click="closeUserMenu"
+                            >
+                                <KeyRound
+                                    class="w-4 h-4 text-slate-500"
+                                    aria-hidden="true"
+                                />
+                                <span>Ubah Kata Sandi</span>
+                            </Link>
+
+                            <div class="border-t border-slate-100 my-1" />
+
+                            <Link
+                                href="/logout"
+                                method="post"
+                                as="button"
+                                class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left cursor-pointer"
+                                role="menuitem"
+                                @click="closeUserMenu"
+                            >
+                                <LogOut
+                                    class="w-4 h-4 text-rose-500"
+                                    aria-hidden="true"
+                                />
+                                <span>Keluar</span>
+                            </Link>
                         </div>
                     </div>
                 </header>

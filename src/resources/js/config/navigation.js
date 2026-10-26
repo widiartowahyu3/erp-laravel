@@ -5,6 +5,7 @@ export const navigationItems = [
         icon: 'LayoutDashboard',
         active: true,
         disabled: false,
+        permission: null,
     },
     {
         name: 'Penjualan',
@@ -13,6 +14,7 @@ export const navigationItems = [
         active: false,
         disabled: true,
         badge: 'Segera',
+        permission: 'sales_orders.view',
     },
     {
         name: 'Pembelian',
@@ -21,6 +23,7 @@ export const navigationItems = [
         active: false,
         disabled: true,
         badge: 'Segera',
+        permission: 'purchase_orders.view',
     },
     {
         name: 'Inventori',
@@ -29,6 +32,7 @@ export const navigationItems = [
         active: false,
         disabled: true,
         badge: 'Segera',
+        permission: 'stock_balances.view',
     },
     {
         name: 'Keuangan',
@@ -37,6 +41,7 @@ export const navigationItems = [
         active: false,
         disabled: true,
         badge: 'Segera',
+        permission: 'journals.view',
     },
     {
         name: 'Master Data',
@@ -45,5 +50,6 @@ export const navigationItems = [
         active: false,
         disabled: true,
         badge: 'Segera',
+        permission: 'products.view',
     },
 ];
