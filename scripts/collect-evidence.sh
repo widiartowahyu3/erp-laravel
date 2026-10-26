@@ -17,11 +17,11 @@ dc() { docker compose run --rm -T "$@"; }
   echo "### diff stat"; git diff --stat "$PREV"..HEAD
   echo "### berkas sensitif di index"; git ls-files | grep -Ei '\.env|\.pem|\.key|secrets|sqlite' ; } > "$OUT/$LABEL-git.txt" 2>&1
 
-{ echo "### php/node"; dc php php -v | head -2; dc --profile tools node node -v 2>/dev/null
+{ echo "### php/node"; dc php php -v | head -2; docker compose --profile tools run --rm -T node node -v 2>/dev/null
   echo "### composer show"; for p in laravel/framework inertiajs/inertia-laravel pestphp/pest phpunit/phpunit pestphp/pest-plugin-laravel larastan/larastan laravel/pint; do dc php composer show "$p" | grep -E '^(name|versions)'; done
   echo "### composer outdated --direct"; dc php composer outdated --direct
-  echo "### npm ls"; dc --profile tools node npm ls --depth=0
-  echo "### npm outdated"; dc --profile tools node npm outdated; } > "$OUT/$LABEL-versions.txt" 2>&1
+  echo "### npm ls"; docker compose --profile tools run --rm -T node npm ls --depth=0
+  echo "### npm outdated"; docker compose --profile tools run --rm -T node npm outdated; } > "$OUT/$LABEL-versions.txt" 2>&1
 
 { echo "### INFO SQL"
   docker compose exec -T db sh -c 'MYSQL_PWD="$(cat /run/secrets/db_root_password)" mariadb -u root' <<'SQL'
