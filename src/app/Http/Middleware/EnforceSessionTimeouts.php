@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Services\Audit\AuditLogger;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,16 @@ class EnforceSessionTimeouts
             $maxLifetimeSeconds = $maxLifetimeMinutes * 60;
 
             if ($loginTime !== null && (now()->timestamp - (int) $loginTime) > $maxLifetimeSeconds) {
+                $user = $request->user();
+                $userId = $user !== null ? (int) $user->id : 0;
+
+                AuditLogger::record(
+                    event: 'session.expired',
+                    auditableType: 'auth',
+                    auditableId: $userId,
+                    userId: $userId > 0 ? $userId : null
+                );
+
                 Auth::guard('web')->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();

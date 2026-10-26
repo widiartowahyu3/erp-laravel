@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
+use App\Services\Audit\AuditLogger;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -49,6 +51,49 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();
+
+            // Intercept 403 Forbidden to record audit log and render Errors/Error
+            if ($status === 403) {
+                $user = $request->user();
+                $userId = $user !== null ? (int) $user->id : 0;
+                $permission = '';
+                if ($e instanceof AuthorizationException) {
+                    $permission = $e->ability() ?? $e->getMessage();
+                } else {
+                    $permission = $e->getMessage();
+                }
+
+                AuditLogger::record(
+                    event: 'access.denied',
+                    auditableType: 'auth',
+                    auditableId: $userId,
+                    new: ['permission' => $permission !== '' ? $permission : 'unauthorized'],
+                    userId: $userId > 0 ? $userId : null
+                );
+
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => 'Akses ditolak.',
+                    ], 403);
+                }
+
+                if ($request->header('X-Inertia')) {
+                    return response()->json([
+                        'component' => 'Errors/Error',
+                        'props' => [
+                            'status' => 403,
+                            'message' => 'Anda tidak memiliki hak akses untuk membuka halaman ini.',
+                        ],
+                        'url' => $request->getRequestUri(),
+                        'version' => '',
+                    ], 403, ['X-Inertia' => 'true']);
+                }
+
+                return response()->view('errors.minimal', [
+                    'status' => 403,
+                    'message' => 'Akses ditolak.',
+                ], 403);
+            }
 
             // Always ensure 404 does not leak stack traces or internal paths
             if ($status === 404) {

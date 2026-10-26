@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Auth;
 
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -35,6 +36,16 @@ final class AuthService
         if (RateLimiter::tooManyAttempts($emailIpKey, 5) || RateLimiter::tooManyAttempts($ipKey, 30)) {
             $seconds = max(RateLimiter::availableIn($emailIpKey), RateLimiter::availableIn($ipKey));
 
+            AuditLogger::record(
+                event: 'login.throttled',
+                auditableType: 'auth',
+                auditableId: 0,
+                new: [
+                    'email_hash' => hash('sha256', $normalizedEmail),
+                    'ip' => $ip,
+                ]
+            );
+
             throw ValidationException::withMessages([
                 'email' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
             ])->status(429);
@@ -50,6 +61,13 @@ final class AuthService
             RateLimiter::hit($emailIpKey, 60);
             RateLimiter::hit($ipKey, 60);
 
+            AuditLogger::record(
+                event: 'login.failed',
+                auditableType: 'auth',
+                auditableId: $user !== null ? (int) $user->id : 0,
+                new: ['email_hash' => hash('sha256', $normalizedEmail)]
+            );
+
             throw ValidationException::withMessages([
                 'email' => 'Email atau kata sandi salah.',
             ]);
@@ -59,6 +77,13 @@ final class AuthService
         if (! Hash::check($password, (string) $user->password)) {
             RateLimiter::hit($emailIpKey, 60);
             RateLimiter::hit($ipKey, 60);
+
+            AuditLogger::record(
+                event: 'login.failed',
+                auditableType: 'auth',
+                auditableId: (int) $user->id,
+                new: ['email_hash' => hash('sha256', $normalizedEmail)]
+            );
 
             throw ValidationException::withMessages([
                 'email' => 'Email atau kata sandi salah.',
@@ -73,6 +98,13 @@ final class AuthService
         $request->session()->put('login_time', now()->timestamp);
 
         $user->forceFill(['last_login_at' => now()])->save();
+
+        AuditLogger::record(
+            event: 'login.success',
+            auditableType: 'auth',
+            auditableId: (int) $user->id,
+            new: ['email_hash' => hash('sha256', $normalizedEmail)]
+        );
     }
 
     /**
@@ -80,6 +112,16 @@ final class AuthService
      */
     public function logout(Request $request): void
     {
+        $user = $request->user();
+        $userId = $user !== null ? (int) $user->id : 0;
+
+        AuditLogger::record(
+            event: 'logout',
+            auditableType: 'auth',
+            auditableId: $userId,
+            userId: $userId > 0 ? $userId : null
+        );
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -109,5 +151,12 @@ final class AuthService
         ])->save();
 
         Auth::logoutOtherDevices($newPassword);
+
+        AuditLogger::record(
+            event: 'password.changed',
+            auditableType: User::class,
+            auditableId: (int) $user->id,
+            userId: (int) $user->id
+        );
     }
 }
