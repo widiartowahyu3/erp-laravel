@@ -656,23 +656,23 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 14. Verifikasi Endpoint & Baseline Keamanan Aplikasi Laravel (Fase 1)
+# 14. Verifikasi Endpoint & Baseline Keamanan Aplikasi Laravel
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 14: Verifikasi Endpoint & Header Keamanan Aplikasi Laravel ---"
 
-ROOT_RES_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/)
-if [ "$ROOT_RES_CODE" = "200" ]; then
-    pass "Endpoint GET / mengembalikan HTTP 200"
+LOGIN_RES_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/login)
+if [ "$LOGIN_RES_CODE" = "200" ]; then
+    pass "Endpoint GET /login mengembalikan HTTP 200"
 else
-    fail "Endpoint GET / mengembalikan HTTP $ROOT_RES_CODE (diharapkan 200)"
+    fail "Endpoint GET /login mengembalikan HTTP $LOGIN_RES_CODE (diharapkan 200)"
 fi
 
-ROOT_BODY=$(curl -s http://127.0.0.1:8080/)
-if echo "$ROOT_BODY" | grep -q 'data-page' || echo "$ROOT_BODY" | grep -q 'ERP Distribusi'; then
-    pass "Endpoint GET / memuat komponen aplikasi Inertia Dashboard ('data-page' / 'ERP Distribusi')"
+LOGIN_BODY=$(curl -s http://127.0.0.1:8080/login)
+if echo "$LOGIN_BODY" | grep -q 'data-page' || echo "$LOGIN_BODY" | grep -q 'ERP Distribusi'; then
+    pass "Endpoint GET /login memuat komponen aplikasi Inertia ('data-page' / 'ERP Distribusi')"
 else
-    fail "Endpoint GET / TIDAK memuat komponen Inertia Dashboard"
+    fail "Endpoint GET /login TIDAK memuat komponen Inertia"
 fi
 
 UP_RES_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/up)
@@ -682,51 +682,51 @@ else
     fail "Endpoint healthcheck GET /up mengembalikan HTTP $UP_RES_CODE (diharapkan 200)"
 fi
 
-ROOT_HEADERS=$(curl -s -I http://127.0.0.1:8080/)
+LOGIN_HEADERS=$(curl -s -I http://127.0.0.1:8080/login)
 
-if echo "$ROOT_HEADERS" | grep -qi "Content-Security-Policy" && echo "$ROOT_HEADERS" | grep -qi "nonce-"; then
+if echo "$LOGIN_HEADERS" | grep -qi "Content-Security-Policy" && echo "$LOGIN_HEADERS" | grep -qi "nonce-"; then
     pass "Header Content-Security-Policy hadir dan memuat per-request nonce"
 else
     fail "Header Content-Security-Policy TIDAK hadir atau tidak memuat nonce"
 fi
 
-if echo "$ROOT_HEADERS" | grep -i "Content-Security-Policy" | grep -qE "style-src[^;]*'unsafe-inline'[^;]*'nonce-|style-src[^;]*'nonce-[^;]*'unsafe-inline'"; then
+if echo "$LOGIN_HEADERS" | grep -i "Content-Security-Policy" | grep -qE "style-src[^;]*'unsafe-inline'[^;]*'nonce-|style-src[^;]*'nonce-[^;]*'unsafe-inline'"; then
     fail "Direktif style-src mencampur 'unsafe-inline' dengan nonce (menyebabkan browser mengabaikan unsafe-inline)!"
 else
     pass "Direktif style-src tidak mencampur 'unsafe-inline' dengan nonce pada direktif yang sama"
 fi
 
-if echo "$ROOT_HEADERS" | grep -qi "X-Content-Type-Options:[[:space:]]*nosniff"; then
+if echo "$LOGIN_HEADERS" | grep -qi "X-Content-Type-Options:[[:space:]]*nosniff"; then
     pass "Header X-Content-Type-Options: nosniff terpasang dengan benar"
 else
     fail "Header X-Content-Type-Options: nosniff TIDAK ditemukan"
 fi
 
-if echo "$ROOT_HEADERS" | grep -qi "X-Frame-Options:[[:space:]]*DENY"; then
+if echo "$LOGIN_HEADERS" | grep -qi "X-Frame-Options:[[:space:]]*DENY"; then
     pass "Header X-Frame-Options: DENY terpasang dengan benar"
 else
     fail "Header X-Frame-Options: DENY TIDAK ditemukan"
 fi
 
-if echo "$ROOT_HEADERS" | grep -qi "Referrer-Policy:[[:space:]]*strict-origin-when-cross-origin"; then
+if echo "$LOGIN_HEADERS" | grep -qi "Referrer-Policy:[[:space:]]*strict-origin-when-cross-origin"; then
     pass "Header Referrer-Policy: strict-origin-when-cross-origin terpasang dengan benar"
 else
     fail "Header Referrer-Policy: strict-origin-when-cross-origin TIDAK ditemukan"
 fi
 
-if echo "$ROOT_HEADERS" | grep -qi "Permissions-Policy:"; then
-    pass "Header Permissions-Policy terpasang dengan benar pada respons GET /"
+if echo "$LOGIN_HEADERS" | grep -qi "Permissions-Policy:"; then
+    pass "Header Permissions-Policy terpasang dengan benar pada respons GET /login"
 else
-    fail "Header Permissions-Policy TIDAK ditemukan pada respons GET /"
+    fail "Header Permissions-Policy TIDAK ditemukan pada respons GET /login"
 fi
 
-if echo "$ROOT_HEADERS" | grep -qi "Cross-Origin-Opener-Policy:[[:space:]]*same-origin"; then
+if echo "$LOGIN_HEADERS" | grep -qi "Cross-Origin-Opener-Policy:[[:space:]]*same-origin"; then
     pass "Header Cross-Origin-Opener-Policy: same-origin terpasang dengan benar"
 else
     fail "Header Cross-Origin-Opener-Policy: same-origin TIDAK ditemukan"
 fi
 
-if echo "$ROOT_HEADERS" | grep -qi "Strict-Transport-Security"; then
+if echo "$LOGIN_HEADERS" | grep -qi "Strict-Transport-Security"; then
     fail "Header Strict-Transport-Security TIDAK boleh hadir pada lingkungan APP_ENV=local"
 else
     pass "Header Strict-Transport-Security tidak hadir pada lingkungan APP_ENV=local (sesuai spesifikasi)"
@@ -772,13 +772,13 @@ else
     fail "php artisan about TIDAK menonaktifkan Debug Mode saat APP_ENV=production!"
 fi
 
-if echo "$ROOT_HEADERS" | grep -i "Set-Cookie" | grep -qi "HttpOnly"; then
+if echo "$LOGIN_HEADERS" | grep -i "Set-Cookie" | grep -qi "HttpOnly"; then
     pass "Cookie sesi Laravel mengonfigurasi atribut HttpOnly"
 else
     fail "Cookie sesi Laravel TIDAK memuat atribut HttpOnly"
 fi
 
-if echo "$ROOT_HEADERS" | grep -i "Set-Cookie" | grep -qi "SameSite=lax"; then
+if echo "$LOGIN_HEADERS" | grep -i "Set-Cookie" | grep -qi "SameSite=lax"; then
     pass "Cookie sesi Laravel mengonfigurasi atribut SameSite=lax"
 else
     fail "Cookie sesi Laravel TIDAK memuat atribut SameSite=lax"
@@ -869,6 +869,114 @@ if echo "$TRIGGERS_OUTPUT" | grep -q "tr_audit_logs_before_update" && \
     pass "Trigger integritas append-only (BEFORE UPDATE & BEFORE DELETE) hadir pada audit_logs dan stock_movements"
 else
     fail "Trigger integritas append-only TIDAK lengkap pada audit_logs dan stock_movements!"
+fi
+
+# ------------------------------------------------------------------------------
+# 16. Verifikasi Autentikasi, Sesi, dan Pembatasan Laju (Fase 3)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 16: Verifikasi Autentikasi, Sesi, dan Pembatasan Laju (Fase 3) ---"
+
+# 1. GET / tanpa login = 302 ke /login
+AUTH_ROOT_RESP=$(curl -s -i http://127.0.0.1:8080/)
+AUTH_ROOT_CODE=$(echo "$AUTH_ROOT_RESP" | head -n 1 | awk '{print $2}')
+AUTH_ROOT_LOC=$(echo "$AUTH_ROOT_RESP" | grep -i "^Location:" | tr -d '\r' | awk '{print $2}')
+
+if [ "$AUTH_ROOT_CODE" = "302" ] && echo "$AUTH_ROOT_LOC" | grep -q "/login"; then
+    pass "Endpoint GET / tanpa login mengembalikan HTTP 302 dan mengarahkan ke /login ($AUTH_ROOT_LOC)"
+else
+    fail "Endpoint GET / tanpa login TIDAK mengembalikan 302 ke /login (Code: $AUTH_ROOT_CODE, Location: $AUTH_ROOT_LOC)"
+fi
+
+# 2. GET /login = 200 dengan CSP bernonce dan header keamanan lengkap
+AUTH_LOGIN_RESP=$(curl -s -I http://127.0.0.1:8080/login)
+AUTH_LOGIN_CODE=$(echo "$AUTH_LOGIN_RESP" | head -n 1 | awk '{print $2}')
+if [ "$AUTH_LOGIN_CODE" = "200" ] && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "Content-Security-Policy" && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "nonce-" && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "X-Content-Type-Options:[[:space:]]*nosniff" && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "X-Frame-Options:[[:space:]]*DENY" && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "Referrer-Policy:[[:space:]]*strict-origin-when-cross-origin" && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "Permissions-Policy:" && \
+   echo "$AUTH_LOGIN_RESP" | grep -qi "Cross-Origin-Opener-Policy:[[:space:]]*same-origin"; then
+    pass "Endpoint GET /login mengembalikan HTTP 200 dengan CSP bernonce dan header keamanan lengkap"
+else
+    fail "Endpoint GET /login TIDAK mengembalikan HTTP 200 dengan CSP bernonce dan header lengkap"
+fi
+
+# 3. POST /login tanpa CSRF = 419
+NO_CSRF_CODE=$(curl -s -o /dev/null -w "%{http_code}" -d "email=probe@example.com&password=wrongpassword" http://127.0.0.1:8080/login)
+if [ "$NO_CSRF_CODE" = "419" ]; then
+    pass "POST /login tanpa token CSRF ditolak dengan HTTP 419"
+else
+    fail "POST /login tanpa token CSRF TIDAK ditolak dengan HTTP 419 (mengembalikan HTTP $NO_CSRF_CODE)"
+fi
+
+# 4. Cookie sesi HttpOnly + SameSite=Lax
+COOKIE_RESP=$(curl -s -I http://127.0.0.1:8080/login)
+SESSION_COOKIE=$(echo "$COOKIE_RESP" | grep -i "Set-Cookie:" | grep -i "erp-distribusi-session" || true)
+
+if echo "$SESSION_COOKIE" | grep -qi "HttpOnly" && echo "$SESSION_COOKIE" | grep -qi "SameSite=Lax"; then
+    pass "Cookie sesi erp-distribusi-session memiliki atribut HttpOnly dan SameSite=Lax"
+else
+    fail "Cookie sesi erp-distribusi-session TIDAK memiliki HttpOnly atau SameSite=Lax ($SESSION_COOKIE)"
+fi
+
+# 5. 6 percobaan login gagal beruntun menghasilkan 429
+COOKIE_JAR=$(mktemp)
+RANDOM_FAIL_EMAIL="verify_probe_$(date +%s)_$RANDOM@example.com"
+curl -s -c "$COOKIE_JAR" -b "$COOKIE_JAR" http://127.0.0.1:8080/login >/dev/null
+
+LAST_HTTP_CODE=""
+for i in {1..6}; do
+    CSRF_COOKIE_VAL=$(grep "XSRF-TOKEN" "$COOKIE_JAR" | awk '{print $NF}' || true)
+    XSRF_DECODED=$(printf '%b' "${CSRF_COOKIE_VAL//%/\\x}")
+    LAST_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
+        -H "X-XSRF-TOKEN: $XSRF_DECODED" \
+        -H "Accept: application/json" \
+        -d "email=${RANDOM_FAIL_EMAIL}&password=invalid_password_attempt" \
+        http://127.0.0.1:8080/login)
+done
+rm -f "$COOKIE_JAR"
+
+if [ "$LAST_HTTP_CODE" = "429" ]; then
+    pass "Percobaan login gagal beruntun (ke-6) dibatasi laju dan mengembalikan HTTP 429"
+else
+    fail "Percobaan login gagal beruntun ke-6 TIDAK mengembalikan HTTP 429 (mengembalikan HTTP $LAST_HTTP_CODE)"
+fi
+
+# 6. password_algos() memuat argon2id pada FPM dan CLI
+CLI_ARGON=$(docker compose exec php php -r 'echo in_array("argon2id", password_algos()) ? "OK" : "MISSING";' 2>/dev/null || true)
+
+PROBE_AUTH_FILE="/tmp/probe_auth_$$.php"
+docker compose exec php sh -c "cat << 'EOF' > $PROBE_AUTH_FILE
+<?php
+echo in_array('argon2id', password_algos()) ? 'OK' : 'MISSING';
+EOF"
+FPM_ARGON=$(docker compose exec php sh -c "SCRIPT_FILENAME=$PROBE_AUTH_FILE REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000" 2>/dev/null || true)
+docker compose exec php rm -f "$PROBE_AUTH_FILE" 2>/dev/null || true
+
+if [ "$CLI_ARGON" = "OK" ] && echo "$FPM_ARGON" | grep -q "OK"; then
+    pass "password_algos() memuat argon2id pada PHP CLI dan PHP-FPM"
+else
+    fail "password_algos() TIDAK memuat argon2id pada CLI ($CLI_ARGON) atau FPM ($FPM_ARGON)"
+fi
+
+# 7. Tidak ada user dengan email default yang dikenal di database erp_trading
+DEFAULT_USERS_COUNT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT COUNT(*) FROM erp_trading.users
+    WHERE email IN ('admin@example.com', 'admin@erp.local', 'admin@erp.com', 'root@localhost', 'user@example.com', 'test@example.com', 'superadmin@example.com')
+       OR email LIKE '%@example.com';
+" 2>/dev/null | tr -d '[:space:]')
+
+TOTAL_USERS_COUNT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT COUNT(*) FROM erp_trading.users;
+" 2>/dev/null | tr -d '[:space:]')
+
+if [ "$DEFAULT_USERS_COUNT" = "0" ]; then
+    pass "Tidak ada akun pengguna default/dummy di database erp_trading (default=0, total=$TOTAL_USERS_COUNT)"
+else
+    fail "Ditemukan akun pengguna default di database erp_trading (ditemukan $DEFAULT_USERS_COUNT)!"
 fi
 
 # ------------------------------------------------------------------------------
