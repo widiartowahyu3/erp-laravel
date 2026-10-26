@@ -980,6 +980,51 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 17. Verifikasi Anti-Spoofing XFF, Rate Limiting Nginx, & OOM Safety (Revisi Fase 3.1)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 17: Verifikasi Anti-Spoofing XFF, Nginx Zone, & OOM Safety ---"
+
+# 1. Jalankan scripts/probe-login-throttle.sh
+if bash scripts/probe-login-throttle.sh >/dev/null 2>&1; then
+    pass "Probe login throttle anti-spoofing X-Forwarded-For lulus (scripts/probe-login-throttle.sh exit 0)"
+else
+    fail "Probe login throttle anti-spoofing X-Forwarded-For GAGAL"
+fi
+
+# 2. Verifikasi Nginx memuat zona login
+NGINX_CONF=$(docker compose exec web nginx -T 2>/dev/null || true)
+if echo "$NGINX_CONF" | grep -q 'zone=login_limit'; then
+    pass "Nginx memuat definisi zona rate limit login (zone=login_limit)"
+else
+    fail "Nginx TIDAK memuat zona login_limit"
+fi
+
+# 3. Verifikasi status 429 pada Nginx
+if echo "$NGINX_CONF" | grep -q 'limit_req_status 429'; then
+    pass "Nginx dikonfigurasi mengembalikan status 429 saat rate limit terlampaui (limit_req_status 429)"
+else
+    fail "Nginx TIDAK mengonfigurasi limit_req_status 429"
+fi
+
+# 4. Verifikasi tidak ada rentang privat hardcoded di trustProxies
+BOOTSTRAP_APP=$(cat src/bootstrap/app.php)
+CONFIG_APP=$(cat src/config/app.php)
+if echo "$BOOTSTRAP_APP $CONFIG_APP" | grep -Eq '10\.0\.0\.0/8|172\.16\.0\.0/12|192\.168\.0\.0/16'; then
+    fail "Ditemukan rentang privat hardcoded di trustProxies (bootstrap/app.php atau config/app.php)!"
+else
+    pass "Tidak ada rentang IP privat hardcoded di trustProxies (bootstrap/app.php dan config/app.php bersih)"
+fi
+
+# 5. Verifikasi OOMKilled=false pada erp-trading-php
+PHP_OOM=$(docker inspect erp-trading-php --format '{{.State.OOMKilled}}' 2>/dev/null || true)
+if [ "$PHP_OOM" = "false" ]; then
+    pass "Container erp-trading-php tidak pernah terkena OOM-killer (OOMKilled=false)"
+else
+    fail "Container erp-trading-php terdeteksi OOMKilled ($PHP_OOM)!"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
