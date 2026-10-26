@@ -35,6 +35,8 @@ test('env example files are production safe without hardcoded secrets', function
     expect($config['MAIL_MAILER'] ?? '')->toBe('log');
 
     expect($config['DB_PASSWORD'] ?? '')->toBe('change_this_to_erp_app_password');
+    expect($config['HASH_DRIVER'] ?? '')->toBe('argon2id');
+    expect($config['SESSION_ABSOLUTE_LIFETIME'] ?? '')->toBe('480');
 
     expect(array_key_exists('DB_ROOT_PASSWORD', $config))->toBeFalse();
     expect(array_key_exists('DB_MIGRATOR_USERNAME', $config))->toBeFalse();
@@ -47,6 +49,10 @@ test('env example files are production safe without hardcoded secrets', function
 test('session configuration defaults enforce httponly and samesite lax', function () {
     expect(config('session.http_only'))->toBeTrue();
     expect(config('session.same_site'))->toBe('lax');
+});
+
+test('hash driver default is configured to argon2id', function () {
+    expect(config('hashing.driver'))->toBe('argon2id');
 });
 
 test('composer configuration enforces strict dependency isolation and minimal allow plugins', function () {
