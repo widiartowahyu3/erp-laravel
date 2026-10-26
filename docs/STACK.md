@@ -1,6 +1,6 @@
-# Daftar Stack & Versi Image / Tool (Fase 2 - Final)
+# Daftar Stack & Versi Image / Tool (Fase 3 - Final)
 
-Dokumen ini mencatat seluruh image Docker, runtime, framework, dependensi, dan kakas (tools) resmi yang digunakan pada Fase 2. Seluruh versi yang dipilih adalah rilis **STABIL** (General Availability / LTS), bukan versi alpha, beta, Release Candidate (RC), atau rolling release (`latest` dilarang). Seluruh image pihak ketiga dipin menggunakan format `tag@sha256:digest` untuk menjamin reproduktibilitas mutlak dan mencegah supply chain attacks.
+Dokumen ini mencatat seluruh image Docker, runtime, framework, dependensi, dan kakas (tools) resmi yang digunakan pada Fase 3. Seluruh versi yang dipilih adalah rilis **STABIL** (General Availability / LTS), bukan versi alpha, beta, Release Candidate (RC), atau rolling release (`latest` dilarang). Seluruh image pihak ketiga dipin menggunakan format `tag@sha256:digest` untuk menjamin reproduktibilitas mutlak dan mencegah supply chain attacks.
 
 Tanggal Pengecekan & Verifikasi: **2026-10-26**
 
@@ -36,10 +36,10 @@ Tanggal Pengecekan & Verifikasi: **2026-10-26**
 
 | Alat / Paket | Versi Terkunci (Lock) | Kategori | Keterangan & Standar |
 |---|---|---|---|
-| **Pest PHP** | `4.7.8` | Testing Framework | Framework pengujian modern elegan |
-| **Pest Plugin Laravel** | `4.1.0` | Testing Integration | Integrasi helper dan testing assertion Laravel |
+| **Pest PHP** | `5.3.3` | Testing Framework | Framework pengujian modern elegan (seri 5 stabil terbaru) |
+| **Pest Plugin Laravel** | `5.0.1` | Testing Integration | Integrasi helper dan testing assertion Laravel 13 |
 | **Pest Plugin Arch** | `4.0.2` | Architecture Test | Pengujian arsitektur & larangan fungsi berbahaya di `app/` |
-| **PHPUnit** | `12.5.33` | Testing Core | Runner pengujian inti di bawah Pest |
+| **PHPUnit** | `13.4.3` | Testing Core | Runner pengujian inti di bawah Pest (seri 13 stabil terbaru) |
 | **Larastan** | `3.13.2` | Static Analysis | Extension PHPStan untuk Laravel (level 6 strict) |
 | **PHPStan** | `2.3.2` | Static Analysis Engine | Mesin analisis statis kode PHP |
 | **Laravel Pint** | `1.32.1` | Code Formatter | Penegakan standar gaya koding Laravel & PSR-12 |

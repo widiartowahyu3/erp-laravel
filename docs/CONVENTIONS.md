@@ -1,4 +1,4 @@
-# Konvensi Struktur & Standar Koding (Fase 1)
+# Konvensi Struktur & Standar Koding (Fase 3)
 
 Dokumen ini mendefinisikan standar arsitektur kode, tata letak direktori, aturan koding backend PHP/Laravel, komponen frontend Vue 3, serta konvensi kontrol versi Git untuk proyek ERP Distribusi / Trading.
 
@@ -136,3 +136,30 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
    - Soft delete (`deleted_at`) hanya pada data master. Dokumen transaksi dilarang dihapus (menggunakan status `void` + `voided_at`, `voided_by`, `void_reason`).
 6. **Constraint CHECK Eksplisit**: Seluruh validasi nilai kolom status dan rentang numerik diwajibkan menggunakan constraint `CHECK` bernama eksplisit `chk_<tabel>_<nama>` via SQL statis literal.
 7. **Nomor Dokumen**: `varchar(30) UNIQUE`, dikelola bebas celah via tabel `document_sequences`.
+
+---
+
+## 6. Konvensi Autentikasi, Otorisasi RBAC, dan Sesi (Fase 3)
+
+1. **Model Autentikasi**:
+   - Model `App\Models\User` extends `Illuminate\Foundation\Auth\User`, menggunakan `SoftDeletes`.
+   - `$fillable` eksplisit: `['name', 'email', 'password', 'is_active']`.
+   - `$hidden`: `['password', 'remember_token']`.
+   - `$casts`: `password => 'hashed'`, `is_active => 'boolean'`, `last_login_at => 'datetime'`.
+2. **Kredensial & Algoritma Hashing**:
+   - Standar hash wajib `Argon2id` via `config/hashing.php` dan `HASH_DRIVER=argon2id`.
+   - Kebijakan kata sandi akun: minimal 12 karakter, campuran huruf besar, huruf kecil, angka, dan simbol.
+3. **Konvensi Hak Akses (Permissions)**:
+   - Format wajib: `<resource>.<action>` dalam huruf kecil dan *snake_case* (mis. `purchase_orders.approve`, `users.view`).
+   - Modul resmi: `administration`, `master_data`, `purchasing`, `inventory`, `sales`, `finance`, `reporting`.
+4. **Otorisasi & Gate Caching**:
+   - Otorisasi rute wajib menggunakan middleware `can:<permission>` (mis. `middleware(['auth', 'user.active', 'can:users.view'])`).
+   - Evaluasi hak akses menggunakan `Gate::before` terintegrasi dengan in-memory cache pada model `User` (`$permissionNamesCache`) untuk menjamin performa O(1) tanpa query N+1.
+   - Frontend navigation menyembunyikan item yang tidak memiliki izin sesuai `auth.permissions` yang dibagikan oleh `HandleInertiaRequests`.
+5. **Kebijakan Sesi & Keamanan**:
+   - Penyimpanan sesi wajib berbasis database (`SESSION_DRIVER=database`).
+   - Timeout ganda: *Idle timeout* 120 menit dan *Absolute lifetime* 480 menit (8 jam).
+   - Middleware `EnsureUserIsActive` memvalidasi status keaktifan pengguna pada setiap request terautentikasi.
+6. **Audit Peristiwa Keamanan**:
+   - Setiap peristiwa autentikasi dan penolakan hak akses wajib dicatat via `App\Services\Audit\AuditLogger`.
+   - Data sensitif (password, token, raw email) wajib disanitasi secara otomatis sebelum disimpan ke tabel `audit_logs`.

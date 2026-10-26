@@ -188,19 +188,25 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
 
 ## 3. Matriks Ancaman & Mitigasi Keamanan Aplikasi
 
-| Vektor Ancaman | Dampak Potensial | Mekanisme Mitigasi Fase 1 | Verifikasi / Bukti Pengujian |
+| Vektor Ancaman | Dampak Potensial | Mekanisme Mitigasi & Pengamanan | Verifikasi / Bukti Pengujian |
 |---|---|---|---|
-| **Cross-Site Scripting (XSS)** | Pencurian sesi, defacement, manipulasi DOM | Content Security Policy dengan per-request nonce unik, pembatasan script-src tanpa `unsafe-eval`, cookie HttpOnly | `SecurityHeadersTest.php`, `verify-hardening.sh` (Butir 14) |
-| **Cross-Site Request Forgery (CSRF)** | Eksekusi transaksi tanpa otorisasi pengguna | Cookie `SameSite=lax`, token CSRF Laravel (`VerifyCsrfToken`), form-action `'self'` | `ConfigSafetyTest.php`, `verify-hardening.sh` (Butir 14) |
+| **Cross-Site Scripting (XSS)** | Pencurian sesi, defacement, manipulasi DOM | Content Security Policy dengan per-request nonce unik, pembatasan script-src tanpa `unsafe-eval`, cookie HttpOnly, Vue no-v-html | `SecurityHeadersTest.php`, `verify-hardening.sh` (Butir 14), `npm run lint` |
+| **Cross-Site Request Forgery (CSRF)** | Eksekusi transaksi tanpa otorisasi pengguna | Cookie `SameSite=lax`, token CSRF Laravel (`VerifyCsrfToken`), form-action `'self'` | `ConfigSafetyTest.php`, `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
 | **SQL Injection & Schema Tampering** | Kerusakan atau penghapusan skema database | Koneksi default `erp_app` dilarang keras DDL (CREATE/DROP), `DB::prohibitDestructiveCommands()`, PDO prepared statements | `DatabasePrivilegeTest.php`, `verify-hardening.sh` (Butir 8) |
 | **Clickjacking** | Pengguna dijebak mengklik tombol tersembunyi | Header `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'` | `SecurityHeadersTest.php`, `verify-hardening.sh` (Butir 14) |
 | **Information Disclosure** | Pembocoran credential, database path, atau source | Error handler produksi tanpa stack trace, server tokens & PHP headers tersembunyi, Nginx blokir `.env` dan `storage/logs` | `SmokeTest.php`, `verify-hardening.sh` (Butir 5 & 14) |
 | **Remote Code Execution (RCE)** | Pengambilalihan server via fungsi berbahaya | `disable_functions` pada PHP-FPM, Pest Arch test melarang `eval`, `exec`, `system`, dll di `app/` | `SecurityArchTest.php`, `verify-hardening.sh` (Butir 6) |
 | **Supply Chain Attacks** | Pemasangan dependensi berbahaya atau bervulnerabilitas | `roave/security-advisories`, `ignore-scripts=true` pada `.npmrc`, Docker images dipin dengan SHA256 digest | `composer audit`, `npm audit`, `verify-hardening.sh` |
+| **Brute Force & Credential Stuffing** | Pembajakan akun pengguna via pencocokan massal | Rate Limiter database (5 kegagalan/menit per email+IP, percobaan ke-6 HTTP 429), Argon2id memory-hard password hashing | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
+| **Account Enumeration** | Mengidentifikasi akun valid via perbedaan respon error | Pesan error generik `"Email atau kata sandi salah."`, email mentah di-hash SHA-256 pada audit log | `AuthenticationTest.php`, `AuditLogTest.php` |
+| **Session Hijacking & Fixation** | Pencurian cookie sesi aktif atau penyusupan session ID | Regenerasi ID sesi saat login, `HttpOnly`, `SameSite=Lax`, idle timeout 120 menit, absolute session lifetime 480 menit | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
+| **Privilege Escalation** | Pengguna mengakses modul atau data di luar haknya | Otorisasi RBAC via database (98 permission, 7 system roles), `Gate::before`, in-memory permission caching, middleware `can:<permission>` | `AuthorizationTest.php` |
+| **Inactive User Access** | Pengguna yang dinonaktifkan tetap menggunakan sesi lama | Middleware `EnsureUserIsActive` memaksa logout pengguna non-aktif pada setiap request berikutnya | `AuthenticationTest.php` |
+| **Credential Leakage in Logs** | Kata sandi atau token sensitif tersimpan di riwayat audit | Sanitasi rekursif regex `/password\|token\|secret\|key/i` pada `AuditLogger` | `AuditLogTest.php` |
 
 ---
 
-## 4. Checklist Review Arsitek / Pengawas (Fase 1)
+## 4. Checklist Review Arsitek / Pengawas (Fase 3)
 
 - [x] Repositori bersih dari file `.env`, berkas rahasia `secrets/`, file `.key`, dan private key (`git ls-files`).
 - [x] Hook `pre-commit` (Gitleaks terpin + filter rahasia) dan `commit-msg` (Conventional Commits) aktif dan executable.
@@ -208,11 +214,20 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
 - [x] Seluruh file PHP baru menerapkan `declare(strict_types=1);`.
 - [x] `Model::shouldBeStrict()`, `Date::use(CarbonImmutable::class)`, `DB::prohibitDestructiveCommands()`, dan `Vite::useCspNonce()` terkonfigurasi di `AppServiceProvider`.
 - [x] Middleware `SecurityHeaders` aktif di web group dengan per-request nonce CSP dan seluruh header keamanan wajib.
-- [x] Font Inter di-self-host dari paket `@fontsource-variable/inter` tanpa ketergantungan CDN eksternal.
-- [x] Layout dasar `AppLayout.vue` responsif (desktop collapsible sidebar, mobile drawer, WCAG AA, focus-visible) dan `Dashboard.vue` beroperasi normal.
-- [x] Seluruh tes otomatis Pest (Unit, Feature, Arch) menggunakan MariaDB nyata lulus 100% (`make test`).
+- [x] Model `User`, `Role`, `Permission` terkonfigurasi dengan relasi Many-to-Many (`role_user`, `permission_role`).
+- [x] Katalog 98 permission dan 7 peran sistem terpasang idempoten via `PermissionSeeder` dan `RoleSeeder`.
+- [x] Hashing Argon2id terverifikasi pada PHP-FPM dan PHP-CLI (`password_algos()`).
+- [x] Rate limiting login berbasis database (5 percobaan/menit, percobaan ke-6 HTTP 429).
+- [x] Session timeouts terpasang: idle 120 menit dan absolute lifetime 480 menit (`EnforceSessionTimeouts`).
+- [x] Otorisasi `Gate::before` terintegrasi in-memory caching pada model `User` bebas dari issue N+1 query.
+- [x] Layanan `AuditLogger` mencatat peristiwa keamanan secara aman ke tabel `audit_logs` (*append-only*).
+- [x] Halaman login (`Login.vue`) dan ganti kata sandi (`Password.vue`) mematuhi CSP, bebas inline style/script, WCAG AA.
+- [x] Perintah Artisan aman: `erp:admin:create`, `erp:user:reset-password`, `erp:user:set-active`, `erp:permissions:sync`.
+- [x] Seluruh tes otomatis Pest (120 tests / 1275 assertions) lulus 100% (`make test`).
 - [x] Static analysis Larastan level 6 lulus 0 error (`make analyse`).
 - [x] Pengecekan gaya kode Pint lulus 0 pelanggaran (`make lint`).
 - [x] Linting frontend ESLint lulus 0 error (`docker compose --profile tools run --rm node npm run lint`).
 - [x] Audit dependensi Composer dan NPM bersih dari celah keamanan (0 vulnerabilities).
-- [x] Skrip verifikasi keamanan `make verify` lulus 100% (89 PASS / 0 FAIL).
+- [x] Skrip verifikasi keamanan `make verify` lulus 100% (110 PASS / 0 FAIL).
+- [x] Font Inter di-self-host dari paket `@fontsource-variable/inter` tanpa ketergantungan CDN eksternal.
+- [x] Layout dasar `AppLayout.vue` responsif (desktop collapsible sidebar, mobile drawer, WCAG AA, focus-visible) dan `Dashboard.vue` beroperasi normal.

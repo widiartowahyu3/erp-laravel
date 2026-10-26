@@ -4,27 +4,33 @@ Repositori sistem ERP untuk operasional distribusi dan trading berbasis monoliti
 
 ---
 
-## Status Fase: Fase 1 - Baseline Fondasi & Keamanan Aplikasi (SELESAI & LULUS VERIFIKASI)
+## Status Fase: Fase 3 - Autentikasi, Otorisasi RBAC, Audit Logging, & Sesi Hardened (SELESAI & LULUS VERIFIKASI)
 
-Fase 1 telah selesai mengimplementasikan fondasi skeleton aplikasi yang aman, teruji, dan siap pakai di atas infrastruktur Docker hardened Fase 0:
-- **Backend Framework**: Laravel 13 (PHP 8.5 FPM unprivileged container), `declare(strict_types=1)`, `Model::shouldBeStrict()`, `Date::use(CarbonImmutable::class)`.
-- **Database Relasional**: MariaDB 12.3 LTS dengan isolasi hak akses role aplikasi:
-  - `mariadb` (`erp_app`): DML strictly (SELECT, INSERT, UPDATE, DELETE). Dilarang keras DDL di runtime.
-  - `mariadb_migrator` (`erp_migrator`): DDL untuk menjalankan migrasi skema tabel via `make migrate`.
-  - Bersih 100% dari jejak SQLite.
-- **Frontend Modern**: Vue 3 + Inertia.js v2/v3 + Tailwind CSS v4 (menggunakan `@theme` token sistem desain), Lucide Icons, dan font Inter Variable self-hosted (tanpa Google Fonts/CDN eksternal).
-- **Keamanan Aplikasi**:
-  - Middleware `SecurityHeaders`: CSP ketat dengan per-request nonce sinkron dengan Vite (`Vite::useCspNonce()`), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `COOP`, serta `HSTS` & `upgrade-insecure-requests` otomatis di production.
-  - Sesi aman terenkripsi dengan atribut `HttpOnly` dan `SameSite=lax`.
-  - Penanganan error bersih tanpa membocorkan stack trace, query database, maupun environment di production.
-  - Trusted proxies terkonfigurasi untuk reverse proxy Docker internal.
-- **Tooling Kualitas & Pengujian Otomatis**:
-  - Pest PHP: Suite pengujian fungsional database nyata (MariaDB), security headers, config safety, privilege denial DDL, dan architectural tests pelarangan fungsi berbahaya (`eval`, `exec`, `dd`, dsb).
-  - Larastan Level 6: Analisis statis tanpa error.
-  - Laravel Pint: Standar gaya koding strict PSR-12/Laravel.
-  - ESLint & Prettier: Linting dan formatting komponen Vue 3.
-  - Audit dependensi: 0 vulnerabilities pada `composer audit` dan `npm audit`.
-  - Suite verifikasi hardening: **89 PASS / 0 FAIL** (`make verify`).
+Fase 3 telah selesai mengimplementasikan sistem autentikasi, otorisasi peran (RBAC), audit logging keamanan, dan manajemen sesi yang aman di atas stack monolitik Laravel 13 + Vue 3:
+- **Autentikasi Native Terproteksi**:
+  - Hashing kata sandi berbasis Argon2id (`HASH_DRIVER=argon2id`).
+  - Halaman login (`/login`) dan ganti kata sandi (`/account/password`) reaktif dengan Inertia Vue 3.
+  - Pembatasan laju (Rate Limiting) berbasis database (5 percobaan gagal/menit per email+IP, percobaan ke-6 HTTP 429).
+  - Pesan kesalahan seragam untuk mencegah *account enumeration*.
+- **Otorisasi Granular RBAC**:
+  - Matriks hak akses lengkap: tepat 98 permissions dan 7 system roles (`super_admin`, `admin`, `purchasing`, `warehouse`, `sales`, `finance`, `viewer`).
+  - Evaluasi hak akses via `Gate::before` terintegrasi in-memory caching pada model `User` bebas masalah N+1 query.
+  - Menu navigasi dinamis yang memfilter tautan berdasarkan hak akses pengguna secara otomatis.
+- **Audit Logging Keamanan Persisten**:
+  - Layanan `AuditLogger` mencatat peristiwa `auth.login.success`, `auth.login.failed`, `auth.logout.success`, `auth.session.expired`, `auth.user.deactivated`, `auth.password.changed`, dan `access.denied` (403).
+  - Sanitasi rekursif data rahasia (`/password|token|secret|key/i`) dan hashing SHA-256 pada raw email.
+  - Tabel `audit_logs` dilindungi trigger MariaDB integritas *append-only*.
+- **Hardening Sesi**:
+  - Penyimpanan sesi di database, atribut cookie `HttpOnly` dan `SameSite=lax`.
+  - *Idle timeout* 120 menit dan *Absolute lifetime* 480 menit (8 jam).
+  - Middleware `EnsureUserIsActive` memaksa logout seketika jika akun dinonaktifkan di tengah sesi aktif.
+- **Suite Pengujian & Verifikasi**:
+  - Pest test suite: **120 tests / 1275 assertions** lulus 100%.
+  - Larastan Level 6: 0 error.
+  - Laravel Pint: 0 pelanggaran.
+  - ESLint & Prettier: 0 error.
+  - Audit dependensi: 0 vulnerabilities (`composer audit` & `npm audit`).
+  - Suite verifikasi hardening: **110 PASS / 0 FAIL** (`make verify`).
 
 ---
 
@@ -80,6 +86,12 @@ make artisan cmd="key:generate"
 # Jalankan migrasi basis data menggunakan koneksi terisolasi erp_migrator
 make migrate
 
+# Jalankan seeder permission dan peran sistem
+make seed
+
+# Buat akun Super Administrator pertama secara interaktif
+make artisan cmd="erp:admin:create"
+
 # Bangun aset frontend
 docker compose --profile tools run --rm node npm run build
 ```
@@ -92,6 +104,7 @@ make npm cmd="run dev"
 
 Akses aplikasi pada peramban:
 - **Aplikasi Web**: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+- **Halaman Login**: [http://127.0.0.1:8080/login](http://127.0.0.1:8080/login)
 - **Vite Dev Server (HMR)**: [http://127.0.0.1:5174](http://127.0.0.1:5174)
 - **Healthcheck Endpoint**: [http://127.0.0.1:8080/up](http://127.0.0.1:8080/up)
 
@@ -117,7 +130,7 @@ make analyse
 # Menjalankan linting frontend Vue/JS (ESLint)
 docker compose --profile tools run --rm node npm run lint
 
-# Menjalankan skrip verifikasi keamanan & hardening (89 butir uji)
+# Menjalankan skrip verifikasi keamanan & hardening (110 butir uji)
 make verify
 ```
 
@@ -126,6 +139,7 @@ make verify
 ## Dokumentasi Teknis
 
 - [Daftar Stack & Matriks Versi Final](docs/STACK.md)
+- [Arsitektur Autentikasi, RBAC, & Audit](docs/AUTH.md)
 - [Arsitektur Monolith & Alur Sistem](docs/ARCHITECTURE.md)
 - [Konvensi Struktur & Standar Koding](docs/CONVENTIONS.md)
 - [Kebijakan Keamanan & Matriks Mitigasi](docs/SECURITY.md)
