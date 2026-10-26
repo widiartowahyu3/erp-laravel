@@ -35,8 +35,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return array_values(array_filter($hosts));
         });
 
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->appendToGroup('web', [
-            SecurityHeaders::class,
             HandleInertiaRequests::class,
         ]);
     })

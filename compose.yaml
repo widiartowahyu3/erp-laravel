@@ -139,8 +139,10 @@ services:
     volumes:
       - ./src:/var/www/html
       - npm_cache:/home/node/.npm
+    environment:
+      VITE_PORT: ${VITE_PORT:-5174}
     ports:
-      - "127.0.0.1:${VITE_PORT:-5173}:5173"
+      - "127.0.0.1:${VITE_PORT:-5174}:5173"
     networks:
       - frontend
     pids_limit: 200

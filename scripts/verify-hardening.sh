@@ -515,12 +515,26 @@ docker compose exec -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_M
     DROP TABLE IF EXISTS erp_trading.probe_migrator;
 " >/dev/null 2>&1 || true
 
-# erp_app tidak punya FILE privilege
+# erp_app tidak punya FILE privilege dan hanya DML
 GRANTS_APP=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SHOW GRANTS FOR '${DB_APP_USERNAME}'@'%';" 2>/dev/null || true)
-if echo "$GRANTS_APP" | grep -i "FILE" >/dev/null; then
-    fail "erp_app memiliki FILE privilege yang dilarang"
+if echo "$GRANTS_APP" | grep -qiE "FILE|SUPER|PROCESS|GRANT OPTION|TRIGGER|CREATE|DROP|ALTER"; then
+    fail "erp_app memiliki privilege terlarang (harus strictly DML)"
 else
-    pass "erp_app TIDAK memiliki FILE privilege"
+    pass "erp_app strictly DML dan TIDAK memiliki privilege FILE, SUPER, PROCESS, TRIGGER, atau DDL"
+fi
+
+# erp_migrator memiliki TRIGGER dan tidak memiliki SUPER, FILE, PROCESS, GRANT OPTION
+GRANTS_MIGRATOR=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SHOW GRANTS FOR '${DB_MIGRATOR_USERNAME}'@'%';" 2>/dev/null || true)
+if echo "$GRANTS_MIGRATOR" | grep -qi "TRIGGER"; then
+    pass "erp_migrator memiliki hak TRIGGER pada database"
+else
+    fail "erp_migrator TIDAK memiliki hak TRIGGER"
+fi
+
+if echo "$GRANTS_MIGRATOR" | grep -qiE "SUPER|FILE|PROCESS|GRANT OPTION"; then
+    fail "erp_migrator memiliki privilege terlarang (SUPER/FILE/PROCESS/GRANT OPTION)"
+else
+    pass "erp_migrator TIDAK memuat privilege SUPER, FILE, PROCESS, atau GRANT OPTION"
 fi
 
 # Isolasi network: db tidak terhubung ke frontend
@@ -730,6 +744,25 @@ if echo "$NOT_FOUND_RESP" | grep -qiE "Stack trace|/var/www/html"; then
     fail "Halaman 404 membocorkan Stack trace atau path internal sistem (/var/www/html)!"
 else
     pass "Halaman 404 aman dan tidak membocorkan Stack trace atau path internal"
+fi
+
+# Header keamanan pada respons 404 (F1 & F2)
+NOT_FOUND_HEADERS=$(curl -s -I http://127.0.0.1:8080/halaman-tidak-ada)
+if echo "$NOT_FOUND_HEADERS" | grep -qi "Content-Security-Policy" && \
+   echo "$NOT_FOUND_HEADERS" | grep -qi "X-Content-Type-Options:[[:space:]]*nosniff" && \
+   echo "$NOT_FOUND_HEADERS" | grep -qi "X-Frame-Options:[[:space:]]*DENY" && \
+   echo "$NOT_FOUND_HEADERS" | grep -qi "Referrer-Policy:[[:space:]]*strict-origin-when-cross-origin" && \
+   echo "$NOT_FOUND_HEADERS" | grep -qi "Permissions-Policy:" && \
+   echo "$NOT_FOUND_HEADERS" | grep -qi "Cross-Origin-Opener-Policy:[[:space:]]*same-origin"; then
+    pass "Header keamanan lengkap hadir pada respons 404 (CSP, nosniff, DENY, Referrer, Permissions, COOP)"
+else
+    fail "Respons 404 TIDAK memuat seluruh header keamanan global wajib"
+fi
+
+if echo "$NOT_FOUND_RESP" | grep -qiE "<style|style="; then
+    fail "Halaman 404 memuat tag <style> atau atribut style= inline!"
+else
+    pass "Halaman 404 bebas dari tag <style> dan atribut style= inline (menggunakan static error.css)"
 fi
 
 ABOUT_PROD_OUTPUT=$(docker compose run --rm -e APP_ENV=production php php artisan about --only=environment 2>&1)

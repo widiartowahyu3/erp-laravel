@@ -130,13 +130,23 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
 - Di lingkungan production, penanganan error (`bootstrap/app.php`) mencegat status code 403, 404, 419, 429, 500, dan 503.
 - Mengembalikan respons JSON bersih untuk permintaan API/Inertia atau tampilan Blade minimalis tanpa pernah membocorkan stack trace, query SQL, atau path sistem internal.
 
-### F. Aturan Arsitektur Pest (Pest Arch Rules)
-Pengujian arsitektur `tests/Arch/SecurityArchTest.php` secara otomatis melarang fungsi-fungsi berbahaya di dalam kode `app/`:
-- Fungsi eksekusi kode dinamis: `eval`, `create_function`, `extract`, `unserialize`, `assert`.
-- Fungsi eksekusi command shell: `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`.
-- Fungsi debug logging tidak sengaja: `dd`, `dump`, `var_dump`.
+### F. Pengujian Statis Keamanan & Aturan Arsitektur Pest (Pest Arch Rules)
+Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
+1. **Pest Arch Rules (`tests/Arch/SecurityArchTest.php`):**
+   - Melarang fungsi berbahaya di dalam kode `app/`: `eval`, `create_function`, `extract`, `unserialize`, `assert`, `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`, `dd`, `dump`, `var_dump`.
+   - Melarang fasad atau komponen proses eksekusi OS: `Illuminate\Support\Facades\Process` dan `Symfony\Component\Process\Process`.
+2. **Scanner Token Statis (`tests/Feature/StaticSecurityScanTest.php`):**
+   - Memindai seluruh berkas PHP pada direktori `app/`, `routes/`, `database/`, `config/`, dan `bootstrap/` menggunakan fungsi bawaan `token_get_all`.
+   - Mendeteksi pemanggilan fungsi global berbahaya (bukan pemanggilan method yang sah), operator eksekusi backtick (`` `...` ``), dan konstruksi bahasa `eval`.
+   - Mendeteksi pemanggilan raw SQL (`DB::raw`, `whereRaw`, `selectRaw`, `orderByRaw`, `havingRaw`, `groupByRaw`, `fromRaw`, `DB::unprepared`, `DB::statement`) yang argumen pertamanya BUKAN string literal statis murni (mendeteksi konkatenasi, variabel, maupun interpolasi string).
+   - Diuji secara reguler dengan tes negatif (fixtures) untuk membuktikan scanner tidak memberikan hasil lolos palsu (*false negatives*).
+   - **Keterbatasan Scanner:** Scanner statis berbasis token ini menganalisis kode pada level leksikal tanpa inferensi data-flow dinamis atau *taint analysis*. Pola berbahaya yang disamarkan melalui variable function (misalnya `$func = 'sys'.'tem'; $func(...)`), `call_user_func`, eksekusi via Reflection, atau deserialisasi dinamis tidak dapat dicegat sepenuhnya oleh scanner token. Karena itu, scanner ini berfungsi sebagai lini pertahanan statis (*defense-in-depth*) yang diperkuat oleh pembatasan runtime di PHP-FPM (`disable_functions`), isolasi container Linux non-root, `read_only: true`, dan `cap_drop: ALL`.
 
-### G. Pengelolaan Dependensi Aman & Self-Hosted Assets
+### G. Penanganan Error & Halaman Respons Statis
+- Seluruh header keamanan (`SecurityHeaders`) didaftarkan sebagai middleware global (`$middleware->append(SecurityHeaders::class)`), memastikan respons route yang tidak ditemukan (404) dan exception sistem lainnya tetap membawa header keamanan lengkap (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP).
+- Berkas template error `resources/views/errors/minimal.blade.php` tidak memuat tag `<style>` inline maupun atribut `style=`. Seluruh styling dipindahkan ke berkas statis `public/error.css` yang dilayani langsung oleh web server Nginx dari origin `'self'` tanpa ketergantungan pada manifest Vite.
+
+### H. Pengelolaan Dependensi Aman & Self-Hosted Assets
 - Dependensi Composer dilindungi oleh `roave/security-advisories:dev-latest`.
 - Audit otomatis `composer audit` dan `npm audit` 100% bebas kerentanan (0 vulnerabilities).
 - Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.

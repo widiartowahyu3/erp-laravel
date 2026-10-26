@@ -91,3 +91,26 @@ test('no csp directive mixes unsafe-inline and nonce in any environment', functi
     'testing',
     'production',
 ]);
+
+test('404 not found responses include all global security headers', function () {
+    $response = $this->get('/non-existent-route-for-security-check');
+
+    $response->assertStatus(404);
+    $response->assertHeader('X-Content-Type-Options', 'nosniff');
+    $response->assertHeader('X-Frame-Options', 'DENY');
+    $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    $response->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    $response->assertHeader('Content-Security-Policy');
+});
+
+test('404 error page body contains no inline style tags or attributes', function () {
+    $response = $this->get('/non-existent-route-for-style-check');
+
+    $response->assertStatus(404);
+    $content = $response->getContent();
+
+    expect($content)->not->toContain('<style');
+    expect($content)->not->toContain('style="');
+    expect($content)->toContain('/error.css');
+});
