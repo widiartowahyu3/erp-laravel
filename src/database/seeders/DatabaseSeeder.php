@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             PaymentTermSeeder::class,
             TaxRateSeeder::class,
             ChartOfAccountSeeder::class,
+            PermissionSeeder::class,
+            RoleSeeder::class,
         ]);
     }
 }
