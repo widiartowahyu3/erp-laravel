@@ -811,6 +811,67 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 15. Verifikasi Skema Domain & Trigger Integritas (Fase 2)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 15: Verifikasi Skema Domain & Trigger Integritas (Fase 2) ---"
+
+# 1. Jumlah tabel domain = 37
+DOMAIN_TABLES_COUNT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT COUNT(*) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = 'erp_trading'
+      AND TABLE_TYPE = 'BASE TABLE'
+      AND TABLE_NAME NOT IN ('migrations', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs', 'sessions', 'probe_migrator');
+" 2>/dev/null | tr -d '[:space:]')
+
+if [ "$DOMAIN_TABLES_COUNT" = "37" ]; then
+    pass "Jumlah tabel domain ERP Distribusi/Trading tepat 37 tabel (ditemukan $DOMAIN_TABLES_COUNT)"
+else
+    fail "Jumlah tabel domain TIDAK tepat 37 tabel (ditemukan $DOMAIN_TABLES_COUNT)!"
+fi
+
+# 2. Distribusi aturan FK
+FK_RULES=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT DELETE_RULE, COUNT(*)
+    FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = 'erp_trading'
+    GROUP BY DELETE_RULE
+    ORDER BY DELETE_RULE;
+" 2>/dev/null)
+
+CASCADE_COUNT=$(echo "$FK_RULES" | awk '$1=="CASCADE" {print $2}')
+RESTRICT_COUNT=$(echo "$FK_RULES" | awk '$1=="RESTRICT" {print $2}')
+OTHER_FK_RULES=$(echo "$FK_RULES" | grep -vE "^(CASCADE|RESTRICT)" || true)
+
+NON_PIVOT_CASCADE=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT CONSTRAINT_NAME
+    FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = 'erp_trading'
+      AND DELETE_RULE = 'CASCADE'
+      AND TABLE_NAME NOT IN ('role_user', 'permission_role');
+" 2>/dev/null | tr -d '[:space:]')
+
+if [ "$CASCADE_COUNT" = "4" ] && [ -z "$NON_PIVOT_CASCADE" ] && [ -n "$RESTRICT_COUNT" ] && [ "$RESTRICT_COUNT" -gt 0 ] && [ -z "$OTHER_FK_RULES" ]; then
+    pass "Distribusi Foreign Key valid: CASCADE=4 (2 di role_user, 2 di permission_role), RESTRICT=$RESTRICT_COUNT, tanpa rule lain"
+else
+    fail "Distribusi aturan Foreign Key TIDAK valid! (CASCADE: $CASCADE_COUNT, RESTRICT: $RESTRICT_COUNT, Non-pivot CASCADE: $NON_PIVOT_CASCADE, Other: $OTHER_FK_RULES)"
+fi
+
+# 3. Keberadaan trigger pada audit_logs dan stock_movements
+TRIGGERS_OUTPUT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = 'erp_trading';
+" 2>/dev/null)
+
+if echo "$TRIGGERS_OUTPUT" | grep -q "tr_audit_logs_before_update" && \
+   echo "$TRIGGERS_OUTPUT" | grep -q "tr_audit_logs_before_delete" && \
+   echo "$TRIGGERS_OUTPUT" | grep -q "tr_stock_movements_before_update" && \
+   echo "$TRIGGERS_OUTPUT" | grep -q "tr_stock_movements_before_delete"; then
+    pass "Trigger integritas append-only (BEFORE UPDATE & BEFORE DELETE) hadir pada audit_logs dan stock_movements"
+else
+    fail "Trigger integritas append-only TIDAK lengkap pada audit_logs dan stock_movements!"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
