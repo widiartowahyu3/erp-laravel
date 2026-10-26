@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -32,5 +34,13 @@ class AppServiceProvider extends ServiceProvider
         URL::forceHttps($this->app->isProduction());
         Date::use(CarbonImmutable::class);
         Vite::useCspNonce();
+
+        Gate::before(function ($user, string $ability): ?true {
+            if ($user instanceof User && $user->hasPermission($ability)) {
+                return true;
+            }
+
+            return null;
+        });
     }
 }
