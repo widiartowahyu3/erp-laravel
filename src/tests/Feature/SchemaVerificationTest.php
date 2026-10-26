@@ -234,3 +234,34 @@ test('seeders are idempotent and COA hierarchy is structurally balanced', functi
         expect((bool) $header->is_postable)->toBeFalse("Header account [{$header->code}] must not be postable");
     }
 });
+
+test('index parity is strictly enforced between sales_invoices and purchase_invoices', function () {
+    $database = DB::connection()->getDatabaseName();
+
+    $indexes = DB::select('
+        SELECT TABLE_NAME, INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns
+        FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = ?
+          AND TABLE_NAME IN (\'sales_invoices\', \'purchase_invoices\')
+        GROUP BY TABLE_NAME, INDEX_NAME
+    ', [$database]);
+
+    $grouped = [];
+    foreach ($indexes as $idx) {
+        $grouped[$idx->TABLE_NAME][$idx->INDEX_NAME] = $idx->columns;
+    }
+
+    // 1. Verify sales_invoices has party+status and due_date indexes
+    expect($grouped['sales_invoices'])->toHaveKey('sales_invoices_customer_id_status_index');
+    expect($grouped['sales_invoices']['sales_invoices_customer_id_status_index'])->toBe('customer_id,status');
+
+    expect($grouped['sales_invoices'])->toHaveKey('sales_invoices_due_date_index');
+    expect($grouped['sales_invoices']['sales_invoices_due_date_index'])->toBe('due_date');
+
+    // 2. Verify purchase_invoices has party+status and due_date indexes
+    expect($grouped['purchase_invoices'])->toHaveKey('purchase_invoices_supplier_id_status_index');
+    expect($grouped['purchase_invoices']['purchase_invoices_supplier_id_status_index'])->toBe('supplier_id,status');
+
+    expect($grouped['purchase_invoices'])->toHaveKey('purchase_invoices_due_date_index');
+    expect($grouped['purchase_invoices']['purchase_invoices_due_date_index'])->toBe('due_date');
+});

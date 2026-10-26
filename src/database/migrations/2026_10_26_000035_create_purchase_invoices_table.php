@@ -40,6 +40,8 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->restrictOnDelete()->restrictOnUpdate();
 
             $table->unique(['supplier_id', 'supplier_invoice_number']);
+            $table->index(['supplier_id', 'status']);
+            $table->index('due_date');
         });
 
         DB::statement("ALTER TABLE purchase_invoices ADD CONSTRAINT chk_purchase_invoices_status CHECK (status IN ('draft', 'posted', 'partially_paid', 'paid', 'void'))");
