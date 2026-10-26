@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Exceptions\TooManyAttemptsException;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Services\Audit\AuditLogger;
@@ -10,7 +11,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -44,8 +44,8 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
-            if ($e instanceof ValidationException && $e->status === 429) {
-                return $response->setStatusCode(429);
+            if ($e instanceof TooManyAttemptsException) {
+                return $response;
             }
 
             $status = $response->getStatusCode();

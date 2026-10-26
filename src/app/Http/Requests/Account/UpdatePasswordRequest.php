@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Account;
 
+use App\Exceptions\TooManyAttemptsException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 class UpdatePasswordRequest extends FormRequest
@@ -73,9 +73,12 @@ class UpdatePasswordRequest extends FormRequest
             if (RateLimiter::tooManyAttempts($userKey, 5) || RateLimiter::tooManyAttempts($ipKey, 20)) {
                 $seconds = max(RateLimiter::availableIn($userKey), RateLimiter::availableIn($ipKey));
 
-                throw ValidationException::withMessages([
-                    'current_password' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
-                ])->status(429);
+                throw new TooManyAttemptsException(
+                    key: $userKey,
+                    seconds: $seconds,
+                    field: 'current_password',
+                    message: "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik."
+                );
             }
 
             $currentPassword = (string) $this->input('current_password');

@@ -59,6 +59,18 @@ function submit() {
                 </div>
             </div>
 
+            <!-- Rate Limit Alert Banner -->
+            <div
+                v-if="form.errors.current_password && form.errors.current_password.includes('Terlalu banyak percobaan')"
+                class="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3"
+                role="alert"
+            >
+                <AlertCircle class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
+                <div class="text-sm font-medium">
+                    {{ form.errors.current_password }}
+                </div>
+            </div>
+
             <!-- Form Card -->
             <div class="bg-white border border-slate-200 rounded-xl shadow-xs p-6 sm:p-8">
                 <form class="space-y-5" novalidate @submit.prevent="submit">

@@ -142,8 +142,7 @@ test('rate limiting throttles after 5 consecutive failures and resets after succ
         'password' => 'WrongPassword123',
     ]);
     $response->assertStatus(429);
-    $response->assertSessionHasErrors('email');
-    expect(session('errors')->first('email'))->toContain('Terlalu banyak percobaan');
+    $response->assertHeader('Retry-After');
 
     // Reset limiter and login with valid user
     RateLimiter::clear("login|{$email}|{$ip}");
@@ -195,7 +194,7 @@ test('login rate limiting cannot be bypassed with rotating x-forwarded-for heade
         ]);
 
     $response->assertStatus(429);
-    $response->assertSessionHasErrors('email');
+    $response->assertHeader('Retry-After');
 });
 
 test('GET logout returns 405 Method Not Allowed', function () {
@@ -364,8 +363,7 @@ test('current password verification throttles after 5 consecutive failures', fun
         'password_confirmation' => 'New#SecurePass123',
     ]);
     $resThrottled->assertStatus(429);
-    $resThrottled->assertSessionHasErrors('current_password');
-    expect(session('errors')->first('current_password'))->toContain('Terlalu banyak percobaan');
+    $resThrottled->assertHeader('Retry-After');
 });
 
 test('current password throttling is isolated between users', function () {
@@ -442,4 +440,89 @@ test('successful password change resets current password failure counter', funct
     $resFailAgain->assertRedirect('/account/password');
     $resFailAgain->assertSessionHasErrors('current_password');
     expect(session('errors')->first('current_password'))->toBe('Kata sandi saat ini tidak sesuai.');
+});
+
+test('inertia login requests when throttled return redirect 303 with session errors', function () {
+    $email = fake()->unique()->safeEmail();
+    $ip = '127.0.0.1';
+    RateLimiter::clear("login|{$email}|{$ip}");
+
+    for ($i = 0; $i < 5; $i++) {
+        $this->withHeader('X-Inertia', 'true')
+            ->from('/login')
+            ->post('/login', [
+                'email' => $email,
+                'password' => 'WrongPassword123',
+            ]);
+    }
+
+    // 6th attempt with X-Inertia header must return 303 redirect with session error, NOT raw 429
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->from('/login')
+        ->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPassword123',
+        ]);
+
+    $response->assertStatus(303);
+    $response->assertRedirect('/login');
+    $response->assertSessionHasErrors('email');
+    expect(session('errors')->first('email'))->toContain('Terlalu banyak percobaan');
+});
+
+test('inertia password update when throttled returns redirect 303 with session error', function () {
+    $user = User::factory()->create([
+        'password' => 'Current#Pass123',
+    ]);
+
+    RateLimiter::clear("pwd_fail_user|{$user->id}");
+    RateLimiter::clear('pwd_fail_ip|127.0.0.1');
+
+    for ($i = 0; $i < 5; $i++) {
+        $this->withHeader('X-Inertia', 'true')
+            ->actingAs($user)
+            ->from('/account/password')
+            ->put('/account/password', [
+                'current_password' => 'WrongCurrentPass',
+                'password' => 'New#ValidPass123',
+                'password_confirmation' => 'New#ValidPass123',
+            ]);
+    }
+
+    // 6th attempt with X-Inertia header must return 303 redirect with session error on current_password
+    $response = $this->withHeader('X-Inertia', 'true')
+        ->actingAs($user)
+        ->from('/account/password')
+        ->put('/account/password', [
+            'current_password' => 'Current#Pass123',
+            'password' => 'New#ValidPass123',
+            'password_confirmation' => 'New#ValidPass123',
+        ]);
+
+    $response->assertStatus(303);
+    $response->assertRedirect('/account/password');
+    $response->assertSessionHasErrors('current_password');
+    expect(session('errors')->first('current_password'))->toContain('Terlalu banyak percobaan');
+});
+
+test('non-inertia and json requests when throttled return 429 with retry-after header', function () {
+    $email = fake()->unique()->safeEmail();
+    $ip = '127.0.0.1';
+    RateLimiter::clear("login|{$email}|{$ip}");
+
+    for ($i = 0; $i < 5; $i++) {
+        $this->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPassword123',
+        ]);
+    }
+
+    $response = $this->postJson('/login', [
+        'email' => $email,
+        'password' => 'WrongPassword123',
+    ]);
+
+    $response->assertStatus(429);
+    $response->assertHeader('Retry-After');
+    $response->assertJsonStructure(['message', 'errors' => ['email']]);
 });

@@ -35,6 +35,18 @@ function submit() {
             </p>
         </div>
 
+        <!-- Rate Limit Alert Banner -->
+        <div
+            v-if="form.errors.email && form.errors.email.includes('Terlalu banyak percobaan')"
+            class="mb-4 p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2.5"
+            role="alert"
+        >
+            <AlertCircle class="w-4 h-4 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div class="text-xs sm:text-sm font-medium">
+                {{ form.errors.email }}
+            </div>
+        </div>
+
         <form class="space-y-4" novalidate @submit.prevent="submit">
             <!-- Field: Email -->
             <div>

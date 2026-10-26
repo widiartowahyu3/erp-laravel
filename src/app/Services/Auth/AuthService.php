@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Auth;
 
+use App\Exceptions\TooManyAttemptsException;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
@@ -46,9 +47,12 @@ final class AuthService
                 ]
             );
 
-            throw ValidationException::withMessages([
-                'email' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
-            ])->status(429);
+            throw new TooManyAttemptsException(
+                key: $emailIpKey,
+                seconds: $seconds,
+                field: 'email',
+                message: "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik."
+            );
         }
 
         // 2. Query user (including soft deleted to differentiate audit without exposing info to user)
@@ -139,9 +143,12 @@ final class AuthService
         if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
             $seconds = RateLimiter::availableIn($rateLimitKey);
 
-            throw ValidationException::withMessages([
-                'password' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
-            ])->status(429);
+            throw new TooManyAttemptsException(
+                key: $rateLimitKey,
+                seconds: $seconds,
+                field: 'password',
+                message: "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik."
+            );
         }
 
         RateLimiter::hit($rateLimitKey, 60);
