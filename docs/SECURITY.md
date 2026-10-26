@@ -150,6 +150,12 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 1. **Pemisahan Hak Akses Database (Least Privilege Principle):**
    - User aplikasi (`erp_app`) strictly berhak hanya pada operasi DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Dilarang keras memiliki hak DDL (`CREATE`, `DROP`, `ALTER`), hak administratif (`SUPER`, `PROCESS`, `FILE`, `GRANT OPTION`), maupun hak `TRIGGER`.
    - User migrator (`erp_migrator`) memiliki hak DDL dan hak `TRIGGER` untuk menjalankan migrasi skema dan membuat trigger integritas. Dilarang keras memiliki hak `SUPER`, `FILE`, `PROCESS`, atau `GRANT OPTION`.
+   - **Analisis Risiko & Mitigasi erp_migrator**:
+     - *Risiko Teknis*: Dalam MariaDB, hak DDL (`DROP` & `TRIGGER`) yang dimiliki `erp_migrator` secara inheren memungkinkan operasi `TRUNCATE TABLE` atau `DROP TRIGGER`. Selain itu, trigger append-only dibuat dengan `DEFINER = erp_migrator@%`.
+     - *Mitigasi Arsitektural*:
+       1. Kredensial `erp_migrator` **TIDAK PERNAH** disimpan di dalam berkas konfigurasi `src/.env` milik Laravel maupun environment container runtime (`erp-trading-php`, `erp-trading-web`).
+       2. Kredensial `erp_migrator` disuntikkan secara dinamis dari file `.env` host hanya pada saat eksekusi migrasi skema dijalankan (`make migrate` atau deploy pipeline).
+       3. Kontainer web/aplikasi yang melayani request pengguna publik hanya memegang kredensial `erp_app` yang strictly DML, sehingga penyerang yang berhasil mengeksploitasi aplikasi web tidak memiliki privilege untuk melakukan `TRUNCATE`, `DROP TRIGGER`, atau menembus trigger append-only.
 2. **Trigger Integritas Ledger Append-Only:**
    - Tabel `audit_logs` dan `stock_movements` dilindungi oleh trigger database tingkat mesin (`BEFORE UPDATE` dan `BEFORE DELETE`) yang mengeksekusi `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<tabel> is append-only'`.
    - Trigger ini berlaku untuk SEMUA user, termasuk `erp_migrator` dan user aplikasi, menjamin riwayat mutasi stok dan jejak audit tidak dapat diubah atau dimanipulasi secara retrospektif oleh siapa pun.

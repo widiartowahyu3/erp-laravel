@@ -192,7 +192,7 @@ Dokumen ini mendefinisikan standar teknis, konvensi arsitektur data, kamus data 
 34. **`purchase_invoices`**
     - **Tujuan:** Tagihan Faktur Pembelian dari pemasok.
     - **Kolom Kunci:** `id`, `number(30)` (UNIQUE), `supplier_id` (FK), `purchase_order_id` (FK nullable), `supplier_invoice_number(50)`, `invoice_date(date)`, `due_date(date)`, `status(20)` (CHECK: `draft`, `posted`, `partially_paid`, `paid`, `void`), `subtotal`, `discount_amount`, `tax_amount`, `total`, `paid_amount` (decimal 18,2), `journal_id` (FK nullable), `notes(text)`, `posted_by` (FK), `posted_at`, `voided_by` (FK), `voided_at`, `void_reason`, timestamps, audit.
-    - **Constraint:** UNIQUE (`supplier_id`, `supplier_invoice_number`), CHECK `paid_amount >= 0 AND paid_amount <= total`.
+    - **Constraint:** UNIQUE (`supplier_id`, `supplier_invoice_number`), CHECK `paid_amount >= 0 AND paid_amount <= total`. Indeks: `(supplier_id, status)`, `(due_date)`.
 35. **`purchase_invoice_items`**
     - **Tujuan:** Rincian baris barang/tagihan pada faktur pembelian.
     - **Kolom Kunci:** `id`, `purchase_invoice_id` (FK), `line_no(smallint unsigned)`, `product_id` (FK nullable), `goods_receipt_item_id` (FK nullable), `description(255)`, `quantity(decimal 18,4, CHECK > 0)`, `unit_price(decimal 18,4)`, `discount_amount(decimal 18,2)`, `tax_rate_id` (FK nullable), `tax_amount(decimal 18,2)`, `line_total(decimal 18,2)`, timestamps.
@@ -245,3 +245,27 @@ Untuk mempertahankan fokus domain, kesederhanaan model, dan keandalan skema pada
 1. **Satu Satuan Dasar per Produk:** Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Tidak ada konversi multi-satuan bertingkat dinamis di tingkat database.
 2. **Tanpa Transfer Antar Gudang:** Transaksi pemindahan stok antar gudang diselesaikan melalui kombinasi dokumen `adjustment_out` pada gudang asal dan `adjustment_in` pada gudang tujuan.
 3. **Mata Uang Tunggal (IDR):** Sistem beroperasi secara ketat dalam mata uang tunggal Rupiah Indonesia (IDR). Seluruh kolom uang bertipe `decimal(18,2)` tanpa tabel kurs multi-mata-uang.
+
+### F. Data Awal Resmi (Seeders Referensi Baku)
+Sistem menyediakan seeder referensi idempoten berbasis query builder (`upsert`) tanpa membuat kredensial atau akun pengguna bawaan:
+1. **Satuan Ukuran (`UnitSeeder`)**: 5 satuan baku:
+   - `PCS` (Pcs)
+   - `BOX` (Box)
+   - `KG` (Kilogram)
+   - `LTR` (Liter)
+   - `MTR` (Meter)
+2. **Syarat Pembayaran (`PaymentTermSeeder`)**: 4 termin pembayaran:
+   - `CASH` (Tunai, 0 hari)
+   - `NET7` (Net 7 Hari, 7 hari)
+   - `NET14` (Net 14 Hari, 14 hari)
+   - `NET30` (Net 30 Hari, 30 hari)
+3. **Tarif Pajak (`TaxRateSeeder`)**: 1 tarif pajak non-aktif/bebas:
+   - `NOL` (Bebas Pajak / 0%, tarif 0.00%)
+4. **Bagan Akun Standar (`ChartOfAccountSeeder`)**: Tepat 20 akun COA terstruktur hierarkis (6 akun header non-postable dan 14 akun detail postable):
+   - Aset (1000): Kas Utama (1101), Bank Operasional (1102), Piutang Usaha (1201), Persediaan Barang Dagang (1301)
+   - Kewajiban (2000): Utang Usaha (2101), Utang Pajak PPN (2102)
+   - Ekuitas (3000): Modal Pemilik (3101), Laba Ditahan (3201)
+   - Pendapatan (4000): Pendapatan Penjualan (4101), Diskon Penjualan (4102)
+   - Beban Pokok Penjualan (5000): Beban Pokok Penjualan (5101), Penyesuaian Nilai Persediaan (5102)
+   - Beban Operasional (6000): Beban Operasional & Umum (6101), Beban Administrasi Bank (6102)
+
