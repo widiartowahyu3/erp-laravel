@@ -11,6 +11,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -76,13 +77,19 @@ return Application::configure(basePath: dirname(__DIR__))
                     $permission = $e->getMessage();
                 }
 
-                AuditLogger::record(
-                    event: 'access.denied',
-                    auditableType: 'auth',
-                    auditableId: $userId,
-                    new: ['permission' => $permission !== '' ? $permission : 'unauthorized'],
-                    userId: $userId > 0 ? $userId : null
-                );
+                $effectivePerm = $permission !== '' ? $permission : 'unauthorized';
+                $ip = (string) ($request->ip() ?? '');
+                $dedupKey = "audit_dedup|access.denied|{$userId}|{$effectivePerm}|{$ip}";
+
+                if (Cache::add($dedupKey, true, 60)) {
+                    AuditLogger::record(
+                        event: 'access.denied',
+                        auditableType: 'auth',
+                        auditableId: $userId,
+                        new: ['permission' => $effectivePerm],
+                        userId: $userId > 0 ? $userId : null
+                    );
+                }
 
                 if ($request->expectsJson() || $request->is('api/*')) {
                     return response()->json([

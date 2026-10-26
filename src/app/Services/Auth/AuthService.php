@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -36,16 +37,20 @@ final class AuthService
         // 1. Rate Limiting Check (max 5 per min for email+ip, max 30 per min for ip)
         if (RateLimiter::tooManyAttempts($emailIpKey, 5) || RateLimiter::tooManyAttempts($ipKey, 30)) {
             $seconds = max(RateLimiter::availableIn($emailIpKey), RateLimiter::availableIn($ipKey));
+            $emailHash = hash('sha256', $normalizedEmail);
 
-            AuditLogger::record(
-                event: 'login.throttled',
-                auditableType: 'auth',
-                auditableId: 0,
-                new: [
-                    'email_hash' => hash('sha256', $normalizedEmail),
-                    'ip' => $ip,
-                ]
-            );
+            $dedupKey = "audit_dedup|login.throttled|{$emailHash}|{$ip}";
+            if (Cache::add($dedupKey, true, 60)) {
+                AuditLogger::record(
+                    event: 'login.throttled',
+                    auditableType: 'auth',
+                    auditableId: 0,
+                    new: [
+                        'email_hash' => $emailHash,
+                        'ip' => $ip,
+                    ]
+                );
+            }
 
             throw new TooManyAttemptsException(
                 key: $emailIpKey,

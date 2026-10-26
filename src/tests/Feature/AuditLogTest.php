@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -232,4 +233,48 @@ test('audit failure does not break authentication flow and is logged to error lo
     );
 
     expect($result)->toBeFalse();
+});
+
+test('consecutive throttled login requests produce at most one audit log row within 60 seconds', function () {
+    $email = fake()->unique()->safeEmail();
+    $ip = '127.0.0.1';
+    RateLimiter::clear("login|{$email}|{$ip}");
+    $emailHash = hash('sha256', $email);
+    Cache::forget("audit_dedup|login.throttled|{$emailHash}|{$ip}");
+
+    // Trigger throttling: first 5 fail, then 50 attempts while throttled
+    for ($i = 0; $i < 55; $i++) {
+        $this->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPassword!',
+        ]);
+    }
+
+    $count = DB::table('audit_logs')
+        ->where('event', 'login.throttled')
+        ->where('new_values', 'like', "%{$emailHash}%")
+        ->count();
+
+    expect($count)->toBe(1);
+});
+
+test('consecutive 403 access denied requests produce at most one audit log row within 60 seconds', function () {
+    Route::get('/audit-test-dedup-403', function () {
+        return 'ok';
+    })->middleware(['web', 'auth', 'can:users.view']);
+
+    $user = User::factory()->create();
+    $ip = '127.0.0.1';
+    Cache::forget("audit_dedup|access.denied|{$user->id}|users.view|{$ip}");
+
+    for ($i = 0; $i < 50; $i++) {
+        $this->actingAs($user)->get('/audit-test-dedup-403');
+    }
+
+    $count = DB::table('audit_logs')
+        ->where('event', 'access.denied')
+        ->where('auditable_id', $user->id)
+        ->count();
+
+    expect($count)->toBe(1);
 });
