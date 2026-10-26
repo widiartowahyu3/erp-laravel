@@ -50,9 +50,14 @@ sequenceDiagram
 
 1. **CSRF Protection**: Permintaan `POST /login` wajib menyertakan token CSRF yang valid melalui cookie `XSRF-TOKEN` atau input `_token`.
 2. **Validasi Input**: Validasi ketat format email (`email:rfc,dns` pada production) dan panjang kata sandi minimal 8 karakter.
-3. **Pembatasan Laju (Rate Limiting)**: Maksimal 5 percobaan gagal per menit per kombinasi `sha1(email)|client_ip`. Percobaan ke-6 ditolak dengan respons status HTTP 429 (*Too Many Requests*).
-4. **Resistensi Enumerasi Akun**: Jika autentikasi gagal (baik karena email tidak terdaftar, kata sandi salah, atau akun non-aktif), sistem mengembalikan pesan kesalahan generik yang seragam: `"Email atau kata sandi salah."`.
-5. **Session Fixation Defense**: Sesaat setelah kredensial terverifikasi, ID sesi di-regenerasi (`$request->session()->regenerate()`) untuk mencegah serangan fiksasi sesi.
+3. **Pembatasan Laju Berlapis (Rate Limiting)**:
+   - **Lapisan 1 (Nginx Reverse Proxy)**: Zona `login_limit` membatasi metode POST pada `/login` berbasis `$binary_remote_addr` fisik (10 request/menit, burst 5 nodelay). Melebihi batas langsung ditolak dengan status HTTP 429 (`limit_req_status 429;`) oleh Nginx.
+   - **Lapisan 2 (Aplikasi Laravel)**: Maksimal 5 kegagalan per menit per akun (`login:email:<sha256(email)>`) dan 20 kegagalan per menit per IP (`login:ip:<client_ip>`). Kunci cache menggunakan hash SHA-256 sehingga tidak menyimpan email mentah di database.
+4. **Penanganan 429 Terpadu (Inertia vs API)**:
+   - Permintaan Inertia (`X-Inertia`): Dilempar via `App\Exceptions\TooManyAttemptsException` yang mengembalikan HTTP 303 Redirect kembali ke halaman login beserta error session bag dan header `Retry-After`. Frontend menampilkan banner peringatan ramah pengguna tanpa dialog modal error 429 bawaan Inertia.
+   - Permintaan API/JSON: Mengembalikan status HTTP 429 murni dengan payload JSON `{ message, seconds }` dan header `Retry-After`.
+5. **Resistensi Enumerasi Akun**: Jika autentikasi gagal (baik karena email tidak terdaftar, kata sandi salah, atau akun non-aktif), sistem mengembalikan pesan kesalahan generik yang seragam: `"Email atau kata sandi salah."`.
+6. **Session Fixation Defense**: Sesaat setelah kredensial terverifikasi, ID sesi di-regenerasi (`$request->session()->regenerate()`) untuk mencegah serangan fiksasi sesi.
 
 ### B. Siklus Hidup Sesi & Timeouts
 Sesi disimpan menggunakan database driver (`SESSION_DRIVER=database`) pada tabel `sessions`:
@@ -71,14 +76,21 @@ Sesi disimpan menggunakan database driver (`SESSION_DRIVER=database`) pada tabel
 
 ### D. Alur Ganti Kata Sandi (Password Change)
 1. Pengguna mengakses menu `/account/password`.
-2. Memasukkan kata sandi saat ini (`current_password`) dan kata sandi baru.
-3. Kebijakan Kata Sandi:
-   - Minimal 12 karakter.
-   - Wajib kombinasi huruf besar (*uppercase*), huruf kecil (*lowercase*), angka (*numbers*), dan simbol unik (*symbols*).
-   - Kata sandi baru tidak boleh sama dengan kata sandi saat ini.
-4. Kata sandi baru di-hash menggunakan Argon2id dan disimpan ke database.
-5. Pemanggilan `Auth::logoutOtherDevices($validated['password'])` untuk mencabut seluruh sesi aktif pengguna di peramban atau perangkat lain.
-6. Pencatatan log peristiwa keamanan `auth.password.changed`.
+2. Pengguna memasukkan kata sandi saat ini (`current_password`), kata sandi baru, dan konfirmasi kata sandi.
+3. **Throttling Kata Sandi Saat Ini**:
+   - Pemeriksaan dilakukan di `UpdatePasswordRequest` *sebelum* eksekusi `Hash::check` untuk melindungi CPU dan memori dari serangan brute force Argon2id.
+   - Dibatasi maksimal 5 kegagalan per menit per ID pengguna (`password-update:user:{id}`) dan 20 kegagalan per menit per IP (`password-update:ip:{ip}`).
+   - Percobaan ke-6 menghasilkan `TooManyAttemptsException` (HTTP 303 Redirect ke form dengan flash error dan header `Retry-After`).
+   - Penghitung kegagalan langsung direset seketika saat pergantian kata sandi berhasil.
+4. **Kebijakan Kata Sandi Terpadu (`PasswordPolicy`)**:
+   - Ditegakkan seragam via `App\Support\PasswordPolicy::rules('email')`.
+   - Panjang: minimal 12 karakter, maksimal 128 karakter.
+   - Komposisi wajib: minimal 1 huruf besar (*uppercase*), 1 huruf kecil (*lowercase*), dan 1 angka (*number*). Simbol diperbolehkan namun tidak dipaksakan guna mendukung passphrase panjang berkekuatan tinggi.
+   - Proteksi profil: dilarang memuat bagian lokal alamat email pengguna jika panjang bagian lokal minimal 4 karakter.
+   - Kata sandi baru tidak boleh sama dengan kata sandi saat ini (`different:current_password`).
+5. Kata sandi baru di-hash menggunakan Argon2id dan disimpan ke database.
+6. Pemanggilan `Auth::logoutOtherDevices($validated['password'])` untuk mencabut seluruh sesi aktif pengguna di peramban atau perangkat lain.
+7. Pencatatan log peristiwa keamanan `auth.password.changed`.
 
 ---
 
@@ -86,12 +98,34 @@ Sesi disimpan menggunakan database driver (`SESSION_DRIVER=database`) pada tabel
 
 | Vektor Ancaman | Deskripsi Risiko | Mekanisme Mitigasi & Implementasi |
 |---|---|---|
-| **Brute Force & Credential Stuffing** | Penyerang mencoba ribuan kata sandi terhadap akun tertentu secara berulang | Database RateLimiter membatasi 5 kegagalan per menit per IP + email (`sha1(email)\|ip`). Percobaan ke-6 menghasilkan HTTP 429. Hashing Argon2id berbiaya memori tinggi memperlambat *offline cracking*. |
+| **Brute Force & Credential Stuffing** | Penyerang mencoba ribuan kata sandi terhadap akun tertentu secara berulang | Database RateLimiter membatasi 5 kegagalan per menit per email dan 20 per IP. Percobaan ke-6 menghasilkan HTTP 429 via `TooManyAttemptsException`. Hashing Argon2id berbiaya memori tinggi memperlambat *offline cracking*. |
+| **Spoofing IP & X-Forwarded-For Bypass** | Penyerang memalsukan header `X-Forwarded-For` untuk melewati pembatasan laju login | Konfigurasi `TRUSTED_PROXIES` kosong secara default (menghapus seluruh CIDR privat hardcoded), ditambah pertahanan Nginx `limit_req_zone` berbasis `$binary_remote_addr` fisik (10r/m burst 5 nodelay; status 429). |
+| **Banjir Audit (Audit Log Flooding / DoS Storage)** | Penyerang sengaja memicu ribuan kegagalan login atau 403 untuk membanjiri tabel `audit_logs` dan menghabiskan disk | Deduplikasi peristiwa audit `login.throttled` (per hash email + IP) dan `access.denied` (per user ID + permission + IP) selama jendela waktu 60 detik. Event sukses dan mutasi data tetap dicatat penuh. |
+| **Brute Force Kata Sandi Saat Ini** | Penyerang yang menguasai sesi mencoba menebak `current_password` pada `PUT /account/password` | Throttle khusus verifikasi kata sandi saat ini di `UpdatePasswordRequest` sebelum `Hash::check`: batas 5 kegagalan per menit per pengguna dan 20 per IP. Reset otomatis saat berhasil. |
 | **Account Enumeration** | Penyerang membedakan apakah email terdaftar melalui perbedaan pesan kesalahan atau waktu respons | Pesan error generik: `"Email atau kata sandi salah."` pada kegagalan apapun. Perilaku waktu konstan untuk verifikasi hash. |
 | **Session Fixation** | Penyerang menyusupkan ID sesi yang telah ditentukan sebelum pengguna masuk | Regenerasi ID sesi mutlak saat autentikasi berhasil (`$request->session()->regenerate()`). |
 | **Session Hijacking** | Pencurian cookie sesi pengguna aktif | Cookie `HttpOnly` (tidak dapat diakses JavaScript), `SameSite=Lax`, pembatasan absolut 480 menit, pembersihan sesi instan saat password diubah. |
 | **Cross-Site Request Forgery (CSRF)** | Permintaan manipulatif dari situs luar mengatasnamakan sesi pengguna aktif | Validasi middleware `PreventRequestForgery` pada seluruh rute non-GET, cookie SameSite, dan sinkronisasi otomatis token CSRF pada komponen Inertia/Axios. |
 | **Privilege Escalation** | Pengguna biasa memanggil endpoint manajemen atau mengubah transaksi yang bukan haknya | Pemeriksaan otorisasi ganda di backend: Middleware `can:<permission>` pada routing dan pemanggilan Gate policy pada controller. Gate::before memvalidasi permission secara strictly dari database. |
+
+### 3.1. Mitigasi Spoofing IP & Bypass X-Forwarded-For
+Pada arsitektur Docker/reverse-proxy standar, jika aplikasi Laravel mempercayai rentang IP privat (`172.16.0.0/12`, `10.0.0.0/8`, `192.168.0.0/16`) secara default, Nginx yang berada di jaringan bridge Docker dianggap sebagai proxy tepercaya. Akibatnya, Laravel membaca header `X-Forwarded-For` yang dikirim oleh peramban/penyerang luar dan menggunakannya sebagai `request()->ip()`. Penyerang dapat memutar header ini pada setiap permintaan untuk mem-bypass rate limiter login secara total.
+
+**Arsitektur Pertahanan Berlapis**:
+1. **Kebijakan Zero-Trust Proxy**: `TRUSTED_PROXIES` dikonfigurasi kosong (`""`) secara default di `src/config/trustedproxy.php` dan `src/bootstrap/app.php`. Tidak ada CIDR privat yang dipercayai tanpa konfigurasi eksplisit operator infrastruktur.
+2. **Nginx Hardware Socket Limiting**: Nginx membatasi koneksi POST ke `/login` menggunakan IP koneksi TCP fisik `$binary_remote_addr` dengan zona `limit_req_zone $login_limit_key zone=login_limit:10m rate=10r/m;`. Jika penyerang membanjiri request dengan IP palsu di header XFF, Nginx tetap memblokir pada koneksi TCP fisik yang sama dengan status HTTP 429.
+
+### 3.2. Penanganan UX Respons 429 (Inertia vs API)
+Standardisasi eksepsi 429 diatur melalui `App\Exceptions\TooManyAttemptsException`:
+- **Inertia Requests**: Mengembalikan HTTP 303 Redirect back ke form sebelumnya dengan session flash errors dan header `Retry-After`. Frontend (`Login.vue` dan `Password.vue`) menangkap error ini dan merender alert banner ramah pengguna berisi sisa detik penalti, menghindari popup modal crash bawaan Inertia.
+- **API / JSON Requests**: Mengembalikan respons standar HTTP 429 *Too Many Requests* dengan payload JSON `{ "message": "...", "retry_after": ... }` dan header `Retry-After`.
+
+### 3.3. Mitigasi Banjir Audit (Audit Storage DoS)
+Penyerang yang terus-menerus memicu percobaan login salah atau mengakses rute terlarang dapat menyebabkan ledakan ukuran tabel `audit_logs`.
+Layanan `AuditLogger` menerapkan penahanan (*deduplication*) menggunakan cache:
+- `login.throttled`: Dikunci selama 60 detik per kombinasi `sha256(email)` dan IP klien. Dalam 60 detik, hanya 1 baris audit log yang ditulis meskipun ada ratusan percobaan brute force.
+- `access.denied`: Dikunci selama 60 detik per kombinasi `user_id`, nama permission, dan IP klien.
+- Peristiwa sukses (`auth.login.success`, `auth.password.changed`, transaksi data) tidak pernah dideduplikasi.
 
 ---
 
@@ -271,6 +305,9 @@ Setiap peristiwa keamanan dicatat melalui layanan `App\Services\Audit\AuditLogge
 - **Perlindungan Privasi Email pada Audit**:
   - Email pada percobaan login gagal tidak dicatat dalam bentuk teks mentah (*raw plaintext*).
   - Layanan menyimpan hash kriptografis `sha256(strtolower(trim($email)))` dalam kolom payload `email_hash` untuk memungkinkan investigasi korelasi insiden tanpa menyimpan data sensitif.
+- **Deduplikasi Peristiwa Keamanan (Anti-Flooding)**:
+  - Peristiwa berulang dengan frekuensi tinggi (`login.throttled` dan `access.denied`) dideduplikasi secara otomatis dengan jendela waktu 60 detik melalui atomic lock cache `Cache::add()`.
+  - Mengeliminasi risiko kepenuhan kapasitas tabel (*storage denial of service*) akibat serangan automated brute force atau crawler tanpa izin.
 - **Resiliensi Sistem**:
   - Operasi pencatatan audit dibungkus dalam blok penanganan eksepsi `try-catch`.
   - Jika terjadi gangguan penyimpanan log audit, proses autentikasi pengguna tidak digagalkan, dan kegagalan dicatat ke log darurat `Log::critical`.

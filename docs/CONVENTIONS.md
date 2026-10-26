@@ -146,9 +146,14 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
    - `$fillable` eksplisit: `['name', 'email', 'password', 'is_active']`.
    - `$hidden`: `['password', 'remember_token']`.
    - `$casts`: `password => 'hashed'`, `is_active => 'boolean'`, `last_login_at => 'datetime'`.
-2. **Kredensial & Algoritma Hashing**:
+2. **Kredensial & Kebijakan Kata Sandi Terpadu (`PasswordPolicy`)**:
    - Standar hash wajib `Argon2id` via `config/hashing.php` dan `HASH_DRIVER=argon2id`.
-   - Kebijakan kata sandi akun: minimal 12 karakter, campuran huruf besar, huruf kecil, angka, dan simbol.
+   - **Satu Aturan Tunggal**: Seluruh validasi kata sandi (pembuatan admin CLI, update password form, reset password CLI) **wajib** menggunakan kelas tunggal `App\Support\PasswordPolicy` (`PasswordPolicy::rules($emailOrFieldName)`). Dilarang keras menduplikasi aturan validasi kata sandi secara lepas di controller atau FormRequest.
+   - Ketentuan Aturan:
+     - Minimal 12 karakter, maksimal 128 karakter.
+     - Wajib memuat minimal satu huruf besar (*uppercase*), satu huruf kecil (*lowercase*), dan satu angka (*number*). Karakter simbol diperbolehkan namun tidak dipaksakan guna mendukung passphrase panjang dengan entropi tinggi.
+     - Dilarang memuat bagian lokal dari alamat email pengguna (`email_local_part`), jika bagian lokal email memiliki panjang minimal 4 karakter (menghindari false positive untuk email dengan karakter pendek).
+   - Validasi CLI interaktif: Perintah Artisan menggunakan `PasswordPolicy::validateDirectly($password, $email)` yang mengembalikan array pesan kesalahan yang seragam.
 3. **Konvensi Hak Akses (Permissions)**:
    - Format wajib: `<resource>.<action>` dalam huruf kecil dan *snake_case* (mis. `purchase_orders.approve`, `users.view`).
    - Modul resmi: `administration`, `master_data`, `purchasing`, `inventory`, `sales`, `finance`, `reporting`.
@@ -163,3 +168,12 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
 6. **Audit Peristiwa Keamanan**:
    - Setiap peristiwa autentikasi dan penolakan hak akses wajib dicatat via `App\Services\Audit\AuditLogger`.
    - Data sensitif (password, token, raw email) wajib disanitasi secara otomatis sebelum disimpan ke tabel `audit_logs`.
+   - Peristiwa berulang dengan frekuensi tinggi (`login.throttled` dan `access.denied`) dideduplikasi secara otomatis selama 60 detik melalui atomic lock cache guna mencegah DoS kapasitas tabel audit.
+7. **Pola Standar Exception 429 (`TooManyAttemptsException`)**:
+   - Dilarang memodifikasi status code `ValidationException` menjadi 429 yang dapat merusak alur redirect Inertia.
+   - Untuk seluruh skenario pembatasan laju (*rate limiting* / *throttling*), gunakan exception khusus `App\Exceptions\TooManyAttemptsException`.
+   - Respons otomatis disesuaikan secara terpadu:
+     - **Inertia Requests**: Mengembalikan HTTP 303 Redirect kembali ke rute pemanggil beserta session flash errors dan header `Retry-After`. Frontend merender alert banner tingkat komponen ramah pengguna tanpa memicu dialog modal error raw 429 bawaan Inertia.
+     - **API / JSON Requests**: Mengembalikan respons standar HTTP 429 *Too Many Requests* dengan payload JSON `{ "message": "...", "seconds": ... }` dan header `Retry-After`.
+8. **Privasi Kunci Cache Rate Limiter**:
+   - Kunci cache pembatas laju wajib melakukan hashing SHA-256 terhadap alamat email (`login:email:<sha256>`), dilarang keras menyimpan alamat email mentah di dalam tabel cache basis data.

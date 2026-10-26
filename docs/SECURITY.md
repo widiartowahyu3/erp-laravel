@@ -60,8 +60,10 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
    - Aturan segmen path: `location ~* ^/(?:\.env|\.git|vendor|node_modules|storage|uploads)(?:/|$) { return 404; }`
    - Aturan berkas konfigurasi: `location ~* ^/(?:composer\.(?:json|lock)|package(?:-lock)?\.json|artisan)$ { return 404; }`
    - Memastikan tidak ada false positive terhadap berkas aset sah seperti `/build/assets/vendor-test.js` atau `/ok.txt`.
-4. **Proteksi DoS Dasar**:
-   - Mengaktifkan `limit_req_zone` untuk rate limiting IP.
+4. **Proteksi DoS & Rate Limiting Berlapis**:
+   - Mengaktifkan `limit_req_zone` untuk rate limiting umum IP klien.
+   - Zona Khusus Autentikasi (`login_limit`): Membatasi metode POST pada `/login` berbasis alamat IP soket TCP fisik (`$binary_remote_addr`) dengan parameter `rate=10r/m` dan `burst=5 nodelay;`.
+   - Mengonfigurasi `limit_req_status 429;` agar Nginx langsung mengembalikan kode status HTTP 429 saat batas terlampaui mendahului FastCGI PHP.
    - Membatasi `client_max_body_size 32M` dan timeout ketat.
 
 ### D. Lapisan PHP Runtime (FPM vs CLI)
@@ -76,6 +78,22 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
    - Ekstensi wajib (`pdo_mysql`, `intl`, `bcmath`, `zip`, `Zend OPcache`) terverifikasi aktif pada runtime FPM dan CLI.
 3. **Probe Independen FPM via `cgi-fcgi`**:
    - Kakas `fcgi` (`cgi-fcgi`) dipasang pada stage dev PHP untuk memanggil pool FastCGI 127.0.0.1:9000 secara independen via berkas probe sementara di `/tmp` (non-destruktif) tanpa bergantung pada keberadaan berkas web root publik.
+4. **Alokasi Sumber Daya Process Manager (PM) & Pencegahan OOM (Revisi Fase 3.1)**:
+   - Dikonfigurasi eksplisit via `docker/php/conf/php-fpm-hardening.conf` (di-mount ke container):
+     - `pm = dynamic`
+     - `pm.max_children = 4`
+     - `pm.start_servers = 2`
+     - `pm.min_spare_servers = 1`
+     - `pm.max_spare_servers = 3`
+     - `pm.max_requests = 500` (mencegah akumulasi memory leak dengan mendaur ulang worker)
+     - `request_terminate_timeout = 30s`
+   - **Perhitungan Headroom Memori (Memory Headroom vs Argon2id)**:
+     - Batas RAM container PHP: 512 MB (`mem_limit: 512m` pada `compose.yaml`).
+     - Komputasi hashing Argon2id memerlukan alokasi `memory_cost=65536` (~64 MB per hash).
+     - Alokasi memori per worker aktif di bawah beban hashing: ~30 MB (Laravel runtime + framework) + ~64 MB (Argon2id peak) = ~94-95 MB.
+     - Puncak beban paralel (seluruh 4 worker mengeksekusi Argon2id secara bersamaan): `4 * 95 MB = 380 MB`.
+     - Headroom memori tersisa: `512 MB - 380 MB = 132 MB` (~26% buffer aman untuk sistem operasi container, ekstensi PHP, buffer I/O, dan OPcache).
+     - Menjamin container `erp-trading-php` kebal dari terminasi OOM-killer kernel Linux (`docker inspect erp-trading-php --format '{{.State.OOMKilled}}'` = `false`).
 
 ### E. Lapisan Database (MariaDB 12.3 LTS)
 1. **Pemisahan Hak Akses Aplikasi (Principle of Least Privilege)**:
@@ -159,11 +177,21 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 2. **Trigger Integritas Ledger Append-Only:**
    - Tabel `audit_logs` dan `stock_movements` dilindungi oleh trigger database tingkat mesin (`BEFORE UPDATE` dan `BEFORE DELETE`) yang mengeksekusi `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<tabel> is append-only'`.
    - Trigger ini berlaku untuk SEMUA user, termasuk `erp_migrator` dan user aplikasi, menjamin riwayat mutasi stok dan jejak audit tidak dapat diubah atau dimanipulasi secara retrospektif oleh siapa pun.
-3. **Catatan Penting Konfigurasi Trust Proxies:**
-   > [!WARNING]
-   > Konfigurasi `trustProxies` pada `bootstrap/app.php` saat ini mencakup subnet blok IP privat (`127.0.0.1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) semata-mata untuk kompatibilitas jaringan internal Docker bridge lokal. Konfigurasi ini **HARUS dipersempit secara ketat pada Fase 12 (Production Deployment)** hanya ke IP spesifik reverse proxy atau load balancer produksi sebenarnya untuk mencegah serangan spoofing header `X-Forwarded-For`.
+3. **Kebijakan TRUSTED_PROXIES & Pencegahan Spoofing IP (Revisi Fase 3.1):**
+   - **Analisis Kerentanan & Akar Masalah**:
+     Pada Fase 3 awal, `bootstrap/app.php` mempercayai subnet IP privat RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) dan loopback `127.0.0.1`. Dalam arsitektur container Docker (bridge network), Nginx terhubung ke PHP-FPM melalui alamat gateway privat (rentang `172.x.x.x`). Akibatnya, Laravel menganggap Nginx sebagai reverse proxy tepercaya dan secara membabi-buta membaca header `X-Forwarded-For` yang dikirimkan oleh klien luar/penyerang. Hal ini memungkinkan penyerang melewati pembatasan laju login secara total dengan memalsukan header `X-Forwarded-For` acak pada tiap permintaan.
+   - **Kebijakan Default Zero-Trust**:
+     Konfigurasi bawaan `TRUSTED_PROXIES` adalah **KOSONG** (`""` atau `null`). Seluruh rentang IP privat hardcoded telah dihapus secara menyeluruh dari kode basis (`bootstrap/app.php` dan `config/app.php`). Konfigurasi dikelola secara tersentralisasi melalui `src/config/trustedproxy.php`.
+   - **Kebijakan Produksi (Production Policy)**:
+     Nilai `TRUSTED_PROXIES` HANYA boleh diisi jika terdapat reverse proxy atau edge load balancer NYATA di depan Nginx (misal Cloudflare, AWS ALB, atau Nginx Ingress). Pengisian hanya boleh memuat alamat IP atau CIDR spesifik milik reverse proxy tersebut, dilarang mencakup seluruh rentang privat umum.
+   - **Template & Dokumentasi Lingkungan**:
+     Berkas template `.env.example` dan `.env.production.example` memuat `TRUSTED_PROXIES=` kosong disertai catatan peringatan keamanan eksplisit.
 
-### I. Pengelolaan Dependensi Aman & Self-Hosted Assets
+### I. Privasi Kunci Cache Rate Limiter & Deduplikasi Audit (Revisi Fase 3.1)
+- **Hashing Kunci Cache**: Alamat email pada kunci pembatas laju login dienkripsi satu arah menggunakan algoritma SHA-256: `login:email:hash('sha256', strtolower(trim($email)))`. Kunci cache yang tersimpan di tabel `cache` MariaDB tidak memuat email teks mentah (*plaintext email*), mencegah kebocoran data pengguna (*data privacy*).
+- **Deduplikasi Log Audit (Anti-Storage DoS)**: Peristiwa penolakan berulang (`login.throttled` dan `access.denied`) dideduplikasi secara otomatis selama 60 detik melalui atomic lock cache `Cache::add()`, mencegah banjir penyimpanan disk database dari ribuan request serangan brute force.
+
+### J. Pengelolaan Dependensi Aman & Self-Hosted Assets
 - Dependensi Composer dilindungi oleh `roave/security-advisories:dev-latest`.
 - Audit otomatis `composer audit` dan `npm audit` 100% bebas kerentanan (0 vulnerabilities).
 - Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
@@ -203,10 +231,14 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
 | **Privilege Escalation** | Pengguna mengakses modul atau data di luar haknya | Otorisasi RBAC via database (98 permission, 7 system roles), `Gate::before`, in-memory permission caching, middleware `can:<permission>` | `AuthorizationTest.php` |
 | **Inactive User Access** | Pengguna yang dinonaktifkan tetap menggunakan sesi lama | Middleware `EnsureUserIsActive` memaksa logout pengguna non-aktif pada setiap request berikutnya | `AuthenticationTest.php` |
 | **Credential Leakage in Logs** | Kata sandi atau token sensitif tersimpan di riwayat audit | Sanitasi rekursif regex `/password\|token\|secret\|key/i` pada `AuditLogger` | `AuditLogTest.php` |
+| **IP Spoofing & XFF Rate Limit Bypass** | Penyerang memalsukan `X-Forwarded-For` untuk melewati batas laju login | `TRUSTED_PROXIES` kosong bawaan (tanpa CIDR privat), ditambah Nginx `limit_req_zone` berbasis TCP socket `$binary_remote_addr` (status 429) | `AuthenticationTest.php`, `ConfigSafetyTest.php`, `probe-login-throttle.sh`, `verify-hardening.sh` (Butir 17) |
+| **Current Password Brute Force** | Penyerang dengan sesi aktif menebak `current_password` di form ganti password | Rate limiting verifikasi kata sandi saat ini sebelum `Hash::check` (5 gagal/menit per user, 20 per IP), reset otomatis saat berhasil | `AuthenticationTest.php` |
+| **Audit Log Storage Flooding (DoS)** | Ribuan percobaan salah membanjiri tabel `audit_logs` | Deduplikasi otomatis event `login.throttled` dan `access.denied` dengan jendela 60 detik via atomic lock cache | `AuditLogTest.php` |
+| **PHP-FPM OOM Exhaustion via Argon2id** | Permintaan login paralel menghabiskan RAM container PHP (512MB) | Konfigurasi eksplisit `pm = dynamic`, `max_children = 4` (puncak 380MB vs 512MB limit, sisa buffer 132MB aman) | `f31-r8-load-test.txt`, `verify-hardening.sh` (Butir 17) |
 
 ---
 
-## 4. Checklist Review Arsitek / Pengawas (Fase 3)
+## 4. Checklist Review Arsitek / Pengawas (Fase 3 & Revisi Fase 3.1)
 
 - [x] Repositori bersih dari file `.env`, berkas rahasia `secrets/`, file `.key`, dan private key (`git ls-files`).
 - [x] Hook `pre-commit` (Gitleaks terpin + filter rahasia) dan `commit-msg` (Conventional Commits) aktif dan executable.
@@ -223,11 +255,21 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
 - [x] Layanan `AuditLogger` mencatat peristiwa keamanan secara aman ke tabel `audit_logs` (*append-only*).
 - [x] Halaman login (`Login.vue`) dan ganti kata sandi (`Password.vue`) mematuhi CSP, bebas inline style/script, WCAG AA.
 - [x] Perintah Artisan aman: `erp:admin:create`, `erp:user:reset-password`, `erp:user:set-active`, `erp:permissions:sync`.
-- [x] Seluruh tes otomatis Pest (120 tests / 1275 assertions) lulus 100% (`make test`).
+- [x] Seluruh tes otomatis Pest lulus 100% (`make test`).
 - [x] Static analysis Larastan level 6 lulus 0 error (`make analyse`).
 - [x] Pengecekan gaya kode Pint lulus 0 pelanggaran (`make lint`).
 - [x] Linting frontend ESLint lulus 0 error (`docker compose --profile tools run --rm node npm run lint`).
 - [x] Audit dependensi Composer dan NPM bersih dari celah keamanan (0 vulnerabilities).
-- [x] Skrip verifikasi keamanan `make verify` lulus 100% (110 PASS / 0 FAIL).
+- [x] Skrip verifikasi keamanan `make verify` lulus 100% (115 PASS / 0 FAIL).
 - [x] Font Inter di-self-host dari paket `@fontsource-variable/inter` tanpa ketergantungan CDN eksternal.
 - [x] Layout dasar `AppLayout.vue` responsif (desktop collapsible sidebar, mobile drawer, WCAG AA, focus-visible) dan `Dashboard.vue` beroperasi normal.
+- [x] **[Revisi Fase 3.1]** Anti-Spoofing IP & XFF: `TRUSTED_PROXIES` kosong secara default, tidak ada rentang privat hardcoded di `bootstrap/app.php` maupun `config/app.php`.
+- [x] **[Revisi Fase 3.1]** Nginx memuat zona rate limiting `zone=login_limit:10m` khusus POST dan `limit_req_status 429`.
+- [x] **[Revisi Fase 3.1]** Skrip probe anti-spoofing `scripts/probe-login-throttle.sh` memverifikasi skenario kontrol dan skenario manipulasi header XFF tertahan pada percobaan ke-6.
+- [x] **[Revisi Fase 3.1]** Rate limiting verifikasi kata sandi saat ini (`PUT /account/password`) aktif sebelum `Hash::check` dijalankan.
+- [x] **[Revisi Fase 3.1]** Eksepsi terdedikasi `TooManyAttemptsException` menghasilkan format yang tepat: Inertia 303 Redirect + error flash banner (tanpa popup modal error) dan API 429 JSON.
+- [x] **[Revisi Fase 3.1]** Deduplikasi log audit 60 detik untuk `login.throttled` dan `access.denied` mencegah serangan DoS penyimpanan.
+- [x] **[Revisi Fase 3.1]** Perintah `erp:admin:create` atomik dalam transaksi basis data dan memvalidasi keberadaan peran `super_admin`.
+- [x] **[Revisi Fase 3.1]** Aturan validasi kata sandi tersentralisasi tunggal melalui `App\Support\PasswordPolicy`.
+- [x] **[Revisi Fase 3.1]** Privasi cache: kunci rate limiter login menggunakan hash SHA-256 (`login:email:<sha256>`), bebas dari email mentah di basis data.
+- [x] **[Revisi Fase 3.1]** Konfigurasi sumber daya PHP-FPM eksplisit (`pm.max_children = 4`, `pm.max_requests = 500`) dengan alokasi memori terkendali dan terverifikasi `OOMKilled=false`.
