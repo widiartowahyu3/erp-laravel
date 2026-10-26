@@ -1,8 +1,8 @@
-# Daftar Stack & Versi Image / Tool (Fase 1 - Final)
+# Daftar Stack & Versi Image / Tool (Fase 2 - Final)
 
-Dokumen ini mencatat seluruh image Docker, runtime, framework, dependensi, dan kakas (tools) resmi yang digunakan pada Fase 1. Seluruh versi yang dipilih adalah rilis **STABIL** (General Availability / LTS), bukan versi alpha, beta, Release Candidate (RC), atau rolling release (`latest` dilarang). Seluruh image pihak ketiga dipin menggunakan format `tag@sha256:digest` untuk menjamin reproduktibilitas mutlak dan mencegah supply chain attacks.
+Dokumen ini mencatat seluruh image Docker, runtime, framework, dependensi, dan kakas (tools) resmi yang digunakan pada Fase 2. Seluruh versi yang dipilih adalah rilis **STABIL** (General Availability / LTS), bukan versi alpha, beta, Release Candidate (RC), atau rolling release (`latest` dilarang). Seluruh image pihak ketiga dipin menggunakan format `tag@sha256:digest` untuk menjamin reproduktibilitas mutlak dan mencegah supply chain attacks.
 
-Tanggal Pengecekan & Verifikasi: **2026-10-25**
+Tanggal Pengecekan & Verifikasi: **2026-10-26**
 
 ---
 

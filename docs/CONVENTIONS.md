@@ -117,3 +117,22 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
 2. **Satu Commit Per Langkah Logis**: Setiap langkah pengerjaan dipisahkan dalam satu commit independen.
 3. **Larangan Force & Bypass**: Dilarang keras menggunakan `git push --force` atau opsi `--no-verify`.
 4. **Perlindungan Rahasia**: Tidak boleh ada berkas `.env`, kredensial, private key, atau kata sandi yang di-commit ke repositori.
+
+---
+
+## 5. Konvensi Skema Database (Fase 2)
+
+1. **Engine & Charset**: Engine `InnoDB`, charset `utf8mb4`, collation `utf8mb4_unicode_ci`.
+2. **Primary Key**: `id` bertipe `bigint unsigned auto-increment` (kecuali pivot composite PK).
+3. **Presisi Numerik (Tanpa Float/Double)**:
+   - Uang/Rupiah: `decimal(18,2)`
+   - Kuantitas: `decimal(18,4)`
+   - Harga & Biaya Satuan: `decimal(18,4)`
+   - Tarif/Persentase: `decimal(5,2)`
+4. **Foreign Key Policy**: `ON UPDATE RESTRICT ON DELETE RESTRICT` untuk semua relasi, kecuali `role_user` dan `permission_role` (`ON DELETE CASCADE`).
+5. **Standar Audit & Immutabilitas**:
+   - Master data & dokumen: `created_at`, `updated_at`, `created_by`, `updated_by` (FK users).
+   - Append-only (`audit_logs`, `stock_movements`): Hanya `created_at` (+ `user_id`/`created_by`).
+   - Soft delete (`deleted_at`) hanya pada data master. Dokumen transaksi dilarang dihapus (menggunakan status `void` + `voided_at`, `voided_by`, `void_reason`).
+6. **Constraint CHECK Eksplisit**: Seluruh validasi nilai kolom status dan rentang numerik diwajibkan menggunakan constraint `CHECK` bernama eksplisit `chk_<tabel>_<nama>` via SQL statis literal.
+7. **Nomor Dokumen**: `varchar(30) UNIQUE`, dikelola bebas celah via tabel `document_sequences`.

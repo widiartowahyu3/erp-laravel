@@ -146,7 +146,18 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 - Seluruh header keamanan (`SecurityHeaders`) didaftarkan sebagai middleware global (`$middleware->append(SecurityHeaders::class)`), memastikan respons route yang tidak ditemukan (404) dan exception sistem lainnya tetap membawa header keamanan lengkap (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP).
 - Berkas template error `resources/views/errors/minimal.blade.php` tidak memuat tag `<style>` inline maupun atribut `style=`. Seluruh styling dipindahkan ke berkas statis `public/error.css` yang dilayani langsung oleh web server Nginx dari origin `'self'` tanpa ketergantungan pada manifest Vite.
 
-### H. Pengelolaan Dependensi Aman & Self-Hosted Assets
+### H. Integritas Database, Hak Akses, & Trigger Anti-Mutasi (Fase 2)
+1. **Pemisahan Hak Akses Database (Least Privilege Principle):**
+   - User aplikasi (`erp_app`) strictly berhak hanya pada operasi DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Dilarang keras memiliki hak DDL (`CREATE`, `DROP`, `ALTER`), hak administratif (`SUPER`, `PROCESS`, `FILE`, `GRANT OPTION`), maupun hak `TRIGGER`.
+   - User migrator (`erp_migrator`) memiliki hak DDL dan hak `TRIGGER` untuk menjalankan migrasi skema dan membuat trigger integritas. Dilarang keras memiliki hak `SUPER`, `FILE`, `PROCESS`, atau `GRANT OPTION`.
+2. **Trigger Integritas Ledger Append-Only:**
+   - Tabel `audit_logs` dan `stock_movements` dilindungi oleh trigger database tingkat mesin (`BEFORE UPDATE` dan `BEFORE DELETE`) yang mengeksekusi `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<tabel> is append-only'`.
+   - Trigger ini berlaku untuk SEMUA user, termasuk `erp_migrator` dan user aplikasi, menjamin riwayat mutasi stok dan jejak audit tidak dapat diubah atau dimanipulasi secara retrospektif oleh siapa pun.
+3. **Catatan Penting Konfigurasi Trust Proxies:**
+   > [!WARNING]
+   > Konfigurasi `trustProxies` pada `bootstrap/app.php` saat ini mencakup subnet blok IP privat (`127.0.0.1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) semata-mata untuk kompatibilitas jaringan internal Docker bridge lokal. Konfigurasi ini **HARUS dipersempit secara ketat pada Fase 12 (Production Deployment)** hanya ke IP spesifik reverse proxy atau load balancer produksi sebenarnya untuk mencegah serangan spoofing header `X-Forwarded-For`.
+
+### I. Pengelolaan Dependensi Aman & Self-Hosted Assets
 - Dependensi Composer dilindungi oleh `roave/security-advisories:dev-latest`.
 - Audit otomatis `composer audit` dan `npm audit` 100% bebas kerentanan (0 vulnerabilities).
 - Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
