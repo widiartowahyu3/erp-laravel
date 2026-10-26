@@ -27,7 +27,7 @@ info() {
 }
 
 echo "================================================================="
-echo "       FASE 1: SECURITY & HARDENING VERIFICATION SUITE           "
+echo "            SECURITY & HARDENING VERIFICATION SUITE              "
 echo "================================================================="
 
 # Source .env
