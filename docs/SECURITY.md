@@ -163,6 +163,21 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 - Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
 - Berkas `.npmrc` mengaktifkan `ignore-scripts=true`.
 
+### J. Pemindai Keamanan Statis (Static Security Scanner) & Keterbatasan Deteksi
+Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berkala melalui `StaticSecurityScanTest.php` untuk memindai seluruh direktori `app/`, `routes/`, `database/`, `config/`, dan `bootstrap/`. Pemindai memvalidasi ketiadaan fungsi berbahaya (`eval`, `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`, `unserialize`, `assert`, `create_function`, `extract`, `call_user_func`, `call_user_func_array`, `forward_static_call`, `forward_static_call_array`, `pcntl_exec`, `phpinfo`, `highlight_file`, `show_source`), backtick execution, argumen non-literal pada SQL mentah (`raw`, `whereRaw`, `statement`, dll), serta penyertaan dinamis (`include`, `require`, `include_once`, `require_once` non-literal).
+
+**Keterbatasan Pemindai Statis**:
+1. **Pemanggilan Fungsi Melalui Variabel (`$f()`)**: Pemindai berbasis token statis tidak dapat melacak nilai runtime variabel dinamis yang menampung nama fungsi (misalnya `$func = 'exec'; $func('ls');`).
+2. **Callable Berupa String**: Pemanggilan melalui fungsi bawaan PHP yang menerima callback nama fungsi string (misalnya `array_map('system', $commands)` atau `usort($data, 'exec')`) tidak terdeteksi oleh parser token sederhana.
+3. **Pemanggilan Metode Dinamis**: Invokasi objek dengan nama metode dinamis (`$object->$methodName()`).
+4. **Refleksi Dinamis**: Instansiasi dan eksekusi via PHP Reflection API dinamis.
+
+**Mitigasi Berlapis Terhadap Keterbatasan Pemindai**:
+- Hardening runtime PHP-FPM (`disable_functions` memuat `exec, passthru, shell_exec, system, proc_open, popen, pcntl_exec`) yang mematikan eksekusi di tingkat binary C PHP engine terlepas dari cara fungsi tersebut dipanggil.
+- Hardening container (`read_only: true`, `cap_drop: ALL`, `no-new-privileges: true`) yang membatasi kemampuan proses sistem operasi.
+- Pest Architectural Test (`SecurityArchTest.php`) yang melarang penggunaan process execution component di seluruh kode aplikasi.
+
+
 ---
 
 ## 3. Matriks Ancaman & Mitigasi Keamanan Aplikasi

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Scan PHP code using PHP token_get_all to detect dangerous function calls,
- * execution operators, and non-literal SQL statement arguments.
+ * execution operators, dynamic inclusions, and non-literal SQL statement arguments.
  *
  * @return array<int, string> List of violation descriptions
  */
@@ -28,6 +28,14 @@ function scanPhpTokens(string $code, string $filePath = 'code'): array
         'dd',
         'dump',
         'var_dump',
+        'call_user_func',
+        'call_user_func_array',
+        'forward_static_call',
+        'forward_static_call_array',
+        'pcntl_exec',
+        'phpinfo',
+        'highlight_file',
+        'show_source',
     ];
 
     $rawSqlMethods = [
@@ -61,11 +69,47 @@ function scanPhpTokens(string $code, string $filePath = 'code'): array
             continue;
         }
 
+        // 3. Language constructs: include, require, include_once, require_once
+        if (is_array($token) && in_array($token[0], [T_INCLUDE, T_INCLUDE_ONCE, T_REQUIRE, T_REQUIRE_ONCE], true)) {
+            $constructName = $token[1];
+            $constructLine = $token[2];
+
+            $argTokens = [];
+            for ($k = $i + 1; $k < $count; $k++) {
+                if ($tokens[$k] === ';' || (is_array($tokens[$k]) && $tokens[$k][0] === T_CLOSE_TAG)) {
+                    break;
+                }
+                $argTokens[] = $tokens[$k];
+            }
+
+            $significant = array_values(array_filter($argTokens, function ($t): bool {
+                if (is_array($t)) {
+                    return ! in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true);
+                }
+
+                return true;
+            }));
+
+            // Strip single wrapping parentheses if present e.g. require('file.php')
+            if (count($significant) >= 2 && $significant[0] === '(' && $significant[count($significant) - 1] === ')') {
+                array_shift($significant);
+                array_pop($significant);
+            }
+
+            $isLiteral = (count($significant) === 1 && is_array($significant[0]) && $significant[0][0] === T_CONSTANT_ENCAPSED_STRING);
+
+            if (! $isLiteral) {
+                $violations[] = "Non-literal path in [{$constructName}] at line {$constructLine} in [{$filePath}]";
+            }
+
+            continue;
+        }
+
         if (! is_array($token)) {
             continue;
         }
 
-        // 3. Identifiers / strings
+        // 4. Identifiers / strings
         if ($token[0] === T_STRING) {
             $name = strtolower($token[1]);
 
@@ -260,6 +304,19 @@ test('static security scanner detects dangerous function calls and operators (ne
     ['<?php dump($var);', 'dump()'],
     ['<?php var_dump($var);', 'var_dump()'],
     ['<?php $out = `ls`;', 'Backtick'],
+    ['<?php call_user_func($callback, $param);', 'call_user_func()'],
+    ['<?php call_user_func_array($callback, [$param]);', 'call_user_func_array()'],
+    ['<?php forward_static_call($callback, $param);', 'forward_static_call()'],
+    ['<?php forward_static_call_array($callback, [$param]);', 'forward_static_call_array()'],
+    ['<?php pcntl_exec("/bin/ls");', 'pcntl_exec()'],
+    ['<?php phpinfo();', 'phpinfo()'],
+    ['<?php highlight_file($filePath);', 'highlight_file()'],
+    ['<?php show_source($filePath);', 'show_source()'],
+    ['<?php require $dynamicPath;', 'Non-literal path in [require]'],
+    ['<?php require($dynamicPath);', 'Non-literal path in [require]'],
+    ['<?php include $dynamicPath;', 'Non-literal path in [include]'],
+    ['<?php include_once("dir/" . $file);', 'Non-literal path in [include_once]'],
+    ['<?php require_once "dir/{$file}.php";', 'Non-literal path in [require_once]'],
     ['<?php DB::statement("CREATE TABLE " . $table);', 'statement()'],
     ['<?php DB::raw("SELECT * FROM " . $table);', 'raw()'],
     ['<?php DB::unprepared($dynamicSql);', 'unprepared()'],
@@ -278,6 +335,11 @@ test('static security scanner allows safe static literals and valid method calls
         '<?php DB::raw("COUNT(*)");',
         '<?php $query->whereRaw("status = ?", ["active"]);',
         '<?php DB::unprepared("CREATE TRIGGER tr_audit BEFORE UPDATE ON audit_logs FOR EACH ROW BEGIN SIGNAL SQLSTATE \'45000\'; END;");',
+        '<?php require "safe_file.php";',
+        '<?php require("safe_file.php");',
+        '<?php require_once "safe_config.php";',
+        '<?php include "safe_template.php";',
+        '<?php include_once("safe_template.php");',
     ];
 
     foreach ($safeSnippets as $code) {
