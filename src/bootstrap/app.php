@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Exceptions\BusinessRuleException;
+use App\Exceptions\DocumentNotEditableException;
+use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidStateTransitionException;
 use App\Exceptions\TooManyAttemptsException;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
@@ -46,10 +50,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontReport([
             TooManyAttemptsException::class,
+            BusinessRuleException::class,
+            InvalidStateTransitionException::class,
+            InsufficientStockException::class,
+            DocumentNotEditableException::class,
         ]);
 
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
-            if ($e instanceof TooManyAttemptsException) {
+            if ($e instanceof TooManyAttemptsException || $e instanceof BusinessRuleException) {
                 return $response;
             }
 
