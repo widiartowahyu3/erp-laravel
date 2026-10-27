@@ -304,3 +304,15 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
    - Karakter wildcard SQL `LIKE` (`%`, `_`, `\`) disanitasi secara otomatis menggunakan *escaping* berbasis *escape character* eksplisit (`!`) sehingga input pencarian pengguna selalu dicocokkan secara literal.
 2. **Presisi Aritmetika Moneter (`Decimal`)**:
    - Penggunaan tipe floating-point dilarang keras untuk mencegah kesalahan perhitungan nilai transaksi moneter. Seluruh perhitungan menggunakan `App\Support\Decimal` berbasis `bcmath` dengan representasi `string`.
+
+### D. Pengecualian Advisori Keamanan PHPUnit (PKSA-qhjm-rpqc-qkn6 / GHSA-9vw2-f4vp-x7gf)
+- **ID Advisori**: `PKSA-qhjm-rpqc-qkn6` (`GHSA-9vw2-f4vp-x7gf`)
+- **Paket & Versi Terdampak**: `phpunit/phpunit` (`>=13.4.0,<13.4.4`)
+- **Alasan Pengecualian**: Paket `pestphp/pest v5.3.3` memiliki batasan konflik eksplisit `pestphp/pest v5.3.3 conflicts phpunit/phpunit (>13.4.3)` (terverifikasi via `composer why-not phpunit/phpunit 13.4.5`), sehingga pembaruan ke versi patch PHPUnit 13.4.4+ belum dapat dilakukan sebelum tersedianya rilis kompatibilitas Pest.
+- **Risiko Praktis**: Kerentanan terjadi via *shared temporary directory* pada penanganan *code coverage* format PHPT oleh pengguna lokal lain di mesin yang sama. Risiko di lingkungan proyek ini **sangat rendah/nihil** karena:
+  1. PHPUnit merupakan dependensi pengembangan (*dev-dependency*) semata, dan tidak pernah diinstal atau dijalankan pada image/container runtime produksi (`--no-dev`).
+  2. Pengujian lokal dan CI dijalankan dalam container Docker terisolasi milik pengguna tunggal tanpa akses pengguna lokal lain.
+- **Kondisi Pencabutan & Kedaluwarsa Pengecualian**:
+  - Pengecualian ini bersifat sementara dan dibatasi waktu secara ketat hingga **2026-11-30**.
+  - Pengecualian akan dicabut segera setelah rilis pembaruan `pestphp/pest` yang mengizinkan `phpunit/phpunit >=13.4.4`, diikuti dengan `composer update phpunit/phpunit pestphp/pest` dan verifikasi bahwa `composer audit` kembali melaporkan 0 kerentanan.
+  - Skrip verifikasi hardening (`scripts/verify-hardening.sh` Butir 19) memvalidasi kepatuhan allowlist dan batas waktu kedaluwarsa secara otomatis.

@@ -22,6 +22,10 @@ fail() {
     FAILED_COUNT=$((FAILED_COUNT + 1))
 }
 
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
 info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -1035,6 +1039,76 @@ if echo "$PHP_LOGS" | grep -Ei 'TooManyAttemptsException|Stack trace'; then
     fail "Ditemukan TooManyAttemptsException atau Stack trace pada log PHP container!"
 else
     pass "Log PHP container bersih dari TooManyAttemptsException dan Stack trace pasca probe"
+fi
+
+# ------------------------------------------------------------------------------
+# 19. Verifikasi Audit Dependensi Composer & Penanganan Advisori (Langkah 0 F6)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 19: Verifikasi Audit Dependensi Composer & Penanganan Advisori ---"
+
+AUDIT_RAW=$(docker compose exec -T php composer audit --format=json 2>/dev/null || true)
+
+if [ -z "$AUDIT_RAW" ]; then
+    fail "composer audit tidak menghasilkan keluaran"
+else
+    AUDIT_CHECK=$(docker compose exec -T php php -r '
+        $raw = file_get_contents("php://stdin");
+        $data = json_decode($raw, true);
+        if (!is_array($data)) {
+            echo "INVALID_JSON";
+            exit(1);
+        }
+        $allowlist = ["PKSA-qhjm-rpqc-qkn6"];
+        $expiry = "2026-11-30";
+        $today = date("Y-m-d");
+
+        $advisories = $data["advisories"] ?? [];
+        $unallowed = [];
+        $allowedFound = [];
+
+        foreach ($advisories as $pkg => $pkgAdvisories) {
+            foreach ($pkgAdvisories as $adv) {
+                $id = $adv["advisoryId"] ?? "";
+                if (in_array($id, $allowlist, true)) {
+                    $allowedFound[] = "$pkg: $id ({$adv["title"]})";
+                } else {
+                    $unallowed[] = "$pkg: $id ({$adv["title"]})";
+                }
+            }
+        }
+
+        if (!empty($unallowed)) {
+            echo "UNALLOWED:" . implode("; ", $unallowed);
+            exit(2);
+        }
+
+        if (!empty($allowedFound)) {
+            if ($today > $expiry) {
+                echo "EXPIRED: Pengecualian advisori telah kedaluwarsa sejak $expiry (hari ini: $today)";
+                exit(3);
+            }
+            echo "ALLOWED:" . implode("; ", $allowedFound);
+            exit(0);
+        }
+
+        echo "CLEAN";
+        exit(0);
+    ' <<< "$AUDIT_RAW" 2>&1 || true)
+
+    if [[ "$AUDIT_CHECK" == ALLOWED:* ]]; then
+        ALLOWED_DETAILS="${AUDIT_CHECK#ALLOWED:}"
+        warn "composer audit menemukan advisori yang dikecualikan (berlaku s.d. 2026-11-30): $ALLOWED_DETAILS"
+        pass "composer audit bebas dari advisori di luar allowlist (pengecualian aktif valid s.d. 2026-11-30)"
+    elif [ "$AUDIT_CHECK" = "CLEAN" ]; then
+        pass "composer audit bersih dari semua kerentanan (0 advisories)"
+    elif [[ "$AUDIT_CHECK" == EXPIRED:* ]]; then
+        fail "Pengecualian advisori telah kedaluwarsa: ${AUDIT_CHECK#EXPIRED:}"
+    elif [[ "$AUDIT_CHECK" == UNALLOWED:* ]]; then
+        fail "Ditemukan advisori composer yang tidak diizinkan: ${AUDIT_CHECK#UNALLOWED:}"
+    else
+        fail "Gagal mengevaluasi hasil composer audit ($AUDIT_CHECK)"
+    fi
 fi
 
 # ------------------------------------------------------------------------------
