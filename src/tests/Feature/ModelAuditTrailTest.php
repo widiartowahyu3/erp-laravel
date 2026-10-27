@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\Models\TestUnit;
@@ -183,4 +184,58 @@ test('RecordsAudit never records sensitive keys or unchanged attributes', functi
         ->and($new)->not->toContain('secret')
         ->and($new)->not->toContain('token')
         ->and($new)->not->toContain('updated_at');
+});
+
+test('failed update leaves no residual pending changes and subsequent update records accurate diff', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // 1. Create two units
+    $unitA = TestUnit::create(['code' => 'U_A', 'name' => 'Original A']);
+    TestUnit::create(['code' => 'U_B', 'name' => 'Unit B']);
+
+    // 2. Attempt an update on unitA that fails database unique constraint
+    $unitA->code = 'U_B'; // Duplicate code!
+    $unitA->name = 'Failed Attempt Name';
+
+    $failed = false;
+    try {
+        $unitA->save();
+    } catch (QueryException $e) {
+        $failed = true;
+    }
+    expect($failed)->toBeTrue();
+
+    // 3. Reset unitA code to a valid new value and different name, then save successfully
+    $unitA->code = 'U_A_NEW';
+    $unitA->name = 'Successfully Renamed A';
+    $unitA->save();
+
+    // 4. Retrieve the updated audit log
+    $updateAudit = DB::table('audit_logs')
+        ->where('auditable_type', $unitA->getMorphClass())
+        ->where('auditable_id', $unitA->id)
+        ->where('event', 'unit.updated')
+        ->latest('id')
+        ->first();
+
+    expect($updateAudit)->not->toBeNull();
+
+    /** @var array<string, mixed> $oldDiff */
+    $oldDiff = json_decode((string) $updateAudit->old_values, true);
+    /** @var array<string, mixed> $newDiff */
+    $newDiff = json_decode((string) $updateAudit->new_values, true);
+
+    // Old values must reflect the clean original values, new values reflect the successful update
+    expect($oldDiff)->toBe([
+        'code' => 'U_A',
+        'name' => 'Original A',
+    ])->and($newDiff)->toBe([
+        'code' => 'U_A_NEW',
+        'name' => 'Successfully Renamed A',
+    ]);
+
+    // Ensure 'Failed Attempt Name' never leaked into the audit trail
+    expect((string) $updateAudit->old_values)->not->toContain('Failed Attempt Name')
+        ->and((string) $updateAudit->new_values)->not->toContain('Failed Attempt Name');
 });

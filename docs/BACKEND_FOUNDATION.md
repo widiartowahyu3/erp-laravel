@@ -257,8 +257,18 @@ Exception bisnis menggunakan trait `RendersAsFormError`:
 ## 9. Jejak Audit Model (`HasAuditUsers`, `RecordsAudit`)
 
 - **`HasAuditUsers`**: Otomatis mengisi kolom `created_by`, `updated_by`, dan `deleted_by` dengan ID pengguna terotentikasi saat ini.
-- **`RecordsAudit`**: Menangkap nilai atribut lama (`dirtyOldBeforeUpdate`) di dalam *in-memory store* internal sebelum update, lalu pada event `created`, `updated`, dan `deleted` menulis rekaman ke tabel `audit_logs`.
-- Catatan teknis: `audit_logs` dilindungi oleh trigger MariaDB `trg_audit_logs_prevent_update` dan `trg_audit_logs_prevent_delete` (append-only strictly).
+- **`RecordsAudit`**: Menangkap nilai atribut lama (`$model->auditPendingChanges`) pada instance model sebelum pembaruan, lalu pada event `created`, `updated`, `deleted`, dan `restored` menulis rekaman ke tabel `audit_logs`.
+- **Pembersihan Terjamin**: Properti `$auditPendingChanges` diinisialisasi ulang pada event `saving` dan dibersihkan pada `updated` dan `saved`, sehingga kegagalan transaksi/update tidak meninggalkan sisa difftrail pada memori.
+- **Batasan Operasi Massal (Bulk Updates)**:
+  - Eksekusi pembaruan atau penghapusan massal via query builder langsung (mis. `DB::table('...')->update(...)` atau `Model::where(...)->delete(...)`) **TIDAK AKAN MEMICU** event Eloquent dan konsekuensinya **TIDAK MEREKAM JEJAK AUDIT**.
+  - **Aturan Baku Arsitektur**: Seluruh mutasi data pada `App\Services` wajib dilakukan melalui pemanggilan instance Model (`$model->save()`, `$model->update()`, `$model->delete()`). Operasi massal langsung via query builder di dalam `App\Services` dilarang keras, kecuali diberi penanda pengecualian yang disetujui:
+    `// @audit-bypass: <alasan_kritis_kinerja_atau_pembersihan>`
+    Aturan ini diverifikasi secara otomatis melalui scan statis di `tests/Arch/BackendFoundationArchTest.php`.
+- **Batasan Sanitasi Kunci 'key' pada `AuditLogger::sanitizePayload`**:
+  - `AuditLogger::sanitizePayload()` secara otomatis membuang kunci yang memuat substring sensitif seperti `password`, `secret`, `token`, serta `key`.
+  - Hal ini menimbulkan batasan teknis: kolom bisnis sah yang bernama `key` (misalnya pada tabel `settings` dengan pasangan `key`-`value`) akan ikut terbuang dari payload audit.
+  - **Solusi yang Direkomendasikan**: Diimplementasikan pada fase modul administrasi berupa mekanisme daftar putih per model (*per-model whitelist* atau atribut model `$auditPreservedKeys = ['key']`) agar kolom non-rahasia bernama `key` tetap tercatat utuh.
+- **Immutabilitas Basis Data**: Tabel `audit_logs` dilindungi oleh trigger MariaDB `trg_audit_logs_prevent_update` dan `trg_audit_logs_prevent_delete` (append-only strictly).
 
 ---
 

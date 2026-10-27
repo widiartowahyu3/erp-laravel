@@ -11,17 +11,23 @@ use Illuminate\Support\Str;
 trait RecordsAudit
 {
     /**
-     * Pending updates store keyed by model object id.
+     * Pending updates store bound strictly to the model instance.
+     * Declared explicitly on the trait so Eloquent never treats it as a model database attribute.
      *
-     * @var array<int, array{old: array<string, mixed>, new: array<string, mixed>}>
+     * @var array{old: array<string, mixed>, new: array<string, mixed>}|null
      */
-    private static array $auditPendingUpdates = [];
+    protected ?array $auditPendingChanges = null;
 
     /**
      * Boot the records audit trait for an Eloquent model.
      */
     protected static function bootRecordsAudit(): void
     {
+        static::saving(function ($model): void {
+            // Guarantee fresh slate for every save cycle
+            $model->auditPendingChanges = null;
+        });
+
         static::created(function ($model): void {
             $attributes = $model->filterAuditAttributes($model->getAttributes());
 
@@ -47,16 +53,15 @@ trait RecordsAudit
                 $new[$key] = $newValue;
             }
 
-            self::$auditPendingUpdates[spl_object_id($model)] = [
+            $model->auditPendingChanges = [
                 'old' => $old,
                 'new' => $new,
             ];
         });
 
         static::updated(function ($model): void {
-            $oid = spl_object_id($model);
-            $pending = self::$auditPendingUpdates[$oid] ?? null;
-            unset(self::$auditPendingUpdates[$oid]);
+            $pending = $model->auditPendingChanges;
+            $model->auditPendingChanges = null;
 
             $rawOld = $pending['old'] ?? [];
             $rawNew = $pending['new'] ?? [];
@@ -76,6 +81,11 @@ trait RecordsAudit
                 new: $new,
                 userId: Auth::id() ? (int) Auth::id() : null
             );
+        });
+
+        static::saved(function ($model): void {
+            // Guaranteed cleanup
+            $model->auditPendingChanges = null;
         });
 
         static::deleted(function ($model): void {

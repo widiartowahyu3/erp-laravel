@@ -63,3 +63,40 @@ test('all classes extending FormRequest reside in App\Http\Requests', function (
         }
     }
 });
+
+test('services do not perform bulk query builder update or delete without approved audit bypass marker', function (): void {
+    $servicesDir = realpath(__DIR__.'/../../app/Services');
+    expect($servicesDir)->not->toBeFalse();
+
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator((string) $servicesDir));
+    $violations = [];
+
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+
+        $lines = file($file->getPathname(), FILE_IGNORE_NEW_LINES) ?: [];
+        foreach ($lines as $lineIndex => $line) {
+            if (preg_match('/->(update|delete)\s*\(/', $line)) {
+                $hasBypass = str_contains($line, '@audit-bypass');
+                if (! $hasBypass && $lineIndex > 0 && str_contains($lines[$lineIndex - 1], '@audit-bypass')) {
+                    $hasBypass = true;
+                }
+
+                if (! $hasBypass) {
+                    $violations[] = sprintf(
+                        'Direct update/delete found without @audit-bypass in %s:%d: %s',
+                        basename($file->getPathname()),
+                        $lineIndex + 1,
+                        trim($line)
+                    );
+                }
+            }
+        }
+    }
+
+    expect($violations)->toBeEmpty(
+        "Services must not perform un-audited mass query builder update/delete without '// @audit-bypass: <reason>' marker.\n".implode("\n", $violations)
+    );
+});
