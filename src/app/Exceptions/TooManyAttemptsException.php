@@ -24,14 +24,6 @@ final class TooManyAttemptsException extends Exception
     }
 
     /**
-     * Determine if the exception should be reported.
-     */
-    public function report(): bool
-    {
-        return false;
-    }
-
-    /**
      * Render the exception into an HTTP response.
      */
     public function render(Request $request): Response

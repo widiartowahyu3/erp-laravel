@@ -44,6 +44,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontReport([
+            TooManyAttemptsException::class,
+        ]);
+
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             if ($e instanceof TooManyAttemptsException) {
                 return $response;

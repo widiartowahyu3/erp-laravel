@@ -559,3 +559,20 @@ test('rate limiter cache keys do not contain raw email strings', function () {
 
     expect($hashedKeyCount)->toBeGreaterThan(0);
 });
+
+test('throttled login requests do not write error or stack trace to application log', function () {
+    Log::spy();
+
+    $email = fake()->unique()->safeEmail();
+    $ip = '127.0.0.1';
+    RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
+
+    for ($i = 0; $i < 20; $i++) {
+        $this->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPassword!',
+        ]);
+    }
+
+    Log::shouldNotHaveReceived('error');
+});

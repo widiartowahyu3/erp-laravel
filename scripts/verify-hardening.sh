@@ -1025,6 +1025,19 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 18. Verifikasi Ketiadaan Log Stack Trace pada Throttle (Fase 4 / Langk. 0 F1)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 18: Verifikasi Log PHP Bebas dari TooManyAttemptsException & Stack Trace ---"
+
+PHP_LOGS=$(docker logs erp-trading-php --since 5m 2>&1 || true)
+if echo "$PHP_LOGS" | grep -Ei 'TooManyAttemptsException|Stack trace'; then
+    fail "Ditemukan TooManyAttemptsException atau Stack trace pada log PHP container!"
+else
+    pass "Log PHP container bersih dari TooManyAttemptsException dan Stack trace pasca probe"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
