@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum PurchaseOrderStatus: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum PurchaseOrderStatus: string implements HasStateTransitions
 {
     case DRAFT = 'draft';
     case APPROVED = 'approved';
@@ -25,8 +27,12 @@ enum PurchaseOrderStatus: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
+        if (! ($to instanceof self)) {
+            return false;
+        }
+
         return match ($this) {
             self::DRAFT => in_array($to, [self::APPROVED, self::VOID], true),
             self::APPROVED => in_array($to, [self::PARTIALLY_RECEIVED, self::RECEIVED, self::VOID], true),

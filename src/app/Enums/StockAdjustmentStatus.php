@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum StockAdjustmentStatus: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum StockAdjustmentStatus: string implements HasStateTransitions
 {
     case DRAFT = 'draft';
     case POSTED = 'posted';
@@ -19,8 +21,12 @@ enum StockAdjustmentStatus: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
+        if (! ($to instanceof self)) {
+            return false;
+        }
+
         return match ($this) {
             self::DRAFT => in_array($to, [self::POSTED, self::VOID], true),
             self::POSTED => $to === self::VOID,

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum NormalBalance: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum NormalBalance: string implements HasStateTransitions
 {
     case DEBIT = 'debit';
     case CREDIT = 'credit';
@@ -17,7 +19,7 @@ enum NormalBalance: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
         return false;
     }

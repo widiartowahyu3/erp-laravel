@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Documents;
 
+use App\Enums\Contracts\HasStateTransitions;
 use App\Exceptions\InvalidStateTransitionException;
-use UnitEnum;
 
 final class DocumentStateMachine
 {
@@ -14,21 +14,13 @@ final class DocumentStateMachine
     /**
      * Check if a transition between two status enum cases is permissible.
      */
-    public static function canTransition(object $from, object $to): bool
+    public static function canTransition(HasStateTransitions $from, HasStateTransitions $to): bool
     {
-        if (! ($from instanceof UnitEnum) || ! ($to instanceof UnitEnum)) {
-            return false;
-        }
-
         if ($from::class !== $to::class) {
             return false;
         }
 
-        if (method_exists($from, 'canTransitionTo')) {
-            return (bool) $from->canTransitionTo($to);
-        }
-
-        return false;
+        return $from->canTransitionTo($to);
     }
 
     /**
@@ -36,11 +28,11 @@ final class DocumentStateMachine
      *
      * @throws InvalidStateTransitionException
      */
-    public static function assertTransition(object $from, object $to): void
+    public static function assertTransition(HasStateTransitions $from, HasStateTransitions $to): void
     {
         if (! self::canTransition($from, $to)) {
-            $fromVal = property_exists($from, 'value') ? (string) $from->value : $from::class;
-            $toVal = property_exists($to, 'value') ? (string) $to->value : $to::class;
+            $fromVal = (string) $from->value;
+            $toVal = (string) $to->value;
 
             throw new InvalidStateTransitionException($fromVal, $toVal);
         }

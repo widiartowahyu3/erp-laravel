@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum StockMovementType: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum StockMovementType: string implements HasStateTransitions
 {
     case RECEIPT = 'receipt';
     case DELIVERY = 'delivery';
@@ -21,7 +23,7 @@ enum StockMovementType: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
         return false;
     }

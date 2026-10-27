@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum PaymentType: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum PaymentType: string implements HasStateTransitions
 {
     case RECEIPT = 'receipt';
     case DISBURSEMENT = 'disbursement';
@@ -17,7 +19,7 @@ enum PaymentType: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
         return false;
     }

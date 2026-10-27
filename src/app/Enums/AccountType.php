@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum AccountType: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum AccountType: string implements HasStateTransitions
 {
     case ASSET = 'asset';
     case LIABILITY = 'liability';
@@ -23,7 +25,7 @@ enum AccountType: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
         return false;
     }

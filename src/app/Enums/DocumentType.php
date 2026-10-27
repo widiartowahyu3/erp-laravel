@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum DocumentType: string
+use App\Enums\Contracts\HasStateTransitions;
+
+enum DocumentType: string implements HasStateTransitions
 {
     case PO = 'PO';
     case GR = 'GR';
@@ -42,7 +44,7 @@ enum DocumentType: string
         };
     }
 
-    public function canTransitionTo(self $to): bool
+    public function canTransitionTo(HasStateTransitions $to): bool
     {
         return false;
     }

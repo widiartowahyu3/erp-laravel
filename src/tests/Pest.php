@@ -6,23 +6,32 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Database\Eloquent\Model;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)->in('Feature', 'Unit');
 
 pest()->afterEach(function (): void {
-    // 1. Clean up temporary test roles and their pivot relations
-    $testRoles = Role::where('name', 'LIKE', 'test_role_%')->get();
-    foreach ($testRoles as $role) {
-        $role->permissions()->detach();
-        $role->users()->detach();
-        $role->delete();
+    if (! app()->bound('db') || Model::getConnectionResolver() === null) {
+        return;
     }
 
-    // 2. Clean up non-seeded permissions that may have been created during tests
-    $standardNames = array_column(PermissionSeeder::permissions(), 'name');
-    if (! empty($standardNames)) {
-        Permission::whereNotIn('name', $standardNames)->delete();
+    try {
+        // 1. Clean up temporary test roles and their pivot relations
+        $testRoles = Role::where('name', 'LIKE', 'test_role_%')->get();
+        foreach ($testRoles as $role) {
+            $role->permissions()->detach();
+            $role->users()->detach();
+            $role->delete();
+        }
+
+        // 2. Clean up non-seeded permissions that may have been created during tests
+        $standardNames = array_column(PermissionSeeder::permissions(), 'name');
+        if (! empty($standardNames)) {
+            Permission::whereNotIn('name', $standardNames)->delete();
+        }
+    } catch (Throwable) {
+        // Silently skip if DB connection is unavailable in stateless/arch tests
     }
 });
 

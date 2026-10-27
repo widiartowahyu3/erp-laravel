@@ -18,6 +18,7 @@ arch('controllers do not use DB facade directly')
 arch('enums in App\Enums are enums')
     ->expect('App\Enums')
     ->toBeEnums()
+    ->ignoring('App\Enums\Contracts')
     ->toImplement(BackedEnum::class);
 
 arch('classes in App\Support are final')
