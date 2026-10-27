@@ -107,7 +107,8 @@ test('row lock test: concurrent connection blocks and times out then acquires ne
         DocumentNumberService::generate($docType, $date, 'mariadb_second');
     } catch (QueryException $e) {
         $lockFailed = true;
-        expect($e->getMessage())->toMatch('/(Lock wait timeout exceeded|1205)/i');
+        expect($e->getMessage())->toMatch('/(Lock wait timeout exceeded|1205)/i')
+            ->and($e->getMessage())->not->toMatch('/(Deadlock found|1213)/i');
     } finally {
         DB::connection('mariadb_second')->rollBack();
     }
@@ -131,6 +132,69 @@ test('row lock test: concurrent connection blocks and times out then acquires ne
         DB::connection('mariadb')->table('document_sequences')
             ->where('doc_type', $docType->value)
             ->where('period', '202610')
+            ->delete();
+    }
+});
+
+test('two-connection lock test on PRE-EXISTING row: connection B fails with lock wait timeout then gets next number', function () {
+    config(['database.connections.mariadb_second' => config('database.connections.mariadb')]);
+    DB::purge('mariadb_second');
+
+    $docType = DocumentType::DO;
+    $period = '202610';
+    $date = '2026-10-15';
+
+    // 1. Pre-insert row with last_number = 5
+    DB::connection('mariadb')->table('document_sequences')->insert([
+        'doc_type' => $docType->value,
+        'period' => $period,
+        'prefix' => $docType->prefix(),
+        'last_number' => 5,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    try {
+        // 2. Connection A begins transaction and updates/locks the pre-existing row
+        DB::connection('mariadb')->beginTransaction();
+        $numA = DocumentNumberService::generate($docType, $date, 'mariadb');
+        expect($numA)->toBe('DO/202610/00006');
+
+        // 3. Connection B with innodb_lock_wait_timeout = 1 attempts to generate
+        DB::connection('mariadb_second')->statement('SET innodb_lock_wait_timeout = 1');
+        DB::connection('mariadb_second')->beginTransaction();
+
+        $lockFailed = false;
+        try {
+            DocumentNumberService::generate($docType, $date, 'mariadb_second');
+        } catch (QueryException $e) {
+            $lockFailed = true;
+            // HARUS gagal karena lock wait timeout (bukan deadlock)
+            expect($e->getMessage())->toMatch('/(Lock wait timeout exceeded|1205)/i')
+                ->and($e->getMessage())->not->toMatch('/(Deadlock found|1213)/i');
+        } finally {
+            DB::connection('mariadb_second')->rollBack();
+        }
+
+        expect($lockFailed)->toBeTrue('Connection B should fail with lock wait timeout on pre-existing row');
+
+        // 4. Connection A commits
+        DB::connection('mariadb')->commit();
+
+        // 5. Connection B now succeeds and receives next number (00007)
+        DB::connection('mariadb_second')->beginTransaction();
+        try {
+            $numB = DocumentNumberService::generate($docType, $date, 'mariadb_second');
+            expect($numB)->toBe('DO/202610/00007');
+            DB::connection('mariadb_second')->commit();
+        } catch (Throwable $e) {
+            DB::connection('mariadb_second')->rollBack();
+            throw $e;
+        }
+    } finally {
+        DB::connection('mariadb')->table('document_sequences')
+            ->where('doc_type', $docType->value)
+            ->where('period', $period)
             ->delete();
     }
 });

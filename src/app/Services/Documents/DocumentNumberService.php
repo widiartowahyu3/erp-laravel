@@ -15,7 +15,7 @@ final class DocumentNumberService
     use RequiresTransaction;
 
     /**
-     * Generate a gapless document number with row locking inside an active transaction.
+     * Generate a gapless document number with atomic single-statement increment inside an active transaction.
      * Format: {PREFIX}/{YYYYMM}/{NNNNN} (e.g., PO/202610/00001).
      *
      * @throws \LogicException If called outside an active transaction.
@@ -35,39 +35,16 @@ final class DocumentNumberService
         $prefix = $type->prefix();
 
         $db = DB::connection($connection);
+        $now = now();
 
-        // Ensure the sequence record exists for this doc_type and period
-        $db->table('document_sequences')->insertOrIgnore([
-            'doc_type' => $type->value,
-            'period' => $period,
-            'prefix' => $prefix,
-            'last_number' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $affected = $db->affectingStatement(
+            'INSERT INTO document_sequences (doc_type, period, prefix, last_number, created_at, updated_at) VALUES (?, ?, ?, 1, ?, ?) ON DUPLICATE KEY UPDATE last_number = LAST_INSERT_ID(last_number + 1), updated_at = VALUES(updated_at)',
+            [$type->value, $period, $prefix, $now, $now]
+        );
 
-        // Lock the sequence row exclusively for the duration of the caller's transaction
-        /** @var object{id: int|string, last_number: int|string}|null $sequence */
-        $sequence = $db->table('document_sequences')
-            ->where('doc_type', $type->value)
-            ->where('period', $period)
-            ->lockForUpdate()
-            ->first();
+        $sequenceNumber = $affected === 1 ? 1 : (int) $db->selectOne('SELECT LAST_INSERT_ID() as num')->num;
 
-        if ($sequence === null) {
-            throw new \RuntimeException("Failed to lock document sequence for [{$type->value}] period [{$period}].");
-        }
-
-        $nextNumber = ((int) $sequence->last_number) + 1;
-
-        $db->table('document_sequences')
-            ->where('id', $sequence->id)
-            ->update([
-                'last_number' => $nextNumber,
-                'updated_at' => now(),
-            ]);
-
-        $paddedNumber = str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
+        $paddedNumber = str_pad((string) $sequenceNumber, 5, '0', STR_PAD_LEFT);
 
         return "{$prefix}/{$period}/{$paddedNumber}";
     }
