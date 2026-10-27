@@ -87,8 +87,8 @@ cleanup() {
     fi
 
     # Container probe cleanup
-    docker compose exec php rm -f "$PROBE_FPM_FILE" 2>/dev/null || true
-    docker compose exec php rm -f "$PROBE_COMPOSER_WRITE" 2>/dev/null || true
+    docker compose exec -T php rm -f "$PROBE_FPM_FILE" 2>/dev/null || true
+    docker compose exec -T php rm -f "$PROBE_COMPOSER_WRITE" 2>/dev/null || true
     docker compose --profile tools exec node rm -f "$PROBE_NPM_WRITE" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
@@ -134,8 +134,8 @@ done
 echo ""
 echo "--- Butir 1: Verifikasi User Non-Root pada Container ---"
 
-WEB_UID=$(docker compose exec web id -u 2>/dev/null | tr -d '\r')
-PHP_UID=$(docker compose exec php id -u 2>/dev/null | tr -d '\r')
+WEB_UID=$(docker compose exec -T web id -u 2>/dev/null | tr -d '\r')
+PHP_UID=$(docker compose exec -T php id -u 2>/dev/null | tr -d '\r')
 NODE_UID=$(docker compose --profile tools exec node id -u 2>/dev/null | tr -d '\r')
 
 if [ "$WEB_UID" != "0" ] && [ -n "$WEB_UID" ]; then
@@ -292,7 +292,7 @@ echo ""
 echo "--- Butir 6: Verifikasi PHP Hardening (FPM via cgi-fcgi & CLI) ---"
 
 # Buat berkas probe di tmpfs /tmp container php
-docker compose exec php sh -c "cat << 'EOF' > $PROBE_FPM_FILE
+docker compose exec -T php sh -c "cat << 'EOF' > $PROBE_FPM_FILE
 <?php
 echo json_encode([
     'disable_functions' => ini_get('disable_functions'),
@@ -305,13 +305,13 @@ echo json_encode([
 ]);
 EOF"
 
-FPM_RAW=$(docker compose exec php sh -c "SCRIPT_FILENAME=$PROBE_FPM_FILE REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000" 2>/dev/null || true)
-docker compose exec php rm -f "$PROBE_FPM_FILE" 2>/dev/null || true
+FPM_RAW=$(docker compose exec -T php sh -c "SCRIPT_FILENAME=$PROBE_FPM_FILE REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000" 2>/dev/null || true)
+docker compose exec -T php rm -f "$PROBE_FPM_FILE" 2>/dev/null || true
 
 FPM_JSON=$(echo "$FPM_RAW" | tr -d '\r' | grep -m 1 '^{' || true)
 
 # Parse disable_functions secara spesifik dari JSON (bukan grep exec yang bisa cocok ke key exec_exists)
-FPM_DISABLE_FUNCS=$(docker compose exec php php -r '
+FPM_DISABLE_FUNCS=$(docker compose exec -T php php -r '
     $raw = @file_get_contents("php://stdin");
     $data = json_decode($raw, true);
     echo $data["disable_functions"] ?? "";
@@ -356,13 +356,13 @@ else
 fi
 
 # Verifikasi ekstensi wajib ADA pada FPM dan CLI
-FPM_EXTS=$(docker compose exec php php -r '
+FPM_EXTS=$(docker compose exec -T php php -r '
     $raw = @file_get_contents("php://stdin");
     $data = json_decode($raw, true);
     echo implode(",", $data["extensions"] ?? []);
 ' <<< "$FPM_JSON" 2>/dev/null || true)
 
-CLI_EXTS=$(docker compose exec php php -r 'echo implode(",", get_loaded_extensions());' 2>/dev/null || true)
+CLI_EXTS=$(docker compose exec -T php php -r 'echo implode(",", get_loaded_extensions());' 2>/dev/null || true)
 
 for ext in pdo_mysql intl bcmath zip "Zend OPcache"; do
     if echo ",$FPM_EXTS," | grep -qi ",$ext,"; then
@@ -392,7 +392,7 @@ else
 fi
 
 # Cek ketersediaan proc_open di CLI
-CLI_PROC_OPEN=$(docker compose exec php php -r "echo function_exists('proc_open') ? 'yes' : 'no';" 2>/dev/null | tr -d '\r')
+CLI_PROC_OPEN=$(docker compose exec -T php php -r "echo function_exists('proc_open') ? 'yes' : 'no';" 2>/dev/null | tr -d '\r')
 if [ "$CLI_PROC_OPEN" = "yes" ]; then
     pass "proc_open TERSEDIA pada PHP CLI untuk kebutuhan Composer & Artisan"
 else
@@ -405,7 +405,7 @@ fi
 echo ""
 echo "--- Butir 7: Verifikasi Composer CLI, NPM, & Cache Writability ---"
 
-COMPOSER_VER=$(docker compose exec php composer --version 2>/dev/null | tr -d '\r')
+COMPOSER_VER=$(docker compose exec -T php composer --version 2>/dev/null | tr -d '\r')
 if [[ "$COMPOSER_VER" =~ Composer[[:space:]]version ]]; then
     pass "composer --version berjalan sukses di container php: $COMPOSER_VER"
 else
@@ -440,7 +440,7 @@ echo ""
 echo "--- Butir 8: Verifikasi Hardening Database MariaDB ---"
 
 # Versi 12.3.x
-DB_VERSION=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT VERSION();" 2>/dev/null | tr -d '\r')
+DB_VERSION=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT VERSION();" 2>/dev/null | tr -d '\r')
 if [[ "$DB_VERSION" =~ ^12\.3\. ]]; then
     pass "MariaDB versi 12.3.x ($DB_VERSION)"
 else
@@ -448,7 +448,7 @@ else
 fi
 
 # local_infile=0
-LOCAL_INFILE=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT @@local_infile;" 2>/dev/null | tr -d '\r')
+LOCAL_INFILE=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT @@local_infile;" 2>/dev/null | tr -d '\r')
 if [ "$LOCAL_INFILE" = "0" ]; then
     pass "local_infile = 0"
 else
@@ -456,7 +456,7 @@ else
 fi
 
 # mariadbd berjalan sebagai dedicated user 'mysql'
-MARIADB_USER=$(docker compose exec db ps aux | grep -E '[m]ariadbd|[m]ysqld' | awk '{print $1}' | head -n 1 | tr -d '\r')
+MARIADB_USER=$(docker compose exec -T db ps aux | grep -E '[m]ariadbd|[m]ysqld' | awk '{print $1}' | head -n 1 | tr -d '\r')
 if [ "$MARIADB_USER" = "mysql" ]; then
     pass "mariadbd berjalan sebagai dedicated user 'mysql' ($MARIADB_USER)"
 else
@@ -464,7 +464,7 @@ else
 fi
 
 # User anonim tidak ada
-ANON_USERS=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT COUNT(*) FROM mysql.user WHERE User = '';" 2>/dev/null | tr -d '\r')
+ANON_USERS=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT COUNT(*) FROM mysql.user WHERE User = '';" 2>/dev/null | tr -d '\r')
 if [ "$ANON_USERS" = "0" ]; then
     pass "Tidak ada user anonim pada MariaDB"
 else
@@ -472,7 +472,7 @@ else
 fi
 
 # User root HANYA diizinkan dari localhost/127.0.0.1/::1
-ROOT_HOSTS=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT host FROM mysql.user WHERE user='root';" 2>/dev/null | tr '\n' ' ' | tr -d '\r')
+ROOT_HOSTS=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SELECT host FROM mysql.user WHERE user='root';" 2>/dev/null | tr '\n' ' ' | tr -d '\r')
 ROOT_HOSTS_TRIM=$(echo "$ROOT_HOSTS" | xargs)
 if [[ "$ROOT_HOSTS" =~ ^(localhost|127\.0\.0\.1|::1|[[:space:]])+$ ]] && [ -n "$ROOT_HOSTS_TRIM" ]; then
     pass "User root MariaDB dibatasi HANYA pada host lokal ($ROOT_HOSTS_TRIM)"
@@ -481,7 +481,7 @@ else
 fi
 
 # erp_app TIDAK bisa CREATE TABLE (F4: via MYSQL_PWD)
-APP_CREATE_RES=$(docker compose exec -e MYSQL_PWD="${DB_APP_PASSWORD}" db mariadb -u "${DB_APP_USERNAME}" -e "CREATE TABLE erp_trading.probe_app (id INT);" 2>&1 || true)
+APP_CREATE_RES=$(docker compose exec -T -e MYSQL_PWD="${DB_APP_PASSWORD}" db mariadb -u "${DB_APP_USERNAME}" -e "CREATE TABLE erp_trading.probe_app (id INT);" 2>&1 || true)
 if echo "$APP_CREATE_RES" | grep -Eiq "denied|access denied"; then
     pass "erp_app DITOLAK saat melakukan CREATE TABLE (Command denied to user)"
 else
@@ -489,7 +489,7 @@ else
 fi
 
 # erp_migrator bisa DDL & DML (F4: via MYSQL_PWD)
-if docker compose exec -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_MIGRATOR_USERNAME}" -e "
+if docker compose exec -T -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_MIGRATOR_USERNAME}" -e "
     DROP TABLE IF EXISTS erp_trading.probe_migrator;
     CREATE TABLE erp_trading.probe_migrator (id INT PRIMARY KEY, name VARCHAR(50));
 " >/dev/null 2>&1; then
@@ -499,7 +499,7 @@ else
 fi
 
 # erp_app bisa DML pada tabel tersebut (F4: via MYSQL_PWD)
-if docker compose exec -e MYSQL_PWD="${DB_APP_PASSWORD}" db mariadb -u "${DB_APP_USERNAME}" -e "
+if docker compose exec -T -e MYSQL_PWD="${DB_APP_PASSWORD}" db mariadb -u "${DB_APP_USERNAME}" -e "
     INSERT INTO erp_trading.probe_migrator VALUES (1, 'test');
     UPDATE erp_trading.probe_migrator SET name = 'updated' WHERE id = 1;
     SELECT * FROM erp_trading.probe_migrator;
@@ -511,12 +511,12 @@ else
 fi
 
 # Cleanup probe table (F4: via MYSQL_PWD)
-docker compose exec -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_MIGRATOR_USERNAME}" -e "
+docker compose exec -T -e MYSQL_PWD="${DB_MIGRATOR_PASSWORD}" db mariadb -u "${DB_MIGRATOR_USERNAME}" -e "
     DROP TABLE IF EXISTS erp_trading.probe_migrator;
 " >/dev/null 2>&1 || true
 
 # erp_app tidak punya FILE privilege dan hanya DML
-GRANTS_APP=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SHOW GRANTS FOR '${DB_APP_USERNAME}'@'%';" 2>/dev/null || true)
+GRANTS_APP=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SHOW GRANTS FOR '${DB_APP_USERNAME}'@'%';" 2>/dev/null || true)
 if echo "$GRANTS_APP" | grep -qiE "FILE|SUPER|PROCESS|GRANT OPTION|TRIGGER|CREATE|DROP|ALTER"; then
     fail "erp_app memiliki privilege terlarang (harus strictly DML)"
 else
@@ -524,7 +524,7 @@ else
 fi
 
 # erp_migrator memiliki TRIGGER dan tidak memiliki SUPER, FILE, PROCESS, GRANT OPTION
-GRANTS_MIGRATOR=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SHOW GRANTS FOR '${DB_MIGRATOR_USERNAME}'@'%';" 2>/dev/null || true)
+GRANTS_MIGRATOR=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "SHOW GRANTS FOR '${DB_MIGRATOR_USERNAME}'@'%';" 2>/dev/null || true)
 if echo "$GRANTS_MIGRATOR" | grep -qi "TRIGGER"; then
     pass "erp_migrator memiliki hak TRIGGER pada database"
 else
@@ -565,7 +565,7 @@ if [ "$LEAK_INSPECT" = "false" ]; then
 fi
 
 # Periksa apakah password root muncul di env container php
-PHP_ENV=$(docker compose exec php env 2>/dev/null || true)
+PHP_ENV=$(docker compose exec -T php env 2>/dev/null || true)
 if echo "$PHP_ENV" | grep -q "$DB_ROOT_SECRET"; then
     fail "String password root MariaDB BOCOR di environment container php!"
 else
@@ -582,7 +582,7 @@ fi
 # Container PHP TIDAK boleh melihat berkas infra: .git, secrets/, docker/, compose.yaml
 ISOLATED=true
 for forbidden in .git secrets docker compose.yaml compose.yml; do
-    if docker compose exec php test -e "/var/www/html/${forbidden}"; then
+    if docker compose exec -T php test -e "/var/www/html/${forbidden}"; then
         fail "Container php DAPAT melihat berkas infra '${forbidden}' di /var/www/html"
         ISOLATED=false
     fi
@@ -817,7 +817,7 @@ echo ""
 echo "--- Butir 15: Verifikasi Skema Domain & Trigger Integritas (Fase 2) ---"
 
 # 1. Jumlah tabel domain = 37
-DOMAIN_TABLES_COUNT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+DOMAIN_TABLES_COUNT=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
     SELECT COUNT(*) FROM information_schema.TABLES
     WHERE TABLE_SCHEMA = 'erp_trading'
       AND TABLE_TYPE = 'BASE TABLE'
@@ -831,7 +831,7 @@ else
 fi
 
 # 2. Distribusi aturan FK
-FK_RULES=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+FK_RULES=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
     SELECT DELETE_RULE, COUNT(*)
     FROM information_schema.REFERENTIAL_CONSTRAINTS
     WHERE CONSTRAINT_SCHEMA = 'erp_trading'
@@ -843,7 +843,7 @@ CASCADE_COUNT=$(echo "$FK_RULES" | awk '$1=="CASCADE" {print $2}')
 RESTRICT_COUNT=$(echo "$FK_RULES" | awk '$1=="RESTRICT" {print $2}')
 OTHER_FK_RULES=$(echo "$FK_RULES" | grep -vE "^(CASCADE|RESTRICT)" || true)
 
-NON_PIVOT_CASCADE=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+NON_PIVOT_CASCADE=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
     SELECT CONSTRAINT_NAME
     FROM information_schema.REFERENTIAL_CONSTRAINTS
     WHERE CONSTRAINT_SCHEMA = 'erp_trading'
@@ -858,7 +858,7 @@ else
 fi
 
 # 3. Keberadaan trigger pada audit_logs dan stock_movements
-TRIGGERS_OUTPUT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+TRIGGERS_OUTPUT=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
     SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = 'erp_trading';
 " 2>/dev/null)
 
@@ -946,15 +946,15 @@ else
 fi
 
 # 6. password_algos() memuat argon2id pada FPM dan CLI
-CLI_ARGON=$(docker compose exec php php -r 'echo in_array("argon2id", password_algos()) ? "OK" : "MISSING";' 2>/dev/null || true)
+CLI_ARGON=$(docker compose exec -T php php -r 'echo in_array("argon2id", password_algos()) ? "OK" : "MISSING";' 2>/dev/null || true)
 
 PROBE_AUTH_FILE="/tmp/probe_auth_$$.php"
-docker compose exec php sh -c "cat << 'EOF' > $PROBE_AUTH_FILE
+docker compose exec -T php sh -c "cat << 'EOF' > $PROBE_AUTH_FILE
 <?php
 echo in_array('argon2id', password_algos()) ? 'OK' : 'MISSING';
 EOF"
-FPM_ARGON=$(docker compose exec php sh -c "SCRIPT_FILENAME=$PROBE_AUTH_FILE REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000" 2>/dev/null || true)
-docker compose exec php rm -f "$PROBE_AUTH_FILE" 2>/dev/null || true
+FPM_ARGON=$(docker compose exec -T php sh -c "SCRIPT_FILENAME=$PROBE_AUTH_FILE REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000" 2>/dev/null || true)
+docker compose exec -T php rm -f "$PROBE_AUTH_FILE" 2>/dev/null || true
 
 if [ "$CLI_ARGON" = "OK" ] && echo "$FPM_ARGON" | grep -q "OK"; then
     pass "password_algos() memuat argon2id pada PHP CLI dan PHP-FPM"
@@ -963,13 +963,13 @@ else
 fi
 
 # 7. Tidak ada user dengan email default yang dikenal di database erp_trading
-DEFAULT_USERS_COUNT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+DEFAULT_USERS_COUNT=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
     SELECT COUNT(*) FROM erp_trading.users
     WHERE email IN ('admin@example.com', 'admin@erp.local', 'admin@erp.com', 'root@localhost', 'user@example.com', 'test@example.com', 'superadmin@example.com')
        OR email LIKE '%@example.com';
 " 2>/dev/null | tr -d '[:space:]')
 
-TOTAL_USERS_COUNT=$(docker compose exec -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+TOTAL_USERS_COUNT=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
     SELECT COUNT(*) FROM erp_trading.users;
 " 2>/dev/null | tr -d '[:space:]')
 
@@ -993,7 +993,7 @@ else
 fi
 
 # 2. Verifikasi Nginx memuat zona login
-NGINX_CONF=$(docker compose exec web nginx -T 2>/dev/null || true)
+NGINX_CONF=$(docker compose exec -T web nginx -T 2>/dev/null || true)
 if echo "$NGINX_CONF" | grep -q 'zone=login_limit'; then
     pass "Nginx memuat definisi zona rate limit login (zone=login_limit)"
 else

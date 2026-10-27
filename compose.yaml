@@ -54,7 +54,6 @@ services:
     volumes:
       - ./src:/var/www/html
       - composer_cache:/tmp/composer
-      - ./docker/php/conf/php-fpm-hardening.conf:/usr/local/etc/php-fpm.d/99-hardening.conf:ro
     environment:
       - COMPOSER_HOME=/tmp/composer
     networks:

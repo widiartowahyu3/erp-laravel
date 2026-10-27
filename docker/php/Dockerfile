@@ -31,11 +31,13 @@ ARG GID=1000
 RUN deluser www-data 2>/dev/null || true \
     && delgroup www-data 2>/dev/null || true \
     && addgroup -g ${GID} -S appuser \
-    && adduser -u ${UID} -S -D -G appuser -h /var/www/html -s /bin/sh appuser
+    && adduser -u ${UID} -S -D -G appuser -h /var/www/html -s /bin/sh appuser \
+    && sed -i 's/^user = www-data/user = appuser/' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/^group = www-data/group = appuser/' /usr/local/etc/php-fpm.d/www.conf
 
 # Configure PHP & PHP-FPM
 COPY docker/php/conf/php-common.ini /usr/local/etc/php/conf.d/10-common.ini
-COPY docker/php/conf/php-fpm-hardening.conf /usr/local/etc/php-fpm.d/99-hardening.conf
+COPY docker/php/conf/php-fpm-hardening.conf /usr/local/etc/php-fpm.d/zz-hardening.conf
 
 # Prepare application directory
 WORKDIR /var/www/html
