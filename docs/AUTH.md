@@ -367,3 +367,42 @@ Perintah ini melakukan sinkronisasi *idempoten* (upsert data baru dan membersihk
    Fitur *Remember Me* jangka panjang dinonaktifkan secara sengaja. Seluruh sesi dibatasi strictly dengan batas maksimum 480 menit (8 jam) demi postur keamanan kerja harian.
 5. **Tanpa Antarmuka CRUD Pengguna di UI**:
    Manajemen pembuatan pengguna dan pemetaan peran via web interface akan diimplementasikan pada Fase 6 (Modul Administrasi). Pada Fase 3, pengelolaan akun dilakukan melalui Artisan CLI yang terlindungi.
+
+
+---
+
+## 10. Alat Bantu Pengujian Otorisasi & Hak Akses (Fase 4)
+
+Untuk mempermudah penulisan tes integrasi pada modul bisnis yang memerlukan skenario pengguna dengan hak akses tertentu, `tests/Pest.php` menyediakan dua helper fungsi global:
+
+### A. `userWithPermissions(array $names): User`
+Membuat pengguna baru (`User::factory()->create()`), membuat peran pengujian temporer, mengaitkan permission yang diminta (membuat permission baru jika belum ada di database), dan melampirkan peran tersebut ke pengguna.
+
+```php
+// Contoh pengujian izin spesifik:
+test('user with purchasing permissions can view purchase orders', function (): void {
+    $user = userWithPermissions(['purchase_orders.view', 'suppliers.view']);
+
+    $this->actingAs($user)
+        ->get('/purchasing/orders')
+        ->assertOk();
+
+    // Pastikan hak akses lain ditolak:
+    expect(Gate::forUser($user)->allows('purchase_orders.approve'))->toBeFalse();
+});
+```
+
+### B. `userWithRole(string $role): User`
+Membuat pengguna baru dan memasangkannya dengan salah satu peran sistem yang sudah didefinisikan (misal: `'admin'`, `'purchasing'`, `'warehouse'`, `'sales'`, `'finance'`, `'viewer'`).
+
+```php
+test('admin user has broad viewing permissions', function (): void {
+    $user = userWithRole('admin');
+
+    expect(Gate::forUser($user)->allows('users.view'))->toBeTrue()
+        ->and(Gate::forUser($user)->allows('purchase_orders.approve'))->toBeFalse();
+});
+```
+
+### C. Penolakan Default (*Default Denial*)
+Pengguna tanpa peran atau hak akses yang dibuat secara langsung (`User::factory()->create()`) akan ditolak secara mutlak pada seluruh pemeriksaan `Gate::allows()`.

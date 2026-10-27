@@ -177,3 +177,43 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
      - **API / JSON Requests**: Mengembalikan respons standar HTTP 429 *Too Many Requests* dengan payload JSON `{ "message": "...", "seconds": ... }` dan header `Retry-After`.
 8. **Privasi Kunci Cache Rate Limiter**:
    - Kunci cache pembatas laju wajib melakukan hashing SHA-256 terhadap alamat email (`login:email:<sha256>`), dilarang keras menyimpan alamat email mentah di dalam tabel cache basis data.
+
+---
+
+## 7. Konvensi Fondasi Backend & Logika Bisnis (Fase 4)
+
+1. **Aritmetika Desimal Aman**:
+   - Seluruh operasi matematika yang melibatkan uang, harga, diskon, pajak, kuantitas stok, dan rasio konversi **DILARANG KERAS** menggunakan tipe numerik floating-point (`float` atau `double`).
+   - Wajib menggunakan kelas utilitas final `App\Support\Decimal` yang beroperasi menggunakan ekstensi PHP `bcmath` dengan representasi nilai berupa `string`.
+   - Pembulatan wajib menggunakan `Decimal::round()` dengan strategi *half-up away from zero* pada presisi yang telah distandarkan (`SCALE_MONEY` = 2, `SCALE_QTY` = 4, `SCALE_CONVERSION` = 6, `SCALE_INTERNAL` = 8).
+
+2. **Status Enums & State Machine Dokumen**:
+   - Seluruh nilai status dokumen transaksi wajib didefinisikan sebagai string-backed enum (`BackedEnum`) di dalam namespace `App\Enums`.
+   - Transisi status dokumen wajib divalidasi melalui `App\Services\Documents\DocumentStateMachine`. Dilarang mengubah status dokumen secara bebas di controller tanpa melewati validasi matriks transisi.
+   - Penambahan nilai status baru wajib menyinkronkan klausa MariaDB `CHECK (status IN (...))` dan diverifikasi kelulusannya oleh `EnumDriftTest`.
+
+3. **Penomoran Dokumen Otomatis**:
+   - Penomoran dokumen transaksi wajib menggunakan `App\Services\Documents\DocumentNumberService`.
+   - Format nomor dokumen baku: `{PREFIX}/{YYYYMM}/{NNNNN}`.
+   - Penomoran harus dijalankan di dalam transaksi database aktif menggunakan penguncian baris pesimistik (`lockForUpdate()`) pada tabel `document_sequences` untuk menjamin urutan bebas celah (*gapless*).
+
+4. **Penjaga Transaksi (`RequiresTransaction`)**:
+   - Metode mutasi multi-tabel atau operasi kritis wajib menyertakan trait `App\Support\Concerns\RequiresTransaction` dan memanggil `self::ensureInTransaction()`. Operasi di luar blok transaksi aktif akan langsung melempar `LogicException`.
+
+5. **Query Daftar Aman (Pagination, Filter, Search, Sort)**:
+   - Request parameter untuk index/listing data wajib divalidasi oleh `App\Http\Requests\Support\ListRequest` (maksimal `per_page` bernilai 100).
+   - Eksekusi query listing wajib menggunakan `App\Support\Query\ListQuery` dengan whitelist kolom pengurutan dan filter yang eksplisit.
+   - Karakter wildcard SQL `LIKE` (`%`, `_`, `\`) pada parameter pencarian wajib disanitasi secara otomatis agar diperlakukan sebagai karakter pencarian literal.
+   - Pengurutan pada kolom non-unik wajib menyertakan secondary sort `id ASC` otomatis demi integritas cursor pagination.
+   - Respons paginasi untuk Inertia wajib dibungkus menggunakan `App\Support\Inertia\Paginated::from()`.
+
+6. **Jejak Audit Model**:
+   - Model Eloquent master data dan dokumen transaksi wajib menyertakan trait `App\Models\Concerns\HasAuditUsers` (mengisi `created_by`, `updated_by`, `deleted_by`) dan `App\Models\Concerns\RecordsAudit` (merekam perubahan nilai kolom sebelum dan sesudah mutasi ke tabel `audit_logs`).
+   - Nilai atribut lama wajib disimpan sementara di dalam *in-memory static store* internal guna mencegah modifikasi atribut Eloquent model secara langsung.
+
+7. **Hierarki Exception Bisnis**:
+   - Seluruh exception domain bisnis wajib merupakan turunan dari `App\Exceptions\BusinessRuleException` dan mengimplementasikan trait `App\Exceptions\Concerns\RendersAsFormError`.
+   - Transisi dokumen tidak sah dan operasi pada dokumen terkunci mengembalikan HTTP 409 Conflict.
+   - Pelanggaran validasi ketersediaan stok atau parameter kuantitas mengembalikan HTTP 422 Unprocessable Content.
+   - Permintaan formulir Inertia secara otomatis diarahkan kembali via HTTP 303 Redirect ke halaman asal dengan pesan error di dalam form error bag (`withErrors(['general' => $message])`).
+   - Exception bisnis dan throttling didaftarkan pada `$exceptions->dontReport(...)` di `bootstrap/app.php` guna mencegah pemborosan kapasitas log produksi.

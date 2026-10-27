@@ -273,3 +273,34 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
 - [x] **[Revisi Fase 3.1]** Aturan validasi kata sandi tersentralisasi tunggal melalui `App\Support\PasswordPolicy`.
 - [x] **[Revisi Fase 3.1]** Privasi cache: kunci rate limiter login menggunakan hash SHA-256 (`login:email:<sha256>`), bebas dari email mentah di basis data.
 - [x] **[Revisi Fase 3.1]** Konfigurasi sumber daya PHP-FPM eksplisit (`pm.max_children = 4`, `pm.max_requests = 500`) dengan alokasi memori terkendali dan terverifikasi `OOMKilled=false`.
+
+
+---
+
+## 5. Fondasi Backend & Mitigasi Keamanan Lanjutan (Fase 4)
+
+### A. Pencegahan Log Flood & Kebocoran Stack Trace (*Log Flood Prevention*)
+1. **Masalah**:
+   - Pengecualian operasional bisnis yang normal (seperti salah password berulang, transisi status yang tidak valid, atau stok tidak cukup) jika dilaporkan ke log framework akan menghasilkan ribuan baris log berstatus ERROR lengkap dengan *stack trace*.
+   - Hal ini berisiko menyebabkan *disk exhaustion* (DoS kapasitas media penyimpanan), memperlambat I/O container, serta mengaburkan insiden teknis kritis yang sesungguhnya.
+2. **Solusi & Mitigasi**:
+   - Seluruh hierarki exception bisnis (`BusinessRuleException`) serta exception pembatasan laju (`TooManyAttemptsException`) didaftarkan ke `$exceptions->dontReport(...)` di `bootstrap/app.php`.
+   - Exception ini tidak menulis stack trace ke file log framework, namun tetap dikonversi menjadi respons pengguna yang ramah dan aman via `RendersAsFormError`.
+   - Kegagalan keamanan yang perlu diaudit tetap dicatat secara aman dan terstruktur melalui `AuditLogger` ke tabel `audit_logs` dengan mekanisme *rate limiting / deduplication* terpasang.
+   - Terverifikasi otomatis pada skrip verifikasi `make verify` (Butir 18).
+
+### B. Resolusi IP Klien Tepercaya (*Trusted Proxy Configuration*)
+1. **Konfigurasi Terpusat**:
+   - Resolusi IP tepercaya diatur secara terpusat melalui `config/trustedproxy.php` yang membaca variabel lingkungan `TRUSTED_PROXIES`.
+   - Secara default `TRUSTED_PROXIES` bernilai kosong (`null`), sehingga Laravel sepenuhnya mengabaikan header `X-Forwarded-For` dari request HTTP dan secara eksklusif menggunakan IP FastCGI `REMOTE_ADDR` yang diteruskan oleh Nginx.
+2. **Verifikasi Perilaku (*Behavioral Verification*)**:
+   - Diuji dan diverifikasi secara perilaku melalui `tests/Feature/TrustedProxyTest.php`:
+     - Skenario default (`TRUSTED_PROXIES` kosong): Request dengan manipulasi header `X-Forwarded-For` tetap menghasilkan `request()->ip()` sesuai alamat IP peer koneksi (`REMOTE_ADDR`), menolak IP palsu.
+     - Skenario proxy terpercaya (IP gateway/load balancer dikonfigurasi eksplisit): Header `X-Forwarded-For` dari proxy terpercaya dievaluasi secara benar.
+
+### C. Integritas Data & Proteksi Injeksi
+1. **Pencegahan Injeksi SQL pada Query Builder Listing (`ListQuery`)**:
+   - Seluruh kolom pengurutan (`sort`) dan penyaringan (`filter`) divalidasi terhadap *whitelist* kolom model yang diizinkan. Parameter yang tidak terdaftar akan diabaikan tanpa memicu SQL error.
+   - Karakter wildcard SQL `LIKE` (`%`, `_`, `\`) disanitasi secara otomatis menggunakan *escaping* berbasis *escape character* eksplisit (`!`) sehingga input pencarian pengguna selalu dicocokkan secara literal.
+2. **Presisi Aritmetika Moneter (`Decimal`)**:
+   - Penggunaan tipe floating-point dilarang keras untuk mencegah kesalahan perhitungan nilai transaksi moneter. Seluruh perhitungan menggunakan `App\Support\Decimal` berbasis `bcmath` dengan representasi `string`.
