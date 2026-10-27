@@ -47,7 +47,7 @@ final class AuthService
         if (RateLimiter::tooManyAttempts($emailIpKey, 5) || RateLimiter::tooManyAttempts($ipKey, 30)) {
             $seconds = max(RateLimiter::availableIn($emailIpKey), RateLimiter::availableIn($ipKey));
 
-            $dedupKey = "audit_dedup|login.throttled|{$emailHash}|{$ip}";
+            $dedupKey = "audit_dedup|login.throttled|{$ip}";
             if (Cache::add($dedupKey, true, 60)) {
                 AuditLogger::record(
                     event: 'login.throttled',

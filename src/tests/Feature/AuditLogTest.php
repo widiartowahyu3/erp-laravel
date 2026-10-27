@@ -240,8 +240,9 @@ test('consecutive throttled login requests produce at most one audit log row wit
     $email = fake()->unique()->safeEmail();
     $ip = '127.0.0.1';
     RateLimiter::clear(AuthService::loginThrottleKey($email, $ip));
+    RateLimiter::clear('login_ip|'.$ip);
     $emailHash = hash('sha256', $email);
-    Cache::forget("audit_dedup|login.throttled|{$emailHash}|{$ip}");
+    Cache::forget("audit_dedup|login.throttled|{$ip}");
 
     // Trigger throttling: first 5 fail, then 50 attempts while throttled
     for ($i = 0; $i < 55; $i++) {
@@ -257,6 +258,28 @@ test('consecutive throttled login requests produce at most one audit log row wit
         ->count();
 
     expect($count)->toBe(1);
+});
+
+test('consecutive throttled login requests with rotating emails from same ip produce at most two audit log rows', function () {
+    $ip = '198.51.100.99';
+    RateLimiter::clear('login_ip|'.$ip);
+    Cache::forget("audit_dedup|login.throttled|{$ip}");
+
+    for ($i = 1; $i <= 50; $i++) {
+        $email = "user{$i}_".uniqid().'@example.com';
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])->post('/login', [
+            'email' => $email,
+            'password' => 'WrongPassword!',
+        ]);
+    }
+
+    $throttledCount = DB::table('audit_logs')
+        ->where('event', 'login.throttled')
+        ->where('ip_address', $ip)
+        ->count();
+
+    expect($throttledCount)->toBeGreaterThanOrEqual(1)
+        ->and($throttledCount)->toBeLessThanOrEqual(2);
 });
 
 test('consecutive 403 access denied requests produce at most one audit log row within 60 seconds', function () {
