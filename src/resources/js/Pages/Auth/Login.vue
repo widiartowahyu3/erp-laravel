@@ -76,7 +76,7 @@ function submit() {
                     />
                 </div>
                 <p
-                    v-if="form.errors.email"
+                    v-if="form.errors.email && !form.errors.email.includes('Terlalu banyak percobaan')"
                     id="email-error"
                     class="mt-1 text-xs text-rose-600 flex items-center gap-1 font-medium"
                     role="alert"

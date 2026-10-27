@@ -30,7 +30,7 @@ class UpdatePasswordRequest extends FormRequest
     {
         return [
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:12', 'max:128', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed'],
         ];
     }
 
@@ -44,8 +44,6 @@ class UpdatePasswordRequest extends FormRequest
         return [
             'current_password.required' => 'Kata sandi saat ini wajib diisi.',
             'password.required' => 'Kata sandi baru wajib diisi.',
-            'password.min' => 'Kata sandi baru minimal 12 karakter.',
-            'password.max' => 'Kata sandi baru maksimal 128 karakter.',
             'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
         ];
     }

@@ -61,13 +61,13 @@ function submit() {
 
             <!-- Rate Limit Alert Banner -->
             <div
-                v-if="form.errors.current_password && form.errors.current_password.includes('Terlalu banyak percobaan')"
+                v-if="(form.errors.current_password && form.errors.current_password.includes('Terlalu banyak percobaan')) || (form.errors.password && form.errors.password.includes('Terlalu banyak percobaan'))"
                 class="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3"
                 role="alert"
             >
                 <AlertCircle class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
                 <div class="text-sm font-medium">
-                    {{ form.errors.current_password }}
+                    {{ form.errors.current_password || form.errors.password }}
                 </div>
             </div>
 
@@ -112,7 +112,7 @@ function submit() {
                             </button>
                         </div>
                         <p
-                            v-if="form.errors.current_password"
+                            v-if="form.errors.current_password && !form.errors.current_password.includes('Terlalu banyak percobaan')"
                             id="current-password-error"
                             class="mt-1 text-xs text-rose-600 flex items-center gap-1 font-medium"
                             role="alert"
@@ -160,7 +160,7 @@ function submit() {
                             </button>
                         </div>
                         <p
-                            v-if="form.errors.password"
+                            v-if="form.errors.password && !form.errors.password.includes('Terlalu banyak percobaan')"
                             id="new-password-error"
                             class="mt-1 text-xs text-rose-600 flex items-center gap-1 font-medium"
                             role="alert"
