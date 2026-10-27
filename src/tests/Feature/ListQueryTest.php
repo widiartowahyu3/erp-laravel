@@ -187,3 +187,60 @@ test('Paginated::from produces exact structured payload for Inertia', function (
             'filter' => ['code' => 'BOX'],
         ]);
 });
+
+test('columns named date, sort, and count in filterable function as column names not PHP functions', function () {
+    // TestUnit table has 'code' and 'name'. Let us alias filter keys 'date', 'sort', 'count' to 'code'
+    TestUnit::create(['code' => 'D1', 'name' => 'Date Item']);
+    TestUnit::create(['code' => 'S1', 'name' => 'Sort Item']);
+    TestUnit::create(['code' => 'C1', 'name' => 'Count Item']);
+
+    // 1. Filter key 'date' mapped to column 'code'
+    $reqDate = Request::create('/test', 'GET', ['filter' => ['date' => 'D1']]);
+    $resDate = ListQuery::for(TestUnit::query())
+        ->filterable(['date' => 'code'])
+        ->paginate($reqDate);
+
+    expect($resDate->total())->toBe(1)
+        ->and($resDate->items()[0]->name)->toBe('Date Item');
+
+    // 2. Filter key 'sort' mapped to column 'code'
+    $reqSort = Request::create('/test', 'GET', ['filter' => ['sort' => 'S1']]);
+    $resSort = ListQuery::for(TestUnit::query())
+        ->filterable(['sort' => 'code'])
+        ->paginate($reqSort);
+
+    expect($resSort->total())->toBe(1)
+        ->and($resSort->items()[0]->name)->toBe('Sort Item');
+
+    // 3. Filter key 'count' mapped to column 'code'
+    $reqCount = Request::create('/test', 'GET', ['filter' => ['count' => 'C1']]);
+    $resCount = ListQuery::for(TestUnit::query())
+        ->filterable(['count' => 'code'])
+        ->paginate($reqCount);
+
+    expect($resCount->total())->toBe(1)
+        ->and($resCount->items()[0]->name)->toBe('Count Item');
+});
+
+test('non-scalar filter values such as array filter[status][]=x are ignored without causing 500 error', function () {
+    TestUnit::create(['code' => 'ACT', 'name' => 'Active Unit']);
+
+    // Plain request with array filter value: filter[status][]=x
+    $request = Request::create('/test', 'GET', [
+        'filter' => [
+            'status' => ['x', 'y'],
+            'code' => 'ACT',
+        ],
+    ]);
+
+    $paginator = ListQuery::for(TestUnit::query())
+        ->filterable([
+            'status' => 'code',
+            'code' => 'code',
+        ])
+        ->paginate($request);
+
+    // Array filter for status was safely ignored, scalar filter for code was applied
+    expect($paginator->total())->toBe(1)
+        ->and($paginator->items()[0]->code)->toBe('ACT');
+});

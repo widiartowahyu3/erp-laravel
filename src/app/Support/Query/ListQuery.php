@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Query;
 
 use App\Http\Requests\Support\ListRequest;
+use Closure;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -27,7 +28,7 @@ final class ListQuery
     private array $sortableColumns = [];
 
     /**
-     * @var array<string, string|callable(Builder<TModel>, mixed): void>
+     * @var array<string, string|Closure(Builder<TModel>, mixed): void>
      */
     private array $filterableDefinitions = [];
 
@@ -85,9 +86,9 @@ final class ListQuery
     }
 
     /**
-     * Set filters with column mappings or callables.
+     * Set filters with column mappings or Closures.
      *
-     * @param  array<string, string|callable(Builder<TModel>, mixed): void>  $definitions
+     * @param  array<string, string|Closure(Builder<TModel>, mixed): void>  $definitions
      * @return $this
      */
     public function filterable(array $definitions): self
@@ -143,8 +144,8 @@ final class ListQuery
         $filters = $request->input('filter');
         if (is_array($filters)) {
             foreach ($filters as $filterKey => $filterValue) {
-                if ($filterValue === null || $filterValue === '') {
-                    continue;
+                if (! is_scalar($filterValue) || $filterValue === '') {
+                    continue; // Ignore non-scalar or empty values without error
                 }
 
                 if (! array_key_exists($filterKey, $this->filterableDefinitions)) {
@@ -153,7 +154,7 @@ final class ListQuery
 
                 $definition = $this->filterableDefinitions[$filterKey];
 
-                if (is_callable($definition)) {
+                if ($definition instanceof Closure) {
                     $definition($this->builder, $filterValue);
                 } elseif (is_string($definition)) {
                     $this->builder->where($definition, (string) $filterValue);
