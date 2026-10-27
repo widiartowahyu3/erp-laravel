@@ -21,16 +21,29 @@ enum DocumentType: string
      */
     public function prefix(): string
     {
+        return $this->value;
+    }
+
+    /**
+     * Get the Indonesian human-readable label.
+     */
+    public function label(): string
+    {
         return match ($this) {
-            self::PO => 'PO',
-            self::GR => 'GR',
-            self::SO => 'SO',
-            self::DO => 'DO',
-            self::SA => 'SA',
-            self::SI => 'SI',
-            self::PI => 'PI',
-            self::PAY => 'PAY',
-            self::JV => 'JV',
+            self::PO => 'Pesanan Pembelian',
+            self::SO => 'Pesanan Penjualan',
+            self::GR => 'Penerimaan Barang',
+            self::DO => 'Surat Jalan',
+            self::SA => 'Penyesuaian Stok',
+            self::SI => 'Faktur Penjualan',
+            self::PI => 'Faktur Pembelian',
+            self::PAY => 'Pembayaran',
+            self::JV => 'Jurnal Umum',
         };
+    }
+
+    public function canTransitionTo(self $to): bool
+    {
+        return false;
     }
 }
