@@ -1078,8 +1078,8 @@ else
             echo "INVALID_JSON";
             exit(1);
         }
-        $allowlist = ["PKSA-qhjm-rpqc-qkn6"];
-        $expiry = "2026-11-30";
+        $allowlist = [];
+        $expiry = "";
         $today = date("Y-m-d");
 
         $advisories = $data["advisories"] ?? [];
