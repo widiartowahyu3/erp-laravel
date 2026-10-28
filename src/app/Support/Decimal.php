@@ -6,14 +6,6 @@ namespace App\Support;
 
 final class Decimal
 {
-    public const int MONEY = 2;
-
-    public const int QUANTITY = 4;
-
-    public const int COST = 4;
-
-    public const int PERCENT = 2;
-
     public const int SCALE_MONEY = 2;
 
     public const int SCALE_QUANTITY = 4;

@@ -5,13 +5,9 @@ declare(strict_types=1);
 use App\Support\Decimal;
 
 test('constants have expected scale values', function () {
-    expect(Decimal::MONEY)->toBe(2)
-        ->and(Decimal::SCALE_MONEY)->toBe(2)
-        ->and(Decimal::QUANTITY)->toBe(4)
+    expect(Decimal::SCALE_MONEY)->toBe(2)
         ->and(Decimal::SCALE_QUANTITY)->toBe(4)
-        ->and(Decimal::COST)->toBe(4)
         ->and(Decimal::SCALE_COST)->toBe(4)
-        ->and(Decimal::PERCENT)->toBe(2)
         ->and(Decimal::SCALE_PERCENT)->toBe(2);
 });
 
