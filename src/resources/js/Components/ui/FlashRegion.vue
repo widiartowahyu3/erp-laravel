@@ -1,23 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { useToast } from '@/composables/useToast';
 import Toast from './Toast.vue';
 
-let toastCounter = 0;
-const toasts = ref([]);
-
-function addToast(toast) {
-    const id = `toast-${++toastCounter}`;
-    toasts.value.push({
-        id,
-        duration: 5000,
-        ...toast,
-    });
-}
-
-function removeToast(id) {
-    toasts.value = toasts.value.filter((t) => t.id !== id);
-}
+const { toasts, addToast, removeToast } = useToast();
 
 const page = usePage();
 
