@@ -7,9 +7,15 @@ use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
-pest()->extend(TestCase::class)->in('Feature', 'Unit');
+pest()->extend(TestCase::class)
+    ->use(DatabaseTransactions::class)
+    ->in('Feature');
+
+pest()->extend(TestCase::class)
+    ->in('Unit');
 
 pest()->afterEach(function (): void {
     if (! app()->bound('db') || Model::getConnectionResolver() === null) {

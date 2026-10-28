@@ -7,6 +7,13 @@ use App\Services\Documents\DocumentNumberService;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\WithoutDatabaseTransactions;
+
+uses(WithoutDatabaseTransactions::class);
+
+afterEach(function () {
+    DB::table('document_sequences')->delete();
+});
 
 test('generate throws LogicException when called outside of an active database transaction', function () {
     expect(DB::transactionLevel())->toBe(0);

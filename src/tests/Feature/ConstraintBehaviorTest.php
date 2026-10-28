@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\ConstraintTestHelper;
 use Tests\Support\TestDataFactory;
-
-uses(DatabaseTransactions::class);
 
 test('negative stock_balances quantity is strictly rejected by check constraint', function () {
     $prodIdValid = TestDataFactory::createProduct();

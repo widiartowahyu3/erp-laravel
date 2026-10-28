@@ -26,7 +26,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => 'u'.bin2hex(random_bytes(6)).'@example.test',
             'password' => static::$password ??= 'Admin#Secret1234',
             'is_active' => true,
         ];

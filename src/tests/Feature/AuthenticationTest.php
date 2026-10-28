@@ -5,12 +5,9 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Services\Auth\AuthService;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
-
-uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     RateLimiter::clear('login_ip|127.0.0.1');

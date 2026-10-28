@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test seed test test-js lint analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed test test-js lint analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -67,12 +67,21 @@ migrate-test:
 	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
 	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD -e DB_DATABASE=erp_trading_test php php artisan migrate --database=mariadb_migrator
 
+test-db-reset:
+	@TARGET_DB=$${TEST_DB_NAME:-erp_trading_test}; \
+	case "$$TARGET_DB" in \
+		*_test) ;; \
+		*) echo "ERROR: Refusing to reset database '$$TARGET_DB'; target database name must end in '_test'!" >&2; exit 1 ;; \
+	esac; \
+	export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
+	docker compose run --rm -T -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD -e DB_DATABASE="$$TARGET_DB" php php artisan migrate:fresh --database=mariadb_migrator --seed < /dev/null
+
 seed:
 	docker compose run --rm php php artisan db:seed --force
 
-test: migrate-test
+test: test-db-reset
 	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
-	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php ./vendor/bin/pest
+	docker compose run --rm -T -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php sh -c './vendor/bin/pest --exclude-filter=ZGuardIntegrityTest && ./vendor/bin/pest tests/Feature/ZGuardIntegrityTest.php' < /dev/null
 
 test-js:
 	docker compose --profile tools run --rm node npm run test

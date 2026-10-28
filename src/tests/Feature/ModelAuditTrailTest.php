@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\Models\TestUnit;
-
-uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     // Clean up units table before each test

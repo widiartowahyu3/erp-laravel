@@ -5,12 +5,9 @@ declare(strict_types=1);
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
-
-uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     $this->seed([PermissionSeeder::class, RoleSeeder::class]);

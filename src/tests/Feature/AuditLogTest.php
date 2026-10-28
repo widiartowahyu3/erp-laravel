@@ -5,14 +5,11 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\AuthService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-
-uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     RateLimiter::clear('login_ip|127.0.0.1');

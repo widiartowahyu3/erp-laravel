@@ -5,13 +5,10 @@ declare(strict_types=1);
 use App\Http\Requests\Support\ListRequest;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Tests\Support\Models\TestUnit;
-
-uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     DB::table('units')->delete();

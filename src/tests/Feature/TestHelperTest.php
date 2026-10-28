@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Gate;
-
-uses(DatabaseTransactions::class);
 
 test('userWithPermissions creates user with specified permissions and denies others', function (): void {
     $user = userWithPermissions(['users.view', 'products.view']);
