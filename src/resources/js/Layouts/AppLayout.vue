@@ -118,9 +118,11 @@ function closeUserMenu() {
         </header>
 
         <!-- Mobile Drawer Overlay -->
-        <div
+        <button
             v-if="isMobileDrawerOpen"
-            class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden transition-opacity"
+            type="button"
+            aria-label="Tutup menu navigasi"
+            class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden transition-opacity cursor-default w-full h-full border-0 p-0 text-left"
             @click="closeMobileDrawer"
         />
 
@@ -281,7 +283,6 @@ function closeUserMenu() {
                                     : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
                             ]"
                             :title="isSidebarCollapsed ? item.name : undefined"
-                            :aria-label="item.name"
                         >
                             <component
                                 :is="iconMap[item.icon]"
@@ -291,6 +292,7 @@ function closeUserMenu() {
                             <span v-if="!isSidebarCollapsed" class="truncate">{{
                                 item.name
                             }}</span>
+                            <span v-else class="sr-only">{{ item.name }}</span>
                         </Link>
                         <div
                             v-else
@@ -440,7 +442,6 @@ function closeUserMenu() {
                             <Link
                                 href="/account/password"
                                 class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                role="menuitem"
                                 @click="closeUserMenu"
                             >
                                 <KeyRound
@@ -457,7 +458,6 @@ function closeUserMenu() {
                                 method="post"
                                 as="button"
                                 class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left cursor-pointer"
-                                role="menuitem"
                                 @click="closeUserMenu"
                             >
                                 <LogOut

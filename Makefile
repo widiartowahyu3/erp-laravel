@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test seed test lint analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test seed test test-js lint analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -74,13 +74,16 @@ test: migrate-test
 	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
 	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php ./vendor/bin/pest
 
+test-js:
+	docker compose --profile tools run --rm node npm run test
+
 lint:
 	docker compose run --rm php ./vendor/bin/pint --test
 
 analyse:
 	docker compose run --rm php ./vendor/bin/phpstan analyse
 
-check: lint analyse test
+check: lint analyse test test-js
 
 dev:
 	docker compose up
