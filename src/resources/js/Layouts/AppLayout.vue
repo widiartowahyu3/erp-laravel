@@ -97,6 +97,7 @@ const filteredNavigationGroups = computed(() => {
     return navigationGroups
         .map((group) => {
             const visibleItems = group.items.filter((item) => {
+                if (item.available === false) return false;
                 if (!item.permission) return true;
                 return permissions.includes(item.permission);
             });
@@ -308,13 +309,18 @@ function isItemActive(href) {
 
             <nav class="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
                 <div v-for="group in filteredNavigationGroups" :key="group.title" class="space-y-1">
-                    <div class="px-3 text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                    <div
+                        v-if="group.items.length > 1"
+                        class="px-3 text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5"
+                    >
                         {{ group.title }}
                     </div>
                     <template v-for="item in group.items" :key="item.name">
                         <Link
                             v-if="!item.disabled"
                             :href="item.href"
+                            :title="item.name"
+                            :aria-label="item.name"
                             :class="[
                                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-400',
                                 isItemActive(item.href)
@@ -328,7 +334,7 @@ function isItemActive(href) {
                                 class="w-5 h-5 shrink-0"
                                 aria-hidden="true"
                             />
-                            <span :aria-current="isItemActive(item.href) ? 'page' : undefined">{{ item.name }}</span>
+                            <span :aria-current="isItemActive(item.href) ? 'page' : undefined" class="truncate">{{ item.name }}</span>
                             <span v-if="isItemActive(item.href)" class="sr-only">(halaman aktif)</span>
                         </Link>
                         <div
@@ -428,7 +434,7 @@ function isItemActive(href) {
                         :class="[isSidebarCollapsed ? 'space-y-1 pt-2 first:pt-0 border-t border-slate-100 dark:border-slate-800 first:border-0' : 'space-y-1']"
                     >
                         <div
-                            v-if="!isSidebarCollapsed"
+                            v-if="!isSidebarCollapsed && group.items.length > 1"
                             class="px-2.5 text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1"
                         >
                             {{ group.title }}
@@ -438,6 +444,8 @@ function isItemActive(href) {
                             <Link
                                 v-if="!item.disabled"
                                 :href="item.href"
+                                :title="item.name"
+                                :aria-label="item.name"
                                 :class="[
                                     'flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-400',
                                     isSidebarCollapsed
@@ -447,7 +455,6 @@ function isItemActive(href) {
                                         ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
                                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white',
                                 ]"
-                                :title="isSidebarCollapsed ? item.name : undefined"
                             >
                                 <component
                                     :is="iconMap[item.icon]"

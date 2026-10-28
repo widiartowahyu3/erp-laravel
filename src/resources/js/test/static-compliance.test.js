@@ -95,4 +95,30 @@ describe('Frontend Static Compliance & Security Audits', () => {
         }
         expect(violations).toEqual([]);
     });
+
+    it('ensures navigation config has available flag and no phase badges', async () => {
+        const { navigationGroups } = await import('../config/navigation.js');
+        const items = navigationGroups.flatMap((g) => g.items);
+
+        for (const item of items) {
+            expect(typeof item.available).toBe('boolean');
+            if (item.badge) {
+                expect(item.badge).not.toMatch(/Fase/i);
+                expect(item.badge).not.toMatch(/Belum Aktif/i);
+            }
+        }
+
+        const availableItems = items.filter((i) => i.available);
+        const availableNames = availableItems.map((i) => i.name);
+        expect(availableNames).toContain('Dashboard');
+        expect(availableNames).toContain('Produk');
+        expect(availableNames).toContain('Kategori Produk');
+        expect(availableNames).toContain('Satuan Ukuran');
+        expect(availableNames).toContain('Pemasok');
+        expect(availableNames).toContain('Pelanggan');
+        expect(availableNames).toContain('Gudang');
+        expect(availableNames).toContain('Tarif Pajak');
+        expect(availableNames).toContain('Syarat Pembayaran');
+        expect(availableItems.length).toBe(9);
+    });
 });
