@@ -32,3 +32,17 @@ Route::middleware([
     Route::get('/account/password', [PasswordController::class, 'edit'])->name('password.edit');
     Route::put('/account/password', [PasswordController::class, 'update'])->name('password.update');
 });
+
+// Development styleguide route (strictly local only)
+if (app()->environment('local')) {
+    Route::middleware([
+        'web',
+        'auth',
+        AuthenticateSession::class,
+        EnforceSessionTimeouts::class,
+        EnsureUserIsActive::class,
+    ])->get('/dev/styleguide', function () {
+        return Inertia::render('Dev/Styleguide');
+    })->name('dev.styleguide');
+}
+
