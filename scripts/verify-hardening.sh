@@ -989,6 +989,9 @@ fi
 echo ""
 echo "--- Butir 17: Verifikasi Anti-Spoofing XFF, Nginx Zone, & OOM Safety ---"
 
+# Catat jumlah baris laravel.log sebelum probe throttle (Langkah 0 F7)
+LARAVEL_LOG_BEFORE_LINES=$(docker compose exec -T php sh -c 'if [ -f storage/logs/laravel.log ]; then wc -l < storage/logs/laravel.log; else echo 0; fi' 2>/dev/null | tr -d '\r\n')
+
 # 1. Jalankan scripts/probe-login-throttle.sh
 if bash scripts/probe-login-throttle.sh >/dev/null 2>&1; then
     pass "Probe login throttle anti-spoofing X-Forwarded-For lulus (scripts/probe-login-throttle.sh exit 0)"
@@ -1029,7 +1032,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 18. Verifikasi Ketiadaan Log Stack Trace pada Throttle (Fase 4 / Langk. 0 F1)
+# 18. Verifikasi Ketiadaan Log Stack Trace pada Throttle (Fase 4 / Langk. 0 F1 & F7)
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 18: Verifikasi Log PHP Bebas dari TooManyAttemptsException & Stack Trace ---"
@@ -1039,6 +1042,22 @@ if echo "$PHP_LOGS" | grep -Ei 'TooManyAttemptsException|Stack trace'; then
     fail "Ditemukan TooManyAttemptsException atau Stack trace pada log PHP container!"
 else
     pass "Log PHP container bersih dari TooManyAttemptsException dan Stack trace pasca probe"
+fi
+
+# F7: Perbandingan baris storage/logs/laravel.log sebelum dan sesudah probe throttle
+LARAVEL_LOG_AFTER_LINES=$(docker compose exec -T php sh -c 'if [ -f storage/logs/laravel.log ]; then wc -l < storage/logs/laravel.log; else echo 0; fi' 2>/dev/null | tr -d '\r\n')
+LARAVEL_LOG_BEFORE_LINES="${LARAVEL_LOG_BEFORE_LINES:-0}"
+
+if [ -n "$LARAVEL_LOG_AFTER_LINES" ] && [ "$LARAVEL_LOG_AFTER_LINES" -gt "$LARAVEL_LOG_BEFORE_LINES" ]; then
+    START_LINE=$((LARAVEL_LOG_BEFORE_LINES + 1))
+    NEW_LOG_LINES=$(docker compose exec -T php sed -n "${START_LINE},${LARAVEL_LOG_AFTER_LINES}p" storage/logs/laravel.log 2>/dev/null || true)
+    if echo "$NEW_LOG_LINES" | grep -Ei 'TooManyAttemptsException'; then
+        fail "Ditemukan TooManyAttemptsException pada baris baru storage/logs/laravel.log pasca probe throttle!"
+    else
+        pass "Baris baru storage/logs/laravel.log ($((LARAVEL_LOG_AFTER_LINES - LARAVEL_LOG_BEFORE_LINES)) baris) bebas dari TooManyAttemptsException"
+    fi
+else
+    pass "storage/logs/laravel.log tidak bertambah pasca probe throttle (bersih dari log exception)"
 fi
 
 # ------------------------------------------------------------------------------
