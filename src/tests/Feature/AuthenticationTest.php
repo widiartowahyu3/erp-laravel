@@ -332,7 +332,8 @@ test('password hashing uses argon2id', function () {
 
     $info = Hash::info((string) $user->password);
 
-    expect($info['algoName'])->toBe('argon2id');
+    expect($info['algoName'])->toBe('argon2id')
+        ->and(Hash::check('Argon2id#Password123', (string) $user->password))->toBeTrue();
 });
 
 test('current password verification throttles after 5 consecutive failures', function () {

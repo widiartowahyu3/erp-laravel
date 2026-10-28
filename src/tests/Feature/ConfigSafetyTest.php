@@ -56,6 +56,14 @@ test('hash driver default is configured to argon2id', function () {
     expect(config('hashing.driver'))->toBe('argon2id');
 });
 
+test('production argon2id configuration defaults are memory 65536, time 4, threads 1', function () {
+    $hashingFile = (string) file_get_contents(config_path('hashing.php'));
+
+    expect($hashingFile)->toContain("env('ARGON_MEMORY', 65536)")
+        ->and($hashingFile)->toContain("env('ARGON_TIME', 4)")
+        ->and($hashingFile)->toContain("env('ARGON_THREADS', 1)");
+});
+
 test('composer configuration enforces strict dependency isolation and minimal allow plugins', function () {
     $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
 
