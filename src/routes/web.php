@@ -45,4 +45,3 @@ if (app()->environment('local')) {
         return Inertia::render('Dev/Styleguide');
     })->name('dev.styleguide');
 }
-
