@@ -15,7 +15,7 @@ defineProps({
         <ol class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <li class="inline-flex items-center">
                 <Link
-                    href="/dashboard"
+                    href="/"
                     class="inline-flex items-center gap-1 hover:text-slate-800 dark:hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-sm"
                 >
                     <Home class="w-3.5 h-3.5" aria-hidden="true" />
