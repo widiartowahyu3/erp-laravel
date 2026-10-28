@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { ref } from 'vue';
+import { ref, h } from 'vue';
 
 // Mock Inertia page props and URL
 const mockPageProps = ref({
@@ -53,6 +53,19 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => {
                 return mockUrl.value;
             },
         }),
+        Head: {
+            name: 'Head',
+            render() {
+                return null;
+            },
+        },
+        Link: {
+            name: 'Link',
+            props: ['href', 'as', 'method'],
+            render() {
+                return h(this.as === 'button' ? 'button' : 'a', { href: this.href }, this.$slots.default ? this.$slots.default() : []);
+            },
+        },
     };
 });
 

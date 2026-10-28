@@ -100,7 +100,7 @@ onUnmounted(() => {
 
 <template>
     <div ref="dropdownRef" class="relative inline-block text-left">
-        <div ref="triggerRef" aria-haspopup="true" :aria-expanded="isOpen">
+        <div ref="triggerRef">
             <slot
                 name="trigger"
                 :open="isOpen"

@@ -583,6 +583,8 @@ function isItemActive(href) {
                                     type="button"
                                     class="flex items-center gap-2.5 pl-2 py-1 pr-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-400 cursor-pointer transition-colors"
                                     aria-label="Menu akun pengguna"
+                                    :aria-expanded="open"
+                                    aria-haspopup="true"
                                     @click="toggle"
                                 >
                                     <div
