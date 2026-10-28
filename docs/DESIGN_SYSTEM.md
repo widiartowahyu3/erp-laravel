@@ -1,6 +1,6 @@
 # Dokumentasi Design System ERP Distribusi/Trading
 
-Dokumen ini mendokumentasikan spesifikasi token desain, palet warna, tipografi, tema terang/gelap, serta standar aksesibilitas pada frontend aplikasi ERP Distribusi/Trading berbasis Vue 3, Inertia 3, dan Tailwind CSS 4.
+Dokumen ini mendokumentasikan spesifikasi token desain, palet warna, tipografi, tema terang/gelap, katalog komponen UI, standar aksesibilitas, dan checklist pembuatan komponen baru pada frontend aplikasi ERP Distribusi/Trading berbasis Vue 3, Inertia 3, dan Tailwind CSS 4.
 
 ---
 
@@ -88,3 +88,126 @@ Sistem desain menggunakan pendekatan token semantik lapis ganda:
 Setiap pasangan warna teks dan latar belakang diuji secara terprogram melalui Vitest (`resources/js/test/theme-contrast.test.js`) dengan menghitung *relative luminance* dan *contrast ratio* matematis:
 $$\text{Contrast Ratio} = \frac{L_1 + 0.05}{L_2 + 0.05}$$
 Seluruh token teks standar wajib menghasilkan rasio $\ge 4.5:1$, dan teks besar/tebal $\ge 3.0:1$.
+
+---
+
+## 5. Katalog Komponen Primitif
+
+Lokasi: `resources/js/Components/ui/`
+
+| Komponen | Props Utama | Emits | Slots | Aksesibilitas |
+|---|---|---|---|---|
+| `Button.vue` | `variant` ('primary'\|'secondary'\|'danger'\|'ghost'), `size` ('sm'\|'md'\|'lg'), `type`, `loading`, `disabled`, `block` | `click` | `default`, `icon` | Focus ring, `aria-disabled`, spinner with `role="status"` |
+| `IconButton.vue` | `ariaLabel` (wajib), `variant`, `size`, `type`, `disabled`, `loading` | `click` | `default` | Mandatory `aria-label`, min target 40px |
+| `TextInput.vue` | `modelValue`, `type`, `id`, `name`, `placeholder`, `disabled`, `readonly`, `required`, `invalid`, `describedBy` | `update:modelValue` | - | `aria-invalid`, `aria-describedby` |
+| `PasswordInput.vue` | `modelValue`, `id`, `name`, `placeholder`, `disabled`, `required`, `invalid`, `describedBy` | `update:modelValue` | - | Toggle visibility button with `aria-pressed` |
+| `Textarea.vue` | `modelValue`, `id`, `rows` (3), `disabled`, `invalid`, `describedBy` | `update:modelValue` | - | CSS `field-sizing-content` auto-resize tanpa inline style |
+| `Select.vue` | `modelValue`, `options` (array of {value, label}), `placeholder`, `disabled`, `invalid`, `describedBy` | `update:modelValue` | - | Keyboard accessible native select wrapper |
+| `Checkbox.vue` | `modelValue`, `id`, `label`, `description`, `disabled` | `update:modelValue` | - | Custom SVG checkmark, label click connection |
+| `Switch.vue` | `modelValue`, `id`, `label`, `description`, `disabled` | `update:modelValue` | - | `role="switch"`, `aria-checked` |
+| `FormField.vue` | `label`, `forId`, `required`, `error`, `hint` | - | `default({ id, invalid, describedBy })` | Auto wiring id & `aria-describedby` ke error & hint |
+| `Badge.vue` | `variant` ('neutral'\|'info'\|'success'\|'warning'\|'danger'), `size` ('sm'\|'md') | - | `default` | High contrast text vs background |
+| `StatusBadge.vue` | `status` (string status enum dokumen) | - | - | Auto map status Fase 4 ke label Bahasa Indonesia |
+| `Card.vue` | `padding` ('none'\|'sm'\|'md'\|'lg') | - | `default`, `header`, `footer` | Surface card background, border subtle |
+| `Alert.vue` | `variant` ('info'\|'success'\|'warning'\|'danger'), `title`, `dismissible` | `dismiss` | `default` | `role="alert"` (danger/warning) / `role="status"` (info/success) |
+| `Spinner.vue` | `size` ('sm'\|'md'\|'lg'), `variant` ('primary'\|'neutral'\|'white') | - | - | `role="status"`, `sr-only` text |
+| `Skeleton.vue` | `variant` ('text'\|'rect'\|'circle'), `class` | - | - | `aria-hidden="true"`, subtle pulse animation |
+| `Tooltip.vue` | `text`, `position` ('top'\|'bottom'\|'left'\|'right') | - | `default` | `role="tooltip"`, `aria-describedby` on trigger |
+
+---
+
+## 6. Katalog Komponen Komposit
+
+Lokasi: `resources/js/Components/ui/`
+
+| Komponen | Props Utama | Emits | Slots | Aksesibilitas |
+|---|---|---|---|---|
+| `Modal.vue` | `show`, `title`, `maxWidth` ('sm'\|'md'\|'lg'\|'xl'\|'2xl'), `closeable` | `close` | `default`, `footer` | WAI-ARIA Dialog pattern, focus trap, body scroll lock, Escape key |
+| `ConfirmDialog.vue` | `show`, `title`, `message`, `confirmText`, `cancelText`, `variant` ('primary'\|'danger'), `loading`, `requiresReason`, `reasonLabel` | `confirm(reason)`, `cancel`, `close` | - | Terintegrasi dengan `useConfirm()`, keyboard trap |
+| `Toast.vue` | `id`, `variant`, `title`, `message`, `duration` | `dismiss` | - | `role="status"`, pause on mouseenter & focusin |
+| `FlashRegion.vue` | - | - | - | `aria-live="polite"`, terhubung dengan session flash Inertia |
+| `Breadcrumbs.vue` | `items` (array of {label, href}) | - | - | `nav[aria-label="Breadcrumb"]`, `aria-current="page"` |
+| `PageHeader.vue` | `title`, `description` | - | `title`, `description`, `breadcrumbs`, `actions` | Semantic heading hierarchy |
+| `EmptyState.vue` | `title`, `description` | - | `icon`, `actions` | Centered layout, clear CTA container |
+| `ErrorState.vue` | `title`, `message`, `retryText` | `retry` | `icon`, `actions` | `role="alert"`, recovery action button |
+| `LoadingState.vue`| `message`, `size` | - | - | Centered spinner with `role="status"` |
+| `Dropdown.vue` | `align` ('left'\|'right'), `width` ('48'\|'56'\|'64'\|'auto') | - | `trigger({ open, toggle, close })`, `default({ close })` | Full keyboard navigation (Arrow Up/Down, Esc, Tab, outside click) |
+| `DataTable.vue` | `columns`, `items`, `keyField`, `sortField`, `sortDirection`, `loading`, `emptyTitle`, `emptyDescription` | `sort(key)` | `cell(key)`, `empty` | Sticky header, internal overflow horizontal, sort indicators |
+| `Pagination.vue` | `meta` ({current_page, per_page, total, last_page, from, to}), `perPageOptions` | `page-change`, `per-page-change` | - | Accessible buttons with `aria-label` |
+| `FilterBar.vue` | `modelValue`, `placeholder`, `hasActiveFilters` | `update:modelValue`, `search`, `reset` | `filters` | Debounced search input (300ms), clear button |
+| `Rupiah.vue` | `value` (string\|number), `fallback` ('-') | - | - | Strict float safe formatting `Intl.NumberFormat('id-ID')` |
+| `Quantity.vue` | `value` (string\|number), `decimals` (2), `fallback` ('-') | - | - | Strict float safe formatting `Intl.NumberFormat('id-ID')` |
+| `DateDisplay.vue`| `value` (string), `withTime` (false), `fallback` ('-') | - | - | Localized Indonesian date string |
+| `PercentDisplay.vue`| `value` (string\|number), `decimals` (2), `fallback` ('-') | - | - | Localized percentage with `%` suffix |
+
+---
+
+## 7. Pola Form & Detail Dokumen
+
+### A. Pola Standar Form Input
+Setiap input dalam form wajib dibungkus dengan `FormField` untuk menjamin pemasangan label, atribut `aria-describedby`, dan penandaan error secara otomatis:
+```vue
+<FormField label="Nama Pelanggan" :error="form.errors.customer_name" required>
+    <template #default="{ id, invalid, describedBy }">
+        <TextInput
+            :id="id"
+            v-model="form.customer_name"
+            :invalid="invalid"
+            :described-by="describedBy"
+            required
+        />
+    </template>
+</FormField>
+```
+
+### B. Pola Konfirmasi Tindakan Berbahaya
+Tindakan pembatalan (*void*), penolakan, atau penghapusan data wajib menggunakan `useConfirm` dengan varian `danger` dan meminta input alasan pembatalan:
+```js
+const { confirm } = useConfirm();
+
+async function handleVoid(documentId) {
+    const result = await confirm({
+        title: 'Batalkan (Void) Dokumen Faktur',
+        message: 'Tindakan ini tidak dapat diurungkan dan akan membalikkan entri jurnal terkait.',
+        confirmText: 'Ya, Batalkan Dokumen',
+        variant: 'danger',
+        requiresReason: true,
+        reasonLabel: 'Alasan Pembatalan Dokumen',
+    });
+
+    if (result && result.confirmed) {
+        router.post(`/invoices/${documentId}/void`, { reason: result.reason });
+    }
+}
+```
+
+---
+
+## 8. Standar Aksesibilitas Frontend
+
+1. **Navigasi Keyboard**: Seluruh elemen interaktif dapat dijangkau dan dioperasikan hanya menggunakan tombol `Tab`, `Shift+Tab`, `Enter`, `Space`, dan tombol panah (`Arrow Keys`).
+2. **Focus Management**:
+   - Modal dan Drawer mobile mengaktifkan *focus trap* saat terbuka sehingga fokus tidak keluar dari konteks dialog.
+   - Saat ditutup, fokus dikembalikan ke elemen pemicu (*trigger element*).
+3. **Pemberitahuan Screen Reader**:
+   - Pesan toast dan feedback sistem menggunakan atribut `role="status"` atau `role="alert"` dengan `aria-live="polite"` agar dibacakan screen reader tanpa memutus fokus pengguna.
+4. **Tanpa Inline Style**:
+   - Seluruh penataan tampilan wajib menggunakan utilitas Tailwind CSS.
+   - Dilarang keras menggunakan atribut `style="..."` statis atau tag `<style>` di SFC demi kepatuhan CSP (*Content Security Policy*) tanpa `unsafe-inline`.
+5. **Keamanan Angka Desimal**:
+   - Dilarang menggunakan `parseFloat()` atau `Number()` pada nilai mata uang dan kuantitas inventori. Semua pemformatan angka menggunakan BigInt string splitting via `useFormatters` atau komponen formatter `Rupiah` dan `Quantity`.
+
+---
+
+## 9. Checklist Sebelum Membuat Komponen Baru
+
+Sebelum menambahkan komponen baru ke dalam repositori, lakukan checklist berikut:
+- [ ] Komponen menggunakan `<script setup>` murni (tanpa TypeScript).
+- [ ] Tidak menggunakan `v-html`.
+- [ ] Tidak menggunakan tag `<style>` atau atribut `style="..."` statis.
+- [ ] Menggunakan token warna semantik (`text-slate-900 dark:text-white`, `border-slate-200 dark:border-slate-800`, dll).
+- [ ] Target sentuh minimum `min-h-[40px]` untuk elemen yang dapat diklik.
+- [ ] Input memiliki label yang terhubung secara eksplisit via `id` dan `for`.
+- [ ] Error message terhubung via `aria-describedby` dan `aria-invalid`.
+- [ ] Lulus pengujian axe-core (`npm run test:a11y` menghasilkan 0 critical/serious violations).
+- [ ] Lulus pengujian static compliance (`npm run test` menghasilkan PASS pada `static-compliance.test.js`).

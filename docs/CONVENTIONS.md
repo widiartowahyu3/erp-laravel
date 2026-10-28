@@ -217,3 +217,11 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
    - Pelanggaran validasi ketersediaan stok atau parameter kuantitas mengembalikan HTTP 422 Unprocessable Content.
    - Permintaan formulir Inertia secara otomatis diarahkan kembali via HTTP 303 Redirect ke halaman asal dengan pesan error di dalam form error bag (`withErrors(['general' => $message])`).
    - Exception bisnis dan throttling didaftarkan pada `$exceptions->dontReport(...)` di `bootstrap/app.php` guna mencegah pemborosan kapasitas log produksi.
+
+8. **Frontend Design System, Testing & Keamanan (Fase 5)**:
+   - Seluruh antarmuka pengguna dibangun di atas Design System internal (`resources/js/Components/ui/`) berbasis Tailwind CSS 4 dan Vue 3.
+   - Komponen primitif dan komposit wajib mematuhi standar aksesibilitas WCAG 2.1 AA (diaudit via axe-core dengan 0 temuan critical/serious).
+   - Format nilai uang dan kuantitas wajib menggunakan komponen aman float (`<Rupiah>`, `<Quantity>`) atau `useFormatters`; dilarang menggunakan `parseFloat()` atau `Number()`.
+   - Seluruh pengujian frontend dijalankan via Vitest (`make test-js` atau `npm run test` di dalam container `node`).
+   - Halaman katalog komponen internal tersedia di `/dev/styleguide`, wajib dijaga ketat agar hanya aktif di lingkungan lokal (`app()->environment('local')`) dan memerlukan autentikasi login. Di luar lokal, route ini tidak terdaftar sama sekali (mengembalikan HTTP 404).
+   - Dilarang keras menggunakan `v-html`, tag `<style>` pada SFC, atribut `style="..."` statis, dan CDN pihak ketiga.

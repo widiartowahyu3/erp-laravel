@@ -4,33 +4,28 @@ Repositori sistem ERP untuk operasional distribusi dan trading berbasis monoliti
 
 ---
 
-## Status Fase: Fase 3 - Autentikasi, Otorisasi RBAC, Audit Logging, & Sesi Hardened (SELESAI & LULUS VERIFIKASI)
+## Status Fase: Fase 5 - Design System Frontend, Aksesibilitas WCAG & Kualitas Antarmuka (SELESAI & LULUS VERIFIKASI)
 
-Fase 3 telah selesai mengimplementasikan sistem autentikasi, otorisasi peran (RBAC), audit logging keamanan, dan manajemen sesi yang aman di atas stack monolitik Laravel 13 + Vue 3:
-- **Autentikasi Native Terproteksi**:
-  - Hashing kata sandi berbasis Argon2id (`HASH_DRIVER=argon2id`).
-  - Halaman login (`/login`) dan ganti kata sandi (`/account/password`) reaktif dengan Inertia Vue 3.
-  - Pembatasan laju (Rate Limiting) berbasis database (5 percobaan gagal/menit per email+IP, percobaan ke-6 HTTP 429).
-  - Pesan kesalahan seragam untuk mencegah *account enumeration*.
-- **Otorisasi Granular RBAC**:
-  - Matriks hak akses lengkap: tepat 98 permissions dan 7 system roles (`super_admin`, `admin`, `purchasing`, `warehouse`, `sales`, `finance`, `viewer`).
-  - Evaluasi hak akses via `Gate::before` terintegrasi in-memory caching pada model `User` bebas masalah N+1 query.
-  - Menu navigasi dinamis yang memfilter tautan berdasarkan hak akses pengguna secara otomatis.
-- **Audit Logging Keamanan Persisten**:
-  - Layanan `AuditLogger` mencatat peristiwa `auth.login.success`, `auth.login.failed`, `auth.logout.success`, `auth.session.expired`, `auth.user.deactivated`, `auth.password.changed`, dan `access.denied` (403).
-  - Sanitasi rekursif data rahasia (`/password|token|secret|key/i`) dan hashing SHA-256 pada raw email.
-  - Tabel `audit_logs` dilindungi trigger MariaDB integritas *append-only*.
-- **Hardening Sesi**:
-  - Penyimpanan sesi di database, atribut cookie `HttpOnly` dan `SameSite=lax`.
-  - *Idle timeout* 120 menit dan *Absolute lifetime* 480 menit (8 jam).
-  - Middleware `EnsureUserIsActive` memaksa logout seketika jika akun dinonaktifkan di tengah sesi aktif.
-- **Suite Pengujian & Verifikasi**:
-  - Pest test suite: **120 tests / 1275 assertions** lulus 100%.
-  - Larastan Level 6: 0 error.
-  - Laravel Pint: 0 pelanggaran.
-  - ESLint & Prettier: 0 error.
-  - Audit dependensi: 0 vulnerabilities (`composer audit` & `npm audit`).
-  - Suite verifikasi hardening: **110 PASS / 0 FAIL** (`make verify`).
+Fase 5 telah mengimplementasikan Design System terpadu, antarmuka responsif, dan gerbang kualitas frontend untuk stack Laravel 13 + Vue 3 + Inertia 3 + Tailwind CSS 4:
+- **Arsitektur Token & Tema Semantik**:
+  - Token CSS variables lapis ganda (`:root` dan `[data-theme="dark"]`) untuk permukaan, garis batas, teks, dan status aksi.
+  - Verifikasi matematis rasio kontras WCAG 2.1 AA ($\ge 4.5:1$) pada 17 pasangan warna tema terang dan gelap (`theme-contrast.test.js`).
+  - Pencegahan kedipan (*Anti-FOUC*) sinkron di Blade `<head>` menggunakan nonce CSP per-request.
+- **Katalog Komponen Primitif & Komposit**:
+  - 16 komponen primitif UI (`Button`, `IconButton`, `TextInput`, `PasswordInput`, `Textarea`, `Select`, `Checkbox`, `Switch`, `FormField`, `Badge`, `StatusBadge`, `Card`, `Alert`, `Spinner`, `Skeleton`, `Tooltip`).
+  - 17 komponen komposit & formatter (`Modal`, `ConfirmDialog`, `Toast`, `FlashRegion`, `Breadcrumbs`, `PageHeader`, `EmptyState`, `ErrorState`, `LoadingState`, `Dropdown`, `DataTable`, `Pagination`, `FilterBar`, `Rupiah`, `Quantity`, `DateDisplay`, `PercentDisplay`).
+  - Format angka dan mata uang strictly float-safe tanpa `parseFloat()` atau `Number()`.
+  - Auto-resize textarea menggunakan utilitas CSS `field-sizing-content` murni tanpa injeksi inline style.
+- **Layout Terpadu & Migrasi Halaman**:
+  - `AppLayout.vue` dengan sidebar responsif per modul (Dashboard, Master Data, Pembelian, Penjualan, Inventori, Keuangan, Laporan, Administrasi), collapsible di desktop, drawer mobile ber-focus trap, dan topbar terintegrasi.
+  - Halaman `Login.vue` dan `Password.vue` sepenuhnya termigrasi ke komponen UI design system tanpa regresi pada tes backend Pest.
+  - Halaman `Dashboard.vue` dengan kisi modul berizin dan status lingkungan sistem.
+  - Halaman katalog lokal `/dev/styleguide` yang dijaga ketat (`app()->environment('local')` dan middleware `auth`).
+- **Gerbang Kualitas & Audit Aksesibilitas**:
+  - Vitest + Vue Test Utils + JSDOM: **7 test files / 78 tests passed**.
+  - Audit aksesibilitas otomatis axe-core: 0 temuan critical / serious pada seluruh komponen dan halaman styleguide.
+  - Audit kepatuhan statis (`static-compliance.test.js`): 0 `v-html`, 0 static `style=`, 0 SFC `<style>`, 0 dependensi CDN luar.
+  - Suite verifikasi hardening: **122 PASS / 0 FAIL** (`make verify`).
 
 ---
 
@@ -105,6 +100,7 @@ make npm cmd="run dev"
 Akses aplikasi pada peramban:
 - **Aplikasi Web**: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 - **Halaman Login**: [http://127.0.0.1:8080/login](http://127.0.0.1:8080/login)
+- **Katalog Styleguide (DEV)**: [http://127.0.0.1:8080/dev/styleguide](http://127.0.0.1:8080/dev/styleguide) *(Khusus APP_ENV=local & terautentikasi)*
 - **Vite Dev Server (HMR)**: [http://127.0.0.1:5174](http://127.0.0.1:5174)
 - **Healthcheck Endpoint**: [http://127.0.0.1:8080/up](http://127.0.0.1:8080/up)
 
@@ -115,11 +111,14 @@ Akses aplikasi pada peramban:
 Seluruh pengujian dan inspeksi kualitas dijalankan di dalam container:
 
 ```bash
-# Menjalankan seluruh pemeriksaan kualitas (Pint + Larastan + Pest + Audit)
+# Menjalankan seluruh pemeriksaan kualitas (Pint + Larastan + Pest + Vitest)
 make check
 
 # Menjalankan suite pengujian Pest (Unit, Feature, Arch)
 make test
+
+# Menjalankan suite pengujian frontend Vitest & axe-core
+make test-js
 
 # Menjalankan pengecekan gaya kode PHP (Laravel Pint)
 make lint
@@ -130,7 +129,7 @@ make analyse
 # Menjalankan linting frontend Vue/JS (ESLint)
 docker compose --profile tools run --rm node npm run lint
 
-# Menjalankan skrip verifikasi keamanan & hardening (110 butir uji)
+# Menjalankan skrip verifikasi keamanan & hardening (122 butir uji)
 make verify
 ```
 
@@ -139,6 +138,9 @@ make verify
 ## Dokumentasi Teknis
 
 - [Daftar Stack & Matriks Versi Final](docs/STACK.md)
+- [Design System & Panduan Komponen UI](docs/DESIGN_SYSTEM.md)
+- [Konvensi & Aturan Frontend](docs/FRONTEND_CONVENTIONS.md)
+- [Panduan Pemeriksaan Visual Peramban](docs/VISUAL_REVIEW.md)
 - [Arsitektur Autentikasi, RBAC, & Audit](docs/AUTH.md)
 - [Arsitektur Monolith & Alur Sistem](docs/ARCHITECTURE.md)
 - [Konvensi Struktur & Standar Koding](docs/CONVENTIONS.md)

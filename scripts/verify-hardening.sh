@@ -1131,6 +1131,59 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# Butir 20: Verifikasi Isolasi Route Dev / Styleguide (Hanya Aktif di APP_ENV=local)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 20: Verifikasi Isolasi Route Dev / Styleguide ---"
+info "Memeriksa isolasi dan perlindungan route /dev/styleguide..."
+
+STYLEGUIDE_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/dev/styleguide" || true)
+if [ "$STYLEGUIDE_HTTP_CODE" = "302" ]; then
+    pass "Endpoint /dev/styleguide terlindungi autentikasi di lingkungan lokal (mengembalikan HTTP 302 redirect ke /login)"
+else
+    fail "Endpoint /dev/styleguide mengembalikan kode HTTP tidak terduga di lokal ($STYLEGUIDE_HTTP_CODE)"
+fi
+
+PROD_ROUTE_CHECK=$(docker compose run --rm -T -e APP_ENV=production php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+    try {
+        $app["router"]->getRoutes()->match(Illuminate\Http\Request::create("/dev/styleguide", "GET"));
+        echo "FOUND";
+    } catch (Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+        echo "NOT_FOUND";
+    }
+' 2>/dev/null || true)
+
+if [ "$PROD_ROUTE_CHECK" = "NOT_FOUND" ]; then
+    pass "Route /dev/styleguide tidak terdaftar di environment production (mengembalikan 404)"
+else
+    fail "Route /dev/styleguide terdaftar/bocor di environment production ($PROD_ROUTE_CHECK)"
+fi
+
+# ------------------------------------------------------------------------------
+# Butir 21: Verifikasi Aset Frontend Mandiri & Self-Hosted (Strictly Zero CDN)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 21: Verifikasi Aset Frontend Mandiri (Strictly Self-Hosted) ---"
+info "Memeriksa aset build frontend di src/public/build/..."
+
+if [ ! -d src/public/build ]; then
+    fail "Direktori build frontend (src/public/build) tidak ditemukan"
+else
+    pass "Direktori build frontend (src/public/build) tersedia"
+
+    CDN_LEAKS=$(grep -rE "https?://(unpkg\.com|cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|cdn\.tailwindcss\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)" src/public/build/ 2>/dev/null || true)
+    if [ -z "$CDN_LEAKS" ]; then
+        pass "Aset build frontend sepenuhnya mandiri / self-hosted (0 referensi CDN luar)"
+    else
+        fail "Ditemukan referensi CDN eksternal di dalam berkas build: $CDN_LEAKS"
+    fi
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
