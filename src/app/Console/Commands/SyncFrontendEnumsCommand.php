@@ -120,16 +120,16 @@ class SyncFrontendEnumsCommand extends Command
     {
         $statusMap = self::generateMap();
         $targetDir = resource_path('js/generated');
-        $targetPath = $targetDir . '/enums.json';
+        $targetPath = $targetDir.'/enums.json';
 
         if (! File::isDirectory($targetDir)) {
             File::makeDirectory($targetDir, 0755, true, true);
         }
 
-        $json = json_encode($statusMap, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        $json = json_encode($statusMap, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
         File::put($targetPath, $json);
 
-        $this->info("Berhasil menyinkronkan " . count($statusMap) . " status ke {$targetPath}");
+        $this->info('Berhasil menyinkronkan '.count($statusMap)." status ke {$targetPath}");
 
         return self::SUCCESS;
     }
