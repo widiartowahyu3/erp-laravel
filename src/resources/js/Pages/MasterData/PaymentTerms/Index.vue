@@ -123,11 +123,8 @@ async function handleDelete(item) {
                 </DataTable>
 
                 <Pagination
-                    :current-page="items.meta.page"
-                    :total-pages="items.meta.last_page"
-                    :total-items="items.meta.total"
-                    :per-page="items.meta.per_page"
-                    @page-change="setPage"
+                    :meta="items.meta"
+                    @change-page="setPage"
                     @change-per-page="setPerPage"
                 />
             </div>

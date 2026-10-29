@@ -21,6 +21,8 @@ import EmptyState from '../Components/ui/EmptyState.vue';
 import ErrorState from '../Components/ui/ErrorState.vue';
 import LoadingState from '../Components/ui/LoadingState.vue';
 import Styleguide from '../Pages/Dev/Styleguide.vue';
+import UnitForm from '../Pages/MasterData/Units/Form.vue';
+import UnitIndex from '../Pages/MasterData/Units/Index.vue';
 
 afterEach(() => {
     document.body.innerHTML = '';
@@ -244,6 +246,54 @@ describe('Automated Accessibility (axe-core)', () => {
     it('Full Styleguide page passes axe-core audit with 0 critical or serious violations', async () => {
         const wrapper = mount(Styleguide, {
             attachTo: document.body,
+        });
+        await expectNoViolations(wrapper.element);
+    });
+
+    it('Master Data Unit Form passes axe-core audit', async () => {
+        const wrapper = mount(UnitForm, {
+            attachTo: document.body,
+            global: {
+                stubs: {
+                    Link: { template: '<a><slot /></a>' },
+                },
+            },
+        });
+        await expectNoViolations(wrapper.element);
+    });
+
+    it('Master Data Unit Index page passes axe-core audit', async () => {
+        const wrapper = mount(UnitIndex, {
+            attachTo: document.body,
+            props: {
+                items: {
+                    data: [
+                        { id: 1, code: 'PCS', name: 'Pieces', created_at: '2026-10-29T00:00:00Z' },
+                        { id: 2, code: 'BOX', name: 'Box', created_at: '2026-10-29T00:00:00Z' },
+                    ],
+                    meta: {
+                        page: 1,
+                        per_page: 25,
+                        total: 2,
+                        last_page: 1,
+                        from: 1,
+                        to: 2,
+                    },
+                    query: {
+                        search: '',
+                        sort: 'code',
+                        direction: 'asc',
+                    },
+                },
+            },
+            global: {
+                stubs: {
+                    Head: true,
+                    Link: { template: '<a><slot /></a>' },
+                    AppLayout: { template: '<div><slot /></div>' },
+                    Can: { template: '<div><slot /></div>' },
+                },
+            },
         });
         await expectNoViolations(wrapper.element);
     });

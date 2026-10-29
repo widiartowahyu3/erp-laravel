@@ -10,7 +10,7 @@ const props = defineProps({
         validator: (value) =>
             typeof value === 'object' &&
             value !== null &&
-            'current_page' in value &&
+            ('current_page' in value || 'page' in value) &&
             'last_page' in value &&
             'total' in value,
     },
@@ -30,7 +30,7 @@ const props = defineProps({
 
 const emit = defineEmits(['change-page', 'change-per-page', 'update:perPage']);
 
-const currentPage = computed(() => Number(props.meta.current_page) || 1);
+const currentPage = computed(() => Number(props.meta.current_page ?? props.meta.page) || 1);
 const lastPage = computed(() => Number(props.meta.last_page) || 1);
 const effectivePerPage = computed(() => Number(props.perPage ?? props.meta.per_page) || 25);
 const total = computed(() => Number(props.meta.total) || 0);
