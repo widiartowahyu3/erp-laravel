@@ -14,6 +14,10 @@ const props = defineProps({
             'last_page' in value &&
             'total' in value,
     },
+    perPage: {
+        type: [Number, String],
+        default: undefined,
+    },
     perPageOptions: {
         type: Array,
         default: () => [10, 25, 50, 100],
@@ -24,14 +28,22 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['change-page', 'change-per-page']);
+const emit = defineEmits(['change-page', 'change-per-page', 'update:perPage']);
 
 const currentPage = computed(() => Number(props.meta.current_page) || 1);
 const lastPage = computed(() => Number(props.meta.last_page) || 1);
-const perPage = computed(() => Number(props.meta.per_page) || 15);
+const effectivePerPage = computed(() => Number(props.perPage ?? props.meta.per_page) || 25);
 const total = computed(() => Number(props.meta.total) || 0);
-const from = computed(() => props.meta.from ?? (total.value > 0 ? (currentPage.value - 1) * perPage.value + 1 : 0));
-const to = computed(() => props.meta.to ?? Math.min(currentPage.value * perPage.value, total.value));
+
+const from = computed(() => {
+    if (total.value === 0) return 0;
+    return props.meta.from ?? ((currentPage.value - 1) * effectivePerPage.value + 1);
+});
+
+const to = computed(() => {
+    if (total.value === 0) return 0;
+    return props.meta.to ?? Math.min(currentPage.value * effectivePerPage.value, total.value);
+});
 
 const pages = computed(() => {
     const current = currentPage.value;
@@ -72,7 +84,9 @@ function goToPage(page) {
 }
 
 function handlePerPageChange(event) {
-    emit('change-per-page', Number(event.target.value));
+    const val = Number(event.target.value);
+    emit('change-per-page', val);
+    emit('update:perPage', val);
 }
 </script>
 
@@ -84,20 +98,23 @@ function handlePerPageChange(event) {
                 Menampilkan <span class="font-semibold text-slate-900 dark:text-slate-100">{{ from }}</span> sampai <span class="font-semibold text-slate-900 dark:text-slate-100">{{ to }}</span> dari <span class="font-semibold text-slate-900 dark:text-slate-100">{{ total }}</span> data
             </span>
             <span v-else>
-                Menampilkan 0 data
+                Menampilkan 0 dari 0 data
             </span>
 
             <div v-if="perPageOptions.length > 0" class="flex items-center gap-1.5 ml-2">
-                <label :for="'per-page-select'" class="text-xs text-slate-500 sr-only">Data per halaman</label>
+                <label for="per-page-select" class="text-xs text-slate-500 dark:text-slate-400">
+                    Per halaman:
+                </label>
                 <select
-                    :id="'per-page-select'"
-                    :value="perPage"
+                    id="per-page-select"
+                    :value="effectivePerPage"
                     :disabled="disabled"
+                    aria-label="Jumlah data per halaman"
                     class="h-8 px-2 py-1 text-xs rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 cursor-pointer"
                     @change="handlePerPageChange"
                 >
                     <option v-for="opt in perPageOptions" :key="opt" :value="opt">
-                        {{ opt }} / hal
+                        {{ opt }}
                     </option>
                 </select>
             </div>

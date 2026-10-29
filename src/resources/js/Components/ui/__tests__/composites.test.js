@@ -206,6 +206,35 @@ describe('Composite UI Components', () => {
             expect(wrapper.emitted('change-page')).toBeTruthy();
             expect(wrapper.emitted('change-page')[0]).toEqual([3]);
         });
+
+        it('displays consistent zero summary when data is 0', () => {
+            const zeroMeta = {
+                current_page: 1,
+                last_page: 1,
+                per_page: 25,
+                total: 0,
+                from: null,
+                to: null,
+            };
+            const wrapper = mount(Pagination, { props: { meta: zeroMeta } });
+            expect(wrapper.text()).toContain('Menampilkan 0 dari 0 data');
+        });
+
+        it('emits change-per-page when per-page selector changes', async () => {
+            const wrapper = mount(Pagination, {
+                props: {
+                    meta,
+                    perPage: 10,
+                    perPageOptions: [10, 25, 50, 100],
+                },
+            });
+            const select = wrapper.find('select');
+            expect(select.exists()).toBe(true);
+            await select.setValue('50');
+
+            expect(wrapper.emitted('change-per-page')).toBeTruthy();
+            expect(wrapper.emitted('change-per-page')[0]).toEqual([50]);
+        });
     });
 
     describe('FilterBar', () => {
