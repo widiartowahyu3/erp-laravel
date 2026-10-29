@@ -39,6 +39,7 @@ final class SupplierService
         $paymentTermId = isset($data['payment_term_id']) && $data['payment_term_id'] !== '' ? (int) $data['payment_term_id'] : null;
 
         return DB::transaction(function () use ($supplier, $data, $paymentTermId): Supplier {
+            // @audit-bypass: Audited via RecordsAudit model event
             $supplier->update([
                 'code' => $data['code'],
                 'name' => $data['name'],
@@ -59,6 +60,7 @@ final class SupplierService
     {
         DB::transaction(function () use ($supplier): void {
             ReferenceGuard::assertCanDelete($supplier, 'Pemasok');
+            // @audit-bypass: Audited via RecordsAudit model event
             $supplier->delete();
         });
     }

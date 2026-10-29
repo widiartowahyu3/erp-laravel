@@ -30,6 +30,7 @@ final class TaxRateService
     public function update(TaxRate $taxRate, array $data): TaxRate
     {
         return DB::transaction(function () use ($taxRate, $data): TaxRate {
+            // @audit-bypass: Audited via RecordsAudit model event
             $taxRate->update([
                 'code' => $data['code'],
                 'name' => $data['name'],
@@ -45,6 +46,7 @@ final class TaxRateService
     {
         DB::transaction(function () use ($taxRate): void {
             ReferenceGuard::assertCanDelete($taxRate, 'Tarif Pajak');
+            // @audit-bypass: Audited via RecordsAudit model event
             $taxRate->delete();
         });
     }

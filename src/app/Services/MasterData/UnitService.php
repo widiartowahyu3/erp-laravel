@@ -28,6 +28,7 @@ final class UnitService
     public function update(Unit $unit, array $data): Unit
     {
         return DB::transaction(function () use ($unit, $data): Unit {
+            // @audit-bypass: Audited via RecordsAudit model event
             $unit->update([
                 'code' => $data['code'],
                 'name' => $data['name'],
@@ -41,6 +42,7 @@ final class UnitService
     {
         DB::transaction(function () use ($unit): void {
             ReferenceGuard::assertCanDelete($unit, 'Satuan Ukuran');
+            // @audit-bypass: Audited via RecordsAudit model event
             $unit->delete();
         });
     }

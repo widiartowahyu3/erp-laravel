@@ -29,6 +29,7 @@ final class PaymentTermService
     public function update(PaymentTerm $paymentTerm, array $data): PaymentTerm
     {
         return DB::transaction(function () use ($paymentTerm, $data): PaymentTerm {
+            // @audit-bypass: Audited via RecordsAudit model event
             $paymentTerm->update([
                 'code' => $data['code'],
                 'name' => $data['name'],
@@ -43,6 +44,7 @@ final class PaymentTermService
     {
         DB::transaction(function () use ($paymentTerm): void {
             ReferenceGuard::assertCanDelete($paymentTerm, 'Syarat Pembayaran');
+            // @audit-bypass: Audited via RecordsAudit model event
             $paymentTerm->delete();
         });
     }

@@ -42,6 +42,7 @@ final class CustomerService
         $creditLimit = isset($data['credit_limit']) && $data['credit_limit'] !== '' ? (string) $data['credit_limit'] : '0.00';
 
         return DB::transaction(function () use ($customer, $data, $paymentTermId, $creditLimit): Customer {
+            // @audit-bypass: Audited via RecordsAudit model event
             $customer->update([
                 'code' => $data['code'],
                 'name' => $data['name'],
@@ -63,6 +64,7 @@ final class CustomerService
     {
         DB::transaction(function () use ($customer): void {
             ReferenceGuard::assertCanDelete($customer, 'Pelanggan');
+            // @audit-bypass: Audited via RecordsAudit model event
             $customer->delete();
         });
     }

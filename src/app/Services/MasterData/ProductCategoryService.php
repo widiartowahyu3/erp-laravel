@@ -40,6 +40,7 @@ final class ProductCategoryService
         $this->assertNoCyclesAndMaxDepth($parentId, (int) $category->id);
 
         return DB::transaction(function () use ($category, $data, $parentId): ProductCategory {
+            // @audit-bypass: Audited via RecordsAudit model event
             $category->update([
                 'parent_id' => $parentId,
                 'code' => $data['code'],
@@ -57,6 +58,7 @@ final class ProductCategoryService
     {
         DB::transaction(function () use ($category): void {
             ReferenceGuard::assertCanDelete($category, 'Kategori Produk');
+            // @audit-bypass: Audited via RecordsAudit model event
             $category->delete();
         });
     }

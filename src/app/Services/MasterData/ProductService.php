@@ -36,6 +36,7 @@ final class ProductService
     public function update(Product $product, array $data): Product
     {
         return DB::transaction(function () use ($product, $data): Product {
+            // @audit-bypass: Audited via RecordsAudit model event
             $product->update([
                 'sku' => $data['sku'],
                 'name' => $data['name'],
@@ -57,6 +58,7 @@ final class ProductService
     {
         DB::transaction(function () use ($product): void {
             ReferenceGuard::assertCanDelete($product, 'Produk');
+            // @audit-bypass: Audited via RecordsAudit model event
             $product->delete();
         });
     }

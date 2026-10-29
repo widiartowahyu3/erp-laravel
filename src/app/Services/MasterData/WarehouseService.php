@@ -30,6 +30,7 @@ final class WarehouseService
     public function update(Warehouse $warehouse, array $data): Warehouse
     {
         return DB::transaction(function () use ($warehouse, $data): Warehouse {
+            // @audit-bypass: Audited via RecordsAudit model event
             $warehouse->update([
                 'code' => $data['code'],
                 'name' => $data['name'],
@@ -45,6 +46,7 @@ final class WarehouseService
     {
         DB::transaction(function () use ($warehouse): void {
             ReferenceGuard::assertCanDelete($warehouse, 'Gudang');
+            // @audit-bypass: Audited via RecordsAudit model event
             $warehouse->delete();
         });
     }
