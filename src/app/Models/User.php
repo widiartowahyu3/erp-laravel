@@ -82,6 +82,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the primary role display name or name for this user.
+     */
+    public function getPrimaryRoleName(): string
+    {
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->first()?->display_name ?? $this->roles->first()?->name ?? 'Pengguna';
+        }
+
+        return $this->roles()->value('display_name') ?? $this->roles()->value('name') ?? 'Pengguna';
+    }
+
+    /**
      * Check if user has the given permission.
      */
     public function hasPermission(string $permissionName): bool

@@ -41,6 +41,7 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => ($user instanceof User) ? $user->getPrimaryRoleName() : 'Pengguna',
                 ] : null,
                 'permissions' => ($user instanceof User)
                     ? $user->getPermissionNames()

@@ -360,10 +360,13 @@ function isItemActive(href) {
             <!-- Mobile Drawer User Profile -->
             <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
                 <div class="px-3 py-2">
-                    <p class="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                    <p class="text-sm font-bold text-slate-900 dark:text-white truncate" :title="user?.name">
                         {{ user?.name || 'Pengguna' }}
                     </p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    <p class="text-xs text-indigo-600 dark:text-indigo-400 font-medium truncate" :title="user?.role">
+                        {{ user?.role || 'Pengguna' }}
+                    </p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5" :title="user?.email">
                         {{ user?.email || '' }}
                     </p>
                 </div>
@@ -602,12 +605,16 @@ function isItemActive(href) {
                                     </div>
                                     <div class="text-left hidden sm:block">
                                         <div
-                                            class="text-xs font-semibold text-slate-900 dark:text-white leading-tight"
+                                            class="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-40"
+                                            :title="user?.name || 'Pengguna'"
                                         >
                                             {{ user?.name || 'Pengguna' }}
                                         </div>
-                                        <div class="text-2xs text-slate-500 dark:text-slate-400 truncate max-w-36">
-                                            {{ user?.email || '' }}
+                                        <div
+                                            class="text-2xs text-slate-500 dark:text-slate-400 truncate max-w-40"
+                                            :title="user?.role || 'Pengguna'"
+                                        >
+                                            {{ user?.role || 'Pengguna' }}
                                         </div>
                                     </div>
                                     <ChevronDown
@@ -619,14 +626,17 @@ function isItemActive(href) {
                             </template>
 
                             <template #default="{ close }">
-                                <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800">
+                                <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
                                     <p class="text-2xs font-medium text-slate-400 dark:text-slate-500">
                                         Masuk sebagai
                                     </p>
-                                    <p class="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                                    <p class="text-xs font-bold text-slate-900 dark:text-white truncate" :title="user?.name">
                                         {{ user?.name || 'Pengguna' }}
                                     </p>
-                                    <p class="text-2xs text-slate-500 dark:text-slate-400 truncate">
+                                    <p class="text-2xs text-indigo-600 dark:text-indigo-400 font-medium truncate" :title="user?.role">
+                                        {{ user?.role || 'Pengguna' }}
+                                    </p>
+                                    <p class="text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5" :title="user?.email">
                                         {{ user?.email || '' }}
                                     </p>
                                 </div>
