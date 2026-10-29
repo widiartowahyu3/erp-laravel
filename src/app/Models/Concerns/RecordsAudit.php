@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Concerns;
 
 use App\Services\Audit\AuditLogger;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -101,7 +102,7 @@ trait RecordsAudit
             );
         });
 
-        if (method_exists(static::class, 'restored')) {
+        if (in_array(SoftDeletes::class, class_uses_recursive(static::class), true)) {
             static::restored(function ($model): void {
                 $attributes = $model->filterAuditAttributes($model->getAttributes());
 
@@ -139,10 +140,8 @@ trait RecordsAudit
     {
         unset($attributes['updated_at']);
 
-        if (method_exists($this, 'getHidden')) {
-            foreach ($this->getHidden() as $hiddenKey) {
-                unset($attributes[$hiddenKey]);
-            }
+        foreach ($this->getHidden() as $hiddenKey) {
+            unset($attributes[$hiddenKey]);
         }
 
         return AuditLogger::sanitizePayload($attributes);
