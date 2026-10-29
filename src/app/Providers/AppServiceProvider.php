@@ -29,6 +29,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->isProduction()) {
+            $driver = (string) config('hashing.driver');
+            $memory = (int) config('hashing.argon.memory', 0);
+            $time = (int) config('hashing.argon.time', 0);
+
+            if ($driver !== 'argon2id' || $memory < 65536 || $time < 4) {
+                throw new \RuntimeException(
+                    "Konfigurasi hashing di lingkungan production tidak aman: driver={$driver}, memory={$memory}, time={$time}. Wajib argon2id dengan memory >= 65536 dan time >= 4."
+                );
+            }
+        }
+
         Model::shouldBeStrict(! $this->app->isProduction());
         DB::prohibitDestructiveCommands($this->app->isProduction());
         URL::forceHttps($this->app->isProduction());
