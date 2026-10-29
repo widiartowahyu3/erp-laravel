@@ -71,7 +71,7 @@ class SyncFrontendEnumsCommand extends Command
     {
         $statusMap = [];
 
-        /** @var list<class-string> $enumClasses */
+        /** @var list<class-string<\BackedEnum>> $enumClasses */
         $enumClasses = [
             PurchaseOrderStatus::class,
             SalesOrderStatus::class,
@@ -87,7 +87,7 @@ class SyncFrontendEnumsCommand extends Command
         ];
 
         foreach ($enumClasses as $enumClass) {
-            /** @var \UnitEnum $case */
+            /** @var \BackedEnum $case */
             foreach ($enumClass::cases() as $case) {
                 $val = (string) $case->value;
                 $label = method_exists($case, 'label') ? $case->label() : ucfirst($val);

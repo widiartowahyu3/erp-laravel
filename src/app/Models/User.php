@@ -87,7 +87,9 @@ class User extends Authenticatable
     public function getPrimaryRoleName(): string
     {
         if ($this->relationLoaded('roles')) {
-            return $this->roles->first()?->display_name ?? $this->roles->first()?->name ?? 'Pengguna';
+            $role = $this->roles->first();
+
+            return $role !== null ? ($role->display_name ?: $role->name) : 'Pengguna';
         }
 
         return $this->roles()->value('display_name') ?? $this->roles()->value('name') ?? 'Pengguna';

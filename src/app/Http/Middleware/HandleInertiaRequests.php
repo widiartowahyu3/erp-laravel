@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,9 +40,9 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => ($user instanceof User) ? $user->getPrimaryRoleName() : 'Pengguna',
+                    'role' => $user->getPrimaryRoleName(),
                 ] : null,
-                'permissions' => ($user instanceof User)
+                'permissions' => $user !== null
                     ? $user->getPermissionNames()
                     : [],
             ],
