@@ -1184,6 +1184,98 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# Butir 22: Verifikasi Keamanan Rute & Otorisasi Master Data (/master/*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 22: Verifikasi Keamanan Rute & Otorisasi Master Data (/master/*) ---"
+info "Memeriksa seluruh rute /master/* terhadap autentikasi dan middleware can:..."
+
+MASTER_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $routes = $app["router"]->getRoutes();
+    $masterRoutes = [];
+    $unprotected = [];
+    $missingCan = [];
+
+    foreach ($routes as $route) {
+        $uri = $route->uri();
+        if (str_starts_with($uri, "master/")) {
+            $masterRoutes[] = $uri;
+            $middleware = $route->gatherMiddleware();
+            if (!in_array("auth", $middleware, true)) {
+                $unprotected[] = $uri;
+            }
+            $hasCan = false;
+            foreach ($middleware as $m) {
+                if (is_string($m) && str_starts_with($m, "can:")) {
+                    $hasCan = true;
+                    break;
+                }
+            }
+            if (!$hasCan) {
+                $missingCan[] = $uri;
+            }
+        }
+    }
+
+    echo count($masterRoutes) . ":" . count($unprotected) . ":" . count($missingCan);
+' 2>/dev/null || echo "0:1:1")
+
+IFS=':' read -r TOTAL_M UNPROT_M MISSING_CAN <<< "$MASTER_ROUTE_CHECK"
+
+if [ "$TOTAL_M" -ge 40 ]; then
+    pass "Ditemukan $TOTAL_M rute master data (/master/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute master data tidak sesuai ekspektasi (ditemukan: $TOTAL_M)"
+fi
+
+if [ "$UNPROT_M" -eq 0 ]; then
+    pass "Seluruh rute /master/* terlindungi oleh middleware 'auth' (0 rute tanpa autentikasi)"
+else
+    fail "Ditemukan $UNPROT_M rute /master/* yang tidak memiliki middleware 'auth'"
+fi
+
+if [ "$MISSING_CAN" -eq 0 ]; then
+    pass "Seluruh rute /master/* memiliki middleware otorisasi spesifik 'can:' (0 rute tanpa 'can:')"
+else
+    fail "Ditemukan $MISSING_CAN rute /master/* yang tidak memiliki middleware 'can:'"
+fi
+
+# Cek HTTP status redirect 302 untuk unauthenticated probe
+GUEST_MASTER_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/master/units" || true)
+if [ "$GUEST_MASTER_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /master/units berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /master/units mengembalikan status HTTP $GUEST_MASTER_CODE (harus 302)"
+fi
+
+# Cek DemoMasterDataSeeder failsafe di production
+DEMO_SEEDER_PROD_CHECK=$(docker compose exec -T -e APP_ENV=production php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    try {
+        $seeder = new Database\Seeders\DemoMasterDataSeeder();
+        $seeder->run();
+        echo "ALLOWED";
+    } catch (\RuntimeException $e) {
+        echo "BLOCKED";
+    }
+' 2>/dev/null || echo "ERROR")
+
+if [ "$DEMO_SEEDER_PROD_CHECK" = "BLOCKED" ]; then
+    pass "DemoMasterDataSeeder menolak eksekusi pada environment production (fail-safe aktif)"
+else
+    fail "DemoMasterDataSeeder dapat dieksekusi di production atau error ($DEMO_SEEDER_PROD_CHECK)"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
