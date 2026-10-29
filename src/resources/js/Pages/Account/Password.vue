@@ -58,8 +58,21 @@ function submit() {
             <!-- Form Card -->
             <Card padding="lg">
                 <form class="space-y-5" novalidate @submit.prevent="submit">
+                    <!-- Hidden username input for browser password autofill heuristic compliance -->
+                    <input
+                        type="text"
+                        name="username"
+                        :value="page.props.auth?.user?.email || ''"
+                        autocomplete="username"
+                        class="sr-only"
+                        aria-hidden="true"
+                        tabindex="-1"
+                        readonly
+                    />
+
                     <!-- Field: Kata Sandi Saat Ini -->
                     <FormField
+                        id="current-password-field"
                         label="Kata Sandi Saat Ini"
                         :error="form.errors.current_password && !form.errors.current_password.includes('Terlalu banyak percobaan') ? form.errors.current_password : undefined"
                         required
@@ -80,6 +93,7 @@ function submit() {
 
                     <!-- Field: Kata Sandi Baru -->
                     <FormField
+                        id="new-password-field"
                         label="Kata Sandi Baru"
                         :error="form.errors.password && !form.errors.password.includes('Terlalu banyak percobaan') ? form.errors.password : undefined"
                         required
@@ -100,6 +114,7 @@ function submit() {
 
                     <!-- Field: Konfirmasi Kata Sandi Baru -->
                     <FormField
+                        id="new-password-confirmation-field"
                         label="Konfirmasi Kata Sandi Baru"
                         :error="form.errors.password_confirmation"
                         required
