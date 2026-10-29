@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed test test-js lint analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo test test-js lint analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -17,6 +17,7 @@ help:
 	@echo "  make migrate      - Run DB migrations using mariadb_migrator connection"
 	@echo "  make migrate-test - Run DB migrations on erp_trading_test using mariadb_migrator"
 	@echo "  make seed         - Run DB seeders (--force)"
+	@echo "  make seed-demo    - Run demo master data seeder (non-production only)"
 	@echo "  make test         - Run PHP test suite (auto migrates test database)"
 	@echo "  make lint         - Run code style checks (Pint)"
 	@echo "  make analyse      - Run static analysis (PHPStan/Larastan)"
@@ -78,6 +79,9 @@ test-db-reset:
 
 seed:
 	docker compose run --rm php php artisan db:seed --force
+
+seed-demo:
+	docker compose run --rm php php artisan db:seed --class=Database\\Seeders\\DemoMasterDataSeeder --force
 
 test: test-db-reset
 	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
