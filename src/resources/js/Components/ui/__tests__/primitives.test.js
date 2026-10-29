@@ -12,6 +12,7 @@ import Switch from '../Switch.vue';
 import FormField from '../FormField.vue';
 import Badge from '../Badge.vue';
 import StatusBadge from '../StatusBadge.vue';
+import statusMap from '@/generated/enums.json';
 import Card from '../Card.vue';
 import Alert from '../Alert.vue';
 import Skeleton from '../Skeleton.vue';
@@ -198,22 +199,13 @@ describe('Primitive UI Components', () => {
             expect(wrapper.classes()).toContain('bg-emerald-50');
         });
 
-        it('maps document status enums to Indonesian label and fixed color variant', () => {
-            const cases = [
-                { status: 'draft', variant: 'neutral', label: 'Draft' },
-                { status: 'submitted', variant: 'info', label: 'Diajukan' },
-                { status: 'pending', variant: 'warning', label: 'Menunggu' },
-                { status: 'approved', variant: 'info', label: 'Disetujui' },
-                { status: 'posted', variant: 'success', label: 'Diposting' },
-                { status: 'paid', variant: 'success', label: 'Lunas' },
-                { status: 'partially_paid', variant: 'warning', label: 'Dibayar Sebagian' },
-                { status: 'rejected', variant: 'danger', label: 'Ditolak' },
-                { status: 'void', variant: 'danger', label: 'Void' },
-            ];
+        it('matches StatusBadge keys and labels with enums.json exactly with zero fictitious statuses', () => {
+            const keys = Object.keys(statusMap);
+            expect(keys.length).toBeGreaterThanOrEqual(18);
 
-            for (const item of cases) {
-                const wrapper = mount(StatusBadge, { props: { status: item.status } });
-                expect(wrapper.text()).toBe(item.label);
+            for (const [statusKey, expected] of Object.entries(statusMap)) {
+                const wrapper = mount(StatusBadge, { props: { status: statusKey } });
+                expect(wrapper.text()).toBe(expected.label);
             }
         });
     });

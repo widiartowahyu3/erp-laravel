@@ -172,7 +172,7 @@ describe('Automated Accessibility (axe-core)', () => {
     });
 
     it('StatusBadge for document states passes a11y audit', async () => {
-        const statuses = ['draft', 'approved', 'rejected', 'void', 'paid', 'overdue'];
+        const statuses = ['draft', 'approved', 'posted', 'void', 'paid', 'active'];
         for (const status of statuses) {
             document.body.innerHTML = '';
             const wrapper = mount(StatusBadge, {

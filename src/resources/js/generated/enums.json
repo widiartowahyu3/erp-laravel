@@ -1,0 +1,82 @@
+{
+    "draft": {
+        "label": "Draf",
+        "variant": "neutral"
+    },
+    "approved": {
+        "label": "Disetujui",
+        "variant": "info"
+    },
+    "partially_received": {
+        "label": "Diterima Sebagian",
+        "variant": "warning"
+    },
+    "received": {
+        "label": "Diterima",
+        "variant": "success"
+    },
+    "closed": {
+        "label": "Ditutup",
+        "variant": "neutral"
+    },
+    "void": {
+        "label": "Dibatalkan",
+        "variant": "danger"
+    },
+    "partially_delivered": {
+        "label": "Terkirim Sebagian",
+        "variant": "warning"
+    },
+    "delivered": {
+        "label": "Terkirim",
+        "variant": "success"
+    },
+    "posted": {
+        "label": "Diposting",
+        "variant": "success"
+    },
+    "partially_paid": {
+        "label": "Dibayar Sebagian",
+        "variant": "warning"
+    },
+    "paid": {
+        "label": "Lunas",
+        "variant": "success"
+    },
+    "receipt": {
+        "label": "Penerimaan Barang",
+        "variant": "info"
+    },
+    "delivery": {
+        "label": "Pengiriman Barang",
+        "variant": "info"
+    },
+    "adjustment_in": {
+        "label": "Penyesuaian Masuk",
+        "variant": "info"
+    },
+    "adjustment_out": {
+        "label": "Penyesuaian Keluar",
+        "variant": "warning"
+    },
+    "cash": {
+        "label": "Tunai",
+        "variant": "neutral"
+    },
+    "bank_transfer": {
+        "label": "Transfer Bank",
+        "variant": "info"
+    },
+    "other": {
+        "label": "Lainnya",
+        "variant": "neutral"
+    },
+    "active": {
+        "label": "Aktif",
+        "variant": "success"
+    },
+    "inactive": {
+        "label": "Nonaktif",
+        "variant": "neutral"
+    }
+}

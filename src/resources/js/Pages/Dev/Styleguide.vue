@@ -201,24 +201,9 @@ const paginationMeta = computed(() => ({
     to: filteredTableData.value.length,
 }));
 
-// All 15 document status enums from Phase 4
-const allStatuses = [
-    'draft',
-    'confirmed',
-    'approved',
-    'rejected',
-    'void',
-    'processing',
-    'partially_shipped',
-    'shipped',
-    'delivered',
-    'partially_received',
-    'received',
-    'unpaid',
-    'partially_paid',
-    'paid',
-    'overdue',
-];
+// Status enums directly synced from backend
+import statusMap from '@/generated/enums.json';
+const allStatuses = Object.keys(statusMap);
 </script>
 
 <template>
@@ -535,7 +520,7 @@ const allStatuses = [
                         5. Komponen Feedback, Alert, StatusBadge &amp; Toast
                     </h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                        Alert, Badge, StatusBadge (15 status dokumen bisnis), Spinner, Skeleton, Tooltip, dan Toast interaktif.
+                        Alert, Badge, StatusBadge (sinkron otomatis dari enum backend), Spinner, Skeleton, Tooltip, dan Toast interaktif.
                     </p>
                 </div>
 
@@ -546,7 +531,7 @@ const allStatuses = [
                             Pencadangan basis data otomatis dijadwalkan setiap pukul 02:00 WIB.
                         </Alert>
                         <Alert variant="success" title="Transaksi Berhasil">
-                            Faktur penjualan SI/2026/03/0012 telah berhasil dibukukan ke jurnal umum.
+                            Faktur penjualan SI/2026/03/0012 telah berhasil diposting ke jurnal umum.
                         </Alert>
                         <Alert variant="warning" title="Peringatan Saldo Minimum">
                             Stok produk SKU-8902 di Gudang Surabaya berada di bawah batas titik pemesanan ulang (ROP).
@@ -556,11 +541,11 @@ const allStatuses = [
                         </Alert>
                     </div>
 
-                    <!-- StatusBadges for all 15 Document Statuses -->
+                    <!-- StatusBadges for all Document & Operational Statuses -->
                     <Card padding="md">
                         <div class="space-y-3">
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                15 Status Dokumen Bisnis (StatusBadge)
+                                Status Dokumen &amp; Operasional Bisnis (StatusBadge)
                             </h3>
                             <div class="flex flex-wrap items-center gap-2">
                                 <StatusBadge

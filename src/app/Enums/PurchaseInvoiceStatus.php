@@ -18,7 +18,7 @@ enum PurchaseInvoiceStatus: string implements HasStateTransitions
     {
         return match ($this) {
             self::DRAFT => 'Draf',
-            self::POSTED => 'Dibukukan',
+            self::POSTED => 'Diposting',
             self::PARTIALLY_PAID => 'Dibayar Sebagian',
             self::PAID => 'Lunas',
             self::VOID => 'Dibatalkan',

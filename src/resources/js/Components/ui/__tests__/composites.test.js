@@ -161,7 +161,7 @@ describe('Composite UI Components', () => {
             expect(wrapper.text()).toContain('Rp 1.500.000');
             expect(wrapper.text()).toContain('Rp 250.000,50');
             expect(wrapper.text()).toContain('Aktif');
-            expect(wrapper.text()).toContain('Draft');
+            expect(wrapper.text()).toContain('Draf');
         });
 
         it('emits sort event when sortable column header is clicked', async () => {
