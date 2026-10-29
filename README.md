@@ -4,28 +4,31 @@ Repositori sistem ERP untuk operasional distribusi dan trading berbasis monoliti
 
 ---
 
-## Status Fase: Fase 5 - Design System Frontend, Aksesibilitas WCAG & Kualitas Antarmuka (SELESAI & LULUS VERIFIKASI)
+## Status Fase: Fase 6 - Master Data End-to-End & Reference Guards (SELESAI & LULUS VERIFIKASI)
 
-Fase 5 telah mengimplementasikan Design System terpadu, antarmuka responsif, dan gerbang kualitas frontend untuk stack Laravel 13 + Vue 3 + Inertia 3 + Tailwind CSS 4:
-- **Arsitektur Token & Tema Semantik**:
-  - Token CSS variables lapis ganda (`:root` dan `[data-theme="dark"]`) untuk permukaan, garis batas, teks, dan status aksi.
-  - Verifikasi matematis rasio kontras WCAG 2.1 AA ($\ge 4.5:1$) pada 17 pasangan warna tema terang dan gelap (`theme-contrast.test.js`).
-  - Pencegahan kedipan (*Anti-FOUC*) sinkron di Blade `<head>` menggunakan nonce CSP per-request.
-- **Katalog Komponen Primitif & Komposit**:
-  - 16 komponen primitif UI (`Button`, `IconButton`, `TextInput`, `PasswordInput`, `Textarea`, `Select`, `Checkbox`, `Switch`, `FormField`, `Badge`, `StatusBadge`, `Card`, `Alert`, `Spinner`, `Skeleton`, `Tooltip`).
-  - 17 komponen komposit & formatter (`Modal`, `ConfirmDialog`, `Toast`, `FlashRegion`, `Breadcrumbs`, `PageHeader`, `EmptyState`, `ErrorState`, `LoadingState`, `Dropdown`, `DataTable`, `Pagination`, `FilterBar`, `Rupiah`, `Quantity`, `DateDisplay`, `PercentDisplay`).
-  - Format angka dan mata uang strictly float-safe tanpa `parseFloat()` atau `Number()`.
-  - Auto-resize textarea menggunakan utilitas CSS `field-sizing-content` murni tanpa injeksi inline style.
-- **Layout Terpadu & Migrasi Halaman**:
-  - `AppLayout.vue` dengan sidebar responsif per modul (Dashboard, Master Data, Pembelian, Penjualan, Inventori, Keuangan, Laporan, Administrasi), collapsible di desktop, drawer mobile ber-focus trap, dan topbar terintegrasi.
-  - Halaman `Login.vue` dan `Password.vue` sepenuhnya termigrasi ke komponen UI design system tanpa regresi pada tes backend Pest.
-  - Halaman `Dashboard.vue` dengan kisi modul berizin dan status lingkungan sistem.
-  - Halaman katalog lokal `/dev/styleguide` yang dijaga ketat (`app()->environment('local')` dan middleware `auth`).
-- **Gerbang Kualitas & Audit Aksesibilitas**:
-  - Vitest + Vue Test Utils + JSDOM: **7 test files / 78 tests passed**.
-  - Audit aksesibilitas otomatis axe-core: 0 temuan critical / serious pada seluruh komponen dan halaman styleguide.
-  - Audit kepatuhan statis (`static-compliance.test.js`): 0 `v-html`, 0 static `style=`, 0 SFC `<style>`, 0 dependensi CDN luar.
-  - Suite verifikasi hardening: **122 PASS / 0 FAIL** (`make verify`).
+Fase 6 telah menyelesaikan implementasi master data end-to-end (backend model, service, controller, request, rute, hingga antarmuka pengguna Vue 3/Inertia) untuk 8 entitas inti:
+- **8 Entitas Master Data**:
+  - `units` (Satuan Ukuran), `product_categories` (Kategori Produk bertingkat), `products` (Katalog Produk/Barang), `warehouses` (Gudang/Lokasi Stok), `suppliers` (Pemasok), `customers` (Pelanggan), `tax_rates` (Tarif Pajak), dan `payment_terms` (Syarat Pembayaran).
+- **Integritas Relasional & Penjaga Referensi (`ReferenceGuard`)**:
+  - Matriks pra-penghapusan pada `ReferenceGuard` memvalidasi ketergantungan rekaman di seluruh tabel transaksi dan master hilir.
+  - Percobaan menghapus data yang sedang digunakan menghasilkan `BusinessRuleException` status **409 Conflict** dengan pesan Bahasa Indonesia yang jelas.
+- **Pohon Hirarki Kategori Produk**:
+  - Pencegahan pemilihan diri sendiri (*self-parent*) dan pencegahan siklus relasi (*cycle prevention*) pada turunan kategori.
+  - Penegakan batas kedalaman pohon kategori maksimal 5 tingkat.
+- **Keamanan Aritmetika Desimal & Aturan Unik Sadar Soft-Delete**:
+  - Nilai moneter dan kuantitas divalidasi dengan rule `DecimalString` dan dioperasikan sebagai string murni tanpa konversi floating-point.
+  - Validasi keunikan FormRequest mengabaikan rekaman soft-delete (`->whereNull('deleted_at')`) dan record yang sedang diedit (`->ignore($id)`).
+- **Antarmuka Pengguna & Aksesibilitas**:
+  - 32 komponen halaman master data terintegrasi (`Index`, `Create`, `Edit`, `Form` untuk 8 modul) dibangun menggunakan komponen Design System Fase 5.
+  - Audit aksesibilitas otomatis axe-core: 0 temuan critical atau serious pada seluruh halaman form dan index master data.
+- **Data Demo Realistis**:
+  - Command `make seed-demo` (`DemoMasterDataSeeder`) mengisi data demo operasional perdagangan secara idempoten dengan perlindungan ketat fail-safe di lingkungan produksi.
+- **Metrik Kualitas & Keamanan**:
+  - Pest Test Suite: **326 passed / 2790 assertions** (0 failed).
+  - Vitest Component & A11y Suite: **7 test files / 83 tests passed** (0 failed).
+  - PHPStan Level 5: **0 errors** (95 files).
+  - Laravel Pint: **202 files clean** (0 style issues).
+  - Hardening Verification Suite: **127 PASS / 0 FAIL** (`make verify`).
 
 ---
 

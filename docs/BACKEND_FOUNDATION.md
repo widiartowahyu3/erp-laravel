@@ -284,3 +284,14 @@ Exception bisnis menggunakan trait `RendersAsFormError`:
 3. Seluruh kelas utilitas di `App\Support` wajib bertipe `final`.
 4. Seluruh Form Request wajib berada di `App\Http\Requests` dan meng-extend `FormRequest`.
 5. `App\Services` dilarang memiliki ketergantungan ke `App\Http`.
+
+---
+
+## 11. Penjaga Relasi Master Data (`App\Services\MasterData\ReferenceGuard`)
+
+Untuk menjaga integritas referensial dan memberikan umpan balik yang informatif kepada pengguna sebelum eksekusi Foreign Key database gagal, seluruh service master data menggunakan `ReferenceGuard::assertCanDelete($model, $moduleName)`.
+
+- **Perilaku**: Memeriksa tabel-tabel transaksi operasional hilir yang merujuk pada record master tersebut.
+- **Respon**: Jika referensi aktif ditemukan, melempar `BusinessRuleException` dengan kode HTTP **409 Conflict** dan pesan human-readable dalam Bahasa Indonesia.
+- **Penanganan Controller**: Controller master data menangkap `BusinessRuleException` dan mengembalikan respons redirect dengan flash error (status 409) untuk permintaan web, atau response JSON status 409 untuk permintaan API/XHR.
+

@@ -225,3 +225,13 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
    - Seluruh pengujian frontend dijalankan via Vitest (`make test-js` atau `npm run test` di dalam container `node`).
    - Halaman katalog komponen internal tersedia di `/dev/styleguide`, wajib dijaga ketat agar hanya aktif di lingkungan lokal (`app()->environment('local')`) dan memerlukan autentikasi login. Di luar lokal, route ini tidak terdaftar sama sekali (mengembalikan HTTP 404).
    - Dilarang keras menggunakan `v-html`, tag `<style>` pada SFC, atribut `style="..."` statis, dan CDN pihak ketiga.
+
+9. **Konvensi Master Data & Reference Guards (Fase 6)**:
+   - **8 Entitas Master Data**: `units`, `product_categories`, `products`, `warehouses`, `suppliers`, `customers`, `tax_rates`, `payment_terms`.
+   - **Pola Service**: Seluruh mutasi master data wajib melalui class Service terkait (`App\Services\MasterData\*Service`) di dalam blok `DB::transaction()`.
+   - **Validasi Unik Sadar Soft-Delete**: Pengecekan keunikan kode/nama wajib menyertakan `->whereNull('deleted_at')` dan pada form update wajib mengabaikan ID record bersangkutan via `->ignore($id)`.
+   - **ReferenceGuard**: Operasi hapus record wajib memanggil `ReferenceGuard::assertCanDelete($model, $moduleLabel)` untuk memeriksa referensi di tabel hilir. Jika terdapat ketergantungan, sistem melempar `BusinessRuleException` status 409 dengan pesan human-readable Bahasa Indonesia.
+   - **Hirarki Kategori Produk**: `product_categories` dilarang memilih parent diri sendiri maupun keturunannya (*cycle prevention*), serta dibatasi maksimal kedalaman 5 tingkat.
+   - **Proteksi Float & Aritmetika Desimal**: Parameter uang dan kuantitas divalidasi dengan rule `DecimalString` dan dikelola sebagai string di backend; dilarang menggunakan float.
+   - **Data Demo Realistis**: Pengisian data uji master data dilakukan secara idempoten melalui command `make seed-demo` (`DemoMasterDataSeeder`). Seeder ini memiliki fail-safe dan otomatis diblokir pada lingkungan produksi.
+
