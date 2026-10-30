@@ -4,31 +4,25 @@ Repositori sistem ERP untuk operasional distribusi dan trading berbasis monoliti
 
 ---
 
-## Status Fase: Fase 6 - Master Data End-to-End & Reference Guards (SELESAI & LULUS VERIFIKASI)
+## Status Fase: Fase 7 - Pembelian dan Inventori (PO, GR, Kartu Stok, Penyesuaian Stok) (SELESAI)
 
-Fase 6 telah menyelesaikan implementasi master data end-to-end (backend model, service, controller, request, rute, hingga antarmuka pengguna Vue 3/Inertia) untuk 8 entitas inti:
-- **8 Entitas Master Data**:
-  - `units` (Satuan Ukuran), `product_categories` (Kategori Produk bertingkat), `products` (Katalog Produk/Barang), `warehouses` (Gudang/Lokasi Stok), `suppliers` (Pemasok), `customers` (Pelanggan), `tax_rates` (Tarif Pajak), dan `payment_terms` (Syarat Pembayaran).
-- **Integritas Relasional & Penjaga Referensi (`ReferenceGuard`)**:
-  - Matriks pra-penghapusan pada `ReferenceGuard` memvalidasi ketergantungan rekaman di seluruh tabel transaksi dan master hilir.
-  - Percobaan menghapus data yang sedang digunakan menghasilkan `BusinessRuleException` status **409 Conflict** dengan pesan Bahasa Indonesia yang jelas.
-- **Pohon Hirarki Kategori Produk**:
-  - Pencegahan pemilihan diri sendiri (*self-parent*) dan pencegahan siklus relasi (*cycle prevention*) pada turunan kategori.
-  - Penegakan batas kedalaman pohon kategori maksimal 5 tingkat.
-- **Keamanan Aritmetika Desimal & Aturan Unik Sadar Soft-Delete**:
-  - Nilai moneter dan kuantitas divalidasi dengan rule `DecimalString` dan dioperasikan sebagai string murni tanpa konversi floating-point.
-  - Validasi keunikan FormRequest mengabaikan rekaman soft-delete (`->whereNull('deleted_at')`) dan record yang sedang diedit (`->ignore($id)`).
-- **Antarmuka Pengguna & Aksesibilitas**:
-  - 32 komponen halaman master data terintegrasi (`Index`, `Create`, `Edit`, `Form` untuk 8 modul) dibangun menggunakan komponen Design System Fase 5.
-  - Audit aksesibilitas otomatis axe-core: 0 temuan critical atau serious pada seluruh halaman form dan index master data.
-- **Data Demo Realistis**:
-  - Command `make seed-demo` (`DemoMasterDataSeeder`) mengisi data demo operasional perdagangan secara idempoten dengan perlindungan ketat fail-safe di lingkungan produksi.
-- **Metrik Kualitas & Keamanan**:
-  - Pest Test Suite: **326 passed / 2790 assertions** (0 failed).
-  - Vitest Component & A11y Suite: **7 test files / 83 tests passed** (0 failed).
-  - PHPStan Level 5: **0 errors** (95 files).
-  - Laravel Pint: **202 files clean** (0 style issues).
-  - Hardening Verification Suite: **127 PASS / 0 FAIL** (`make verify`).
+Fase 7 telah menyelesaikan implementasi modul Pembelian dan Inventori secara end-to-end (backend model, service, kalkulator Moving Average Cost, controller, form request, locking konkurensi, hingga antarmuka pengguna Vue 3/Inertia):
+- **Modul Inventori (Stock Management)**:
+  - `stock_balances` (Snapshot saldo persediaan & biaya rata-rata bergerak).
+  - `stock_movements` (Buku besar pergerakan inventori bersifat *APPEND-ONLY* dengan trigger database anti-mutasi).
+  - `stock_adjustments` & `stock_adjustment_items` (Penyesuaian stok / stock opname dengan mutasi pembalik otomatis saat dibatalkan).
+  - Halaman Antarmuka: Saldo Stok (`/inventory/stock-balances`), Mutasi Stok (`/inventory/stock-movements`), Kartu Stok (`/inventory/stock-card`), dan Penyesuaian Stok (`/inventory/stock-adjustments/*`).
+- **Modul Pembelian (Purchasing & Procurement)**:
+  - `purchase_orders` & `purchase_order_items` (Pesanan Pembelian dengan kalkulator P3: gross, net, tax, total; state machine dengan transisi rollback saat pembatalan penerimaan).
+  - `goods_receipts` & `goods_receipt_items` (Surat Penerimaan Barang terikat PO; penambahan stok atomik dan locking deterministik PO -> GR -> Items -> Balances).
+  - Halaman Antarmuka: Pesanan Pembelian (`/purchasing/purchase-orders/*`) dan Penerimaan Barang (`/purchasing/goods-receipts/*`).
+- **Integritas Konkurensi & Keamanan**:
+  - Nol floating point arithmetic di seluruh stack (PHP menggunakan `bcmath` via `App\Support\Decimal`, frontend menggunakan `BigInt` via `Support/decimal.js`).
+  - Pemisahan peran ketat (*Separation of Duties*): peran `purchasing` menguasai PO & intip GR; peran `warehouse` menguasai GR & penyesuaian stok.
+  - Rate limiting mutasi `throttle:erp-write` pada seluruh aksi POST/PUT transaksi.
+  - Total permission sistem tetap terkunci di angka 98 (dijaga `ZGuardIntegrityTest`).
+- **Verifikasi & Hardening**:
+  - Hardening Verification Suite: 24 butir pengujian (`make verify`) mencakup 11 rute inventori dan 17 rute purchasing.
 
 ---
 
@@ -140,6 +134,9 @@ make verify
 
 ## Dokumentasi Teknis
 
+- [Modul Inventori & Saldo Stok](docs/INVENTORY.md)
+- [Modul Pembelian & Penerimaan Barang](docs/PURCHASING.md)
+- [Desain & Konvensi Database](docs/DATABASE_DESIGN.md)
 - [Daftar Stack & Matriks Versi Final](docs/STACK.md)
 - [Design System & Panduan Komponen UI](docs/DESIGN_SYSTEM.md)
 - [Konvensi & Aturan Frontend](docs/FRONTEND_CONVENTIONS.md)

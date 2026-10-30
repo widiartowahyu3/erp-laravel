@@ -269,3 +269,19 @@ Sistem menyediakan seeder referensi idempoten berbasis query builder (`upsert`) 
    - Beban Pokok Penjualan (5000): Beban Pokok Penjualan (5101), Penyesuaian Nilai Persediaan (5102)
    - Beban Operasional (6000): Beban Operasional & Umum (6101), Beban Administrasi Bank (6102)
 
+---
+
+## 4. Catatan Sinkronisasi Implementasi Aktual (Fase 7)
+
+1. **Implementasi Layanan & Kalkulator Aktual:**
+   - Implementasi kalkulasi item dan total pesanan pembelian merujuk secara ketat pada `App\Support\Purchasing\PurchaseOrderCalculator` (bukan contoh usang di dokumen pendukung lama).
+   - Penentuan status kemajuan penerimaan PO dikelola oleh `App\Support\Purchasing\PurchaseOrderProgress::statusFor()`.
+   - Layanan bisnis transaksi beroperasi melalui `App\Services\Purchasing\PurchaseOrderService` dan `App\Services\Purchasing\GoodsReceiptService`.
+   - Layanan mutasi dan saldo inventori beroperasi melalui `App\Services\Inventory\StockService` dan `App\Services\Inventory\StockAdjustmentService`.
+2. **Pembaruan Transisi Status Rollback `PurchaseOrderStatus`:**
+   - Untuk mendukung integritas pembatalan surat penerimaan barang (`GoodsReceipt::void`), state machine `PurchaseOrderStatus` secara resmi mengizinkan transisi pembalik/rollback status bila kuantitas barang yang diterima berkurang:
+     - `RECEIVED` -> `PARTIALLY_RECEIVED`
+     - `RECEIVED` -> `APPROVED`
+     - `PARTIALLY_RECEIVED` -> `APPROVED`
+   - Transisi ini divalidasi oleh `DocumentStateMachine` dan dilindungi oleh `DocumentStateMachineTest` serta `FrontendEnumsSyncTest`.
+
