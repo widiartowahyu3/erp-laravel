@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockBalanceController;
 use App\Http\Controllers\Inventory\StockCardController;
 use App\Http\Controllers\Inventory\StockMovementController;
@@ -115,6 +116,16 @@ Route::middleware([
         Route::get('stock-balances', [StockBalanceController::class, 'index'])->middleware('can:stock_balances.view')->name('stock-balances.index');
         Route::get('stock-movements', [StockMovementController::class, 'index'])->middleware('can:stock_movements.view')->name('stock-movements.index');
         Route::get('stock-card', [StockCardController::class, 'index'])->middleware('can:stock_movements.view')->name('stock-card.index');
+
+        // Stock Adjustments
+        Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->middleware('can:stock_adjustments.view')->name('stock-adjustments.index');
+        Route::get('stock-adjustments/create', [StockAdjustmentController::class, 'create'])->middleware('can:stock_adjustments.create')->name('stock-adjustments.create');
+        Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->middleware(['can:stock_adjustments.create', 'throttle:erp-write'])->name('stock-adjustments.store');
+        Route::get('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'show'])->middleware('can:stock_adjustments.view')->name('stock-adjustments.show');
+        Route::get('stock-adjustments/{stock_adjustment}/edit', [StockAdjustmentController::class, 'edit'])->middleware('can:stock_adjustments.update')->name('stock-adjustments.edit');
+        Route::put('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'update'])->middleware(['can:stock_adjustments.update', 'throttle:erp-write'])->name('stock-adjustments.update');
+        Route::post('stock-adjustments/{stock_adjustment}/post', [StockAdjustmentController::class, 'post'])->middleware(['can:stock_adjustments.post', 'throttle:erp-write'])->name('stock-adjustments.post');
+        Route::post('stock-adjustments/{stock_adjustment}/void', [StockAdjustmentController::class, 'void'])->middleware(['can:stock_adjustments.void', 'throttle:erp-write'])->name('stock-adjustments.void');
     });
 });
 
