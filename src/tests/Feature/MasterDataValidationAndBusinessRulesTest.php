@@ -139,6 +139,54 @@ test('product category hierarchy rejects self-parent, cycles, and depth exceedin
         ->toThrow(BusinessRuleException::class, 'Kedalaman kategori maksimal 5 level');
 });
 
+test('moving category calculates parent depth plus subtree height and rejects moves exceeding depth 5', function (): void {
+    $service = app(ProductCategoryService::class);
+    $admin = userWithPermissions(['product_categories.update']);
+
+    // Setup Parent Branch: P1 -> P2 -> P3 (depth of P3 is 3)
+    $p1 = ProductCategory::create(['code' => 'P1_BR', 'name' => 'Parent Branch 1']);
+    $p2 = ProductCategory::create(['code' => 'P2_BR', 'name' => 'Parent Branch 2', 'parent_id' => $p1->id]);
+    $p3 = ProductCategory::create(['code' => 'P3_BR', 'name' => 'Parent Branch 3', 'parent_id' => $p2->id]);
+
+    // Setup Child Branch to move: C1 -> C2 -> C3 (subtree height of C1 is 3)
+    $c1 = ProductCategory::create(['code' => 'C1_MV', 'name' => 'Category Move 1']);
+    $c2 = ProductCategory::create(['code' => 'C2_MV', 'name' => 'Category Move 2', 'parent_id' => $c1->id]);
+    $c3 = ProductCategory::create(['code' => 'C3_MV', 'name' => 'Category Move 3', 'parent_id' => $c2->id]);
+
+    expect($service->getParentChainDepth((int) $p3->id))->toBe(3)
+        ->and($service->getSubtreeHeight((int) $c1->id))->toBe(3);
+
+    // 1. Moving C1 under P3 would result in total depth 3 + 3 = 6 > 5 -> REJECTED (422)
+    expect(fn () => $service->update($c1, [
+        'code' => $c1->code,
+        'name' => $c1->name,
+        'parent_id' => $p3->id,
+    ]))->toThrow(BusinessRuleException::class, 'Kedalaman kategori maksimal 5 level');
+
+    // HTTP PUT request receives 422 / error session
+    $this->actingAs($admin)->putJson("/master/product-categories/{$c1->id}", [
+        'code' => $c1->code,
+        'name' => $c1->name,
+        'parent_id' => $p3->id,
+    ])->assertStatus(422);
+
+    // 2. Moving C1 under P2 results in total depth 2 + 3 = 5 <= 5 -> SUCCEEDS
+    $validResponse = $this->actingAs($admin)->put("/master/product-categories/{$c1->id}", [
+        'code' => $c1->code,
+        'name' => $c1->name,
+        'parent_id' => $p2->id,
+    ]);
+    $validResponse->assertRedirect('/master/product-categories');
+    expect($c1->fresh()->parent_id)->toBe($p2->id);
+
+    // 3. Cycle remains rejected: moving P1 under C3 (which is now under P1 -> P2 -> C1 -> C2 -> C3)
+    expect(fn () => $service->update($p1, [
+        'code' => $p1->code,
+        'name' => $p1->name,
+        'parent_id' => $c3->id,
+    ]))->toThrow(BusinessRuleException::class, 'siklus');
+});
+
 test('reference guard prevents deleting master records referenced downstream', function (): void {
     $unit = Unit::create(['code' => 'UREF', 'name' => 'Unit Ref']);
     $cat = ProductCategory::create(['code' => 'CREF', 'name' => 'Cat Ref']);

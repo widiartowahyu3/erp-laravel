@@ -64,7 +64,8 @@ final class ProductCategoryService
     }
 
     /**
-     * Enforce hierarchy constraints: prevent self-parenting, cycles, and depth > 5.
+     * Enforce hierarchy constraints: prevent self-parenting, cycles, and total depth > 5.
+     * Total depth = parentChainDepth + subtreeHeight <= 5.
      *
      * @throws BusinessRuleException
      */
@@ -78,8 +79,24 @@ final class ProductCategoryService
             throw new BusinessRuleException('Kategori tidak boleh menjadi induk untuk dirinya sendiri.', 422);
         }
 
+        $parentDepth = $this->getParentChainDepth($parentId, $categoryId);
+        $subtreeHeight = $categoryId !== null ? $this->getSubtreeHeight($categoryId) : 1;
+
+        if ($parentDepth + $subtreeHeight > 5) {
+            throw new BusinessRuleException('Kedalaman kategori maksimal 5 level hierarki.', 422);
+        }
+    }
+
+    /**
+     * Calculate depth of parent chain up to root (number of ancestor nodes inclusive of parentId).
+     *
+     * @throws BusinessRuleException
+     */
+    public function getParentChainDepth(int $parentId, ?int $categoryId = null): int
+    {
         $visited = $categoryId !== null ? [$categoryId => true] : [];
-        $depth = 1;
+        $depth = 0;
+        /** @var int|null $currentId */
         $currentId = $parentId;
 
         while ($currentId !== null) {
@@ -89,12 +106,42 @@ final class ProductCategoryService
             $visited[$currentId] = true;
             $depth++;
 
-            if ($depth > 5) {
-                throw new BusinessRuleException('Kedalaman kategori maksimal 5 level hierarki.', 422);
-            }
-
             /** @var int|null $currentId */
             $currentId = ProductCategory::where('id', $currentId)->value('parent_id');
         }
+
+        return $depth;
+    }
+
+    /**
+     * Calculate the maximum height of the subtree rooted at categoryId.
+     * A leaf node has height 1.
+     *
+     * @param  array<int, bool>  $visited
+     *
+     * @throws BusinessRuleException
+     */
+    public function getSubtreeHeight(int $categoryId, array &$visited = []): int
+    {
+        if (isset($visited[$categoryId])) {
+            throw new BusinessRuleException('Struktur hierarki kategori mengalami perulangan siklus (cycle).', 422);
+        }
+        $visited[$categoryId] = true;
+
+        /** @var list<int> $childrenIds */
+        $childrenIds = ProductCategory::where('parent_id', $categoryId)->pluck('id')->all();
+        if (empty($childrenIds)) {
+            return 1;
+        }
+
+        $maxChildHeight = 0;
+        foreach ($childrenIds as $childId) {
+            $childHeight = $this->getSubtreeHeight($childId, $visited);
+            if ($childHeight > $maxChildHeight) {
+                $maxChildHeight = $childHeight;
+            }
+        }
+
+        return 1 + $maxChildHeight;
     }
 }
