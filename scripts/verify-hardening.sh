@@ -1276,6 +1276,168 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# Butir 23: Verifikasi Keamanan Rute & Otorisasi Inventori (/inventory/*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 23: Verifikasi Keamanan Rute & Otorisasi Inventori (/inventory/*) ---"
+info "Memeriksa seluruh rute /inventory/* terhadap autentikasi, can:, dan throttle:erp-write..."
+
+INV_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $routes = $app["router"]->getRoutes();
+    $invRoutes = [];
+    $unprotected = [];
+    $missingCan = [];
+    $missingThrottle = [];
+
+    foreach ($routes as $route) {
+        $uri = $route->uri();
+        if (str_starts_with($uri, "inventory/")) {
+            $invRoutes[] = $uri;
+            $methods = $route->methods();
+            $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+            $middleware = $route->gatherMiddleware();
+            if (!in_array("auth", $middleware, true)) {
+                $unprotected[] = $uri;
+            }
+            $hasCan = false;
+            foreach ($middleware as $m) {
+                if (is_string($m) && str_starts_with($m, "can:")) {
+                    $hasCan = true;
+                    break;
+                }
+            }
+            if (!$hasCan) {
+                $missingCan[] = $uri;
+            }
+            if ($isMutation && !in_array("throttle:erp-write", $middleware, true)) {
+                $missingThrottle[] = $uri;
+            }
+        }
+    }
+
+    echo count($invRoutes) . ":" . count($unprotected) . ":" . count($missingCan) . ":" . count($missingThrottle);
+' 2>/dev/null || echo "0:1:1:1")
+
+IFS=':' read -r TOTAL_INV UNPROT_INV MISSING_CAN_INV MISSING_THROTTLE_INV <<< "$INV_ROUTE_CHECK"
+
+if [ "$TOTAL_INV" -eq 11 ]; then
+    pass "Ditemukan 11 rute modul inventori (/inventory/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute modul inventori tidak sesuai ekspektasi (harus 11, ditemukan: $TOTAL_INV)"
+fi
+
+if [ "$UNPROT_INV" -eq 0 ]; then
+    pass "Seluruh rute /inventory/* terlindungi oleh middleware '\''auth'\'' (0 rute tanpa autentikasi)"
+else
+    fail "Ditemukan $UNPROT_INV rute /inventory/* yang tidak memiliki middleware '\''auth'\''"
+fi
+
+if [ "$MISSING_CAN_INV" -eq 0 ]; then
+    pass "Seluruh rute /inventory/* memiliki middleware otorisasi spesifik '\''can:'\'' (0 rute tanpa '\''can:'\'')"
+else
+    fail "Ditemukan $MISSING_CAN_INV rute /inventory/* yang tidak memiliki middleware '\''can:'\''"
+fi
+
+if [ "$MISSING_THROTTLE_INV" -eq 0 ]; then
+    pass "Seluruh aksi mutasi /inventory/* terlindungi oleh rate limiter '\''throttle:erp-write'\''"
+else
+    fail "Ditemukan $MISSING_THROTTLE_INV rute mutasi /inventory/* tanpa '\''throttle:erp-write'\''"
+fi
+
+GUEST_INV_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/inventory/stock-balances" || true)
+if [ "$GUEST_INV_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /inventory/stock-balances berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /inventory/stock-balances mengembalikan status HTTP $GUEST_INV_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
+# Butir 24: Verifikasi Keamanan Rute & Otorisasi Pembelian (/purchasing/*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 24: Verifikasi Keamanan Rute & Otorisasi Pembelian (/purchasing/*) ---"
+info "Memeriksa seluruh rute /purchasing/* terhadap autentikasi, can:, dan throttle:erp-write..."
+
+PURCH_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $routes = $app["router"]->getRoutes();
+    $purchRoutes = [];
+    $unprotected = [];
+    $missingCan = [];
+    $missingThrottle = [];
+
+    foreach ($routes as $route) {
+        $uri = $route->uri();
+        if (str_starts_with($uri, "purchasing/")) {
+            $purchRoutes[] = $uri;
+            $methods = $route->methods();
+            $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+            $middleware = $route->gatherMiddleware();
+            if (!in_array("auth", $middleware, true)) {
+                $unprotected[] = $uri;
+            }
+            $hasCan = false;
+            foreach ($middleware as $m) {
+                if (is_string($m) && str_starts_with($m, "can:")) {
+                    $hasCan = true;
+                    break;
+                }
+            }
+            if (!$hasCan) {
+                $missingCan[] = $uri;
+            }
+            if ($isMutation && !in_array("throttle:erp-write", $middleware, true)) {
+                $missingThrottle[] = $uri;
+            }
+        }
+    }
+
+    echo count($purchRoutes) . ":" . count($unprotected) . ":" . count($missingCan) . ":" . count($missingThrottle);
+' 2>/dev/null || echo "0:1:1:1")
+
+IFS=':' read -r TOTAL_PURCH UNPROT_PURCH MISSING_CAN_PURCH MISSING_THROTTLE_PURCH <<< "$PURCH_ROUTE_CHECK"
+
+if [ "$TOTAL_PURCH" -eq 17 ]; then
+    pass "Ditemukan 17 rute modul purchasing (/purchasing/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute modul purchasing tidak sesuai ekspektasi (harus 17, ditemukan: $TOTAL_PURCH)"
+fi
+
+if [ "$UNPROT_PURCH" -eq 0 ]; then
+    pass "Seluruh rute /purchasing/* terlindungi oleh middleware '\''auth'\'' (0 rute tanpa autentikasi)"
+else
+    fail "Ditemukan $UNPROT_PURCH rute /purchasing/* yang tidak memiliki middleware '\''auth'\''"
+fi
+
+if [ "$MISSING_CAN_PURCH" -eq 0 ]; then
+    pass "Seluruh rute /purchasing/* memiliki middleware otorisasi spesifik '\''can:'\'' (0 rute tanpa '\''can:'\'')"
+else
+    fail "Ditemukan $MISSING_CAN_PURCH rute /purchasing/* yang tidak memiliki middleware '\''can:'\''"
+fi
+
+if [ "$MISSING_THROTTLE_PURCH" -eq 0 ]; then
+    pass "Seluruh aksi mutasi /purchasing/* terlindungi oleh rate limiter '\''throttle:erp-write'\''"
+else
+    fail "Ditemukan $MISSING_THROTTLE_PURCH rute mutasi /purchasing/* tanpa '\''throttle:erp-write'\''"
+fi
+
+GUEST_PURCH_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/purchasing/purchase-orders" || true)
+if [ "$GUEST_PURCH_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /purchasing/purchase-orders berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /purchasing/purchase-orders mengembalikan status HTTP $GUEST_PURCH_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
