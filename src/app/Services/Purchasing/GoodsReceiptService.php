@@ -138,7 +138,9 @@ class GoodsReceiptService
             $lineNo = 1;
             foreach ($data['items'] as $itemData) {
                 $poItem = $poItems->get((int) $itemData['purchase_order_item_id']);
-                assert($poItem !== null);
+                if ($poItem === null) {
+                    throw new BusinessRuleException('Item pesanan pembelian tidak valid.');
+                }
 
                 $qty = Decimal::round((string) $itemData['quantity'], Decimal::SCALE_QUANTITY);
 
@@ -246,7 +248,9 @@ class GoodsReceiptService
             $lineNo = 1;
             foreach ($data['items'] as $itemData) {
                 $poItem = $poItems->get((int) $itemData['purchase_order_item_id']);
-                assert($poItem !== null);
+                if ($poItem === null) {
+                    throw new BusinessRuleException('Item pesanan pembelian tidak valid.');
+                }
 
                 $qty = Decimal::round((string) $itemData['quantity'], Decimal::SCALE_QUANTITY);
 
