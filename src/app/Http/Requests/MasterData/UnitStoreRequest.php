@@ -14,7 +14,7 @@ final class UnitStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:10', Rule::unique('units', 'code')->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:10', Rule::unique('units', 'code')],
             'name' => ['required', 'string', 'max:50'],
         ];
     }

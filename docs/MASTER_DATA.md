@@ -52,14 +52,15 @@ Seluruh interaksi master data mengikuti pola arsitektur berlapis baku:
 ### 1. Form Requests (`App\Http\Requests\MasterData`)
 - Meng-extend `BaseMasterDataRequest` yang mewarisi `authorize(): bool { return true; }` (karena otorisasi ditegakkan pada route middleware `can:`).
 - Menerapkan sanitasi input otomatis: string di-`trim()`, kode di-`strtoupper()`, kolom opsional kosong dijadikan `null`.
-- Validasi keunikan (*unique check*) sadar soft-delete:
+- Validasi keunikan (*unique check*) mencakup seluruh baris termasuk data yang telah dihapus (*soft-deleted*):
   ```php
-  Rule::unique('units', 'code')->whereNull('deleted_at')
+  Rule::unique('units', 'code')
   ```
-  Pada update request, ID entitas diabaikan secara eksplisit:
+  Pada update request, ID entitas saat ini diabaikan secara eksplisit:
   ```php
-  Rule::unique('units', 'code')->whereNull('deleted_at')->ignore($id)
+  Rule::unique('units', 'code')->ignore($id)
   ```
+  Hal ini selaras dengan batasan `UNIQUE KEY` MariaDB yang tidak memiliki klausul parsial `WHERE deleted_at IS NULL`, sehingga kode/SKU/barcode unik yang pernah digunakan tidak dapat dipakai kembali sekalipun telah di-soft-delete. Apabila terjadi kondisi balapan (*race condition*) saat insert/update bersamaan pada level database, exception `UniqueConstraintViolationException` ditangkap secara terpusat di `bootstrap/app.php` dan dikonversi menjadi error validasi 422 inline pada form field terkait.
 - Validasi numerik mata uang/kuantitas menggunakan custom rule `DecimalString`:
   - Format angka desimal strictly tervalidasi via regex tanpa konversi floating-point PHP.
   - Memastikan angka bernilai non-negatif dan presisi desimal sesuai peruntukan (maks. 2 desimal untuk uang, 4 untuk kuantitas/stok, 2 untuk tarif pajak).

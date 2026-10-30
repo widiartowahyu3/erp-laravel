@@ -11,6 +11,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -54,10 +55,44 @@ return Application::configure(basePath: dirname(__DIR__))
             InvalidStateTransitionException::class,
             InsufficientStockException::class,
             DocumentNotEditableException::class,
+            UniqueConstraintViolationException::class,
         ]);
 
+        $exceptions->render(function (UniqueConstraintViolationException $e, Request $request) {
+            $msg = $e->getMessage();
+            $field = 'code';
+            $validationMsg = 'Kode sudah dipakai, termasuk oleh data yang sudah dihapus.';
+
+            if (str_contains($msg, 'products_sku_unique') || str_contains($msg, '_sku_unique')) {
+                $field = 'sku';
+                $validationMsg = 'Kode SKU sudah dipakai, termasuk oleh data yang sudah dihapus.';
+            } elseif (str_contains($msg, 'products_barcode_unique') || str_contains($msg, '_barcode_unique')) {
+                $field = 'barcode';
+                $validationMsg = 'Kode barcode sudah dipakai, termasuk oleh data yang sudah dihapus.';
+            } elseif (str_contains($msg, 'users_email_unique') || str_contains($msg, '_email_unique')) {
+                $field = 'email';
+                $validationMsg = 'Email sudah dipakai, termasuk oleh data yang sudah dihapus.';
+            } elseif (str_contains($msg, '_code_unique')) {
+                $field = 'code';
+                $validationMsg = 'Kode sudah dipakai, termasuk oleh data yang sudah dihapus.';
+            }
+
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => $validationMsg,
+                    'errors' => [
+                        $field => [$validationMsg],
+                    ],
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withInput($request->input())
+                ->withErrors([$field => $validationMsg]);
+        });
+
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
-            if ($e instanceof TooManyAttemptsException || $e instanceof BusinessRuleException) {
+            if ($e instanceof TooManyAttemptsException || $e instanceof BusinessRuleException || $e instanceof UniqueConstraintViolationException) {
                 return $response;
             }
 

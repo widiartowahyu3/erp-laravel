@@ -14,7 +14,7 @@ final class SupplierStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('suppliers', 'code')->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('suppliers', 'code')],
             'name' => ['required', 'string', 'max:150'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:30'],

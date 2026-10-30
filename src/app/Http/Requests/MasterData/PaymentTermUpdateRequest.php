@@ -19,7 +19,7 @@ final class PaymentTermUpdateRequest extends BaseMasterDataRequest
         $id = is_object($paymentTerm) ? $paymentTerm->getKey() : $paymentTerm;
 
         return [
-            'code' => ['required', 'string', 'max:20', Rule::unique('payment_terms', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:20', Rule::unique('payment_terms', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:100'],
             'days' => ['required', 'integer', 'min:0', 'max:3650'],
         ];

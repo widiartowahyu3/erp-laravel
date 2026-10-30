@@ -222,6 +222,13 @@ Exception bisnis menggunakan trait `RendersAsFormError`:
 - Jika request mengharapkan **JSON (API)**: Mengembalikan respons JSON dengan HTTP status code yang sesuai (`409` atau `422`).
 - Seluruh exception bisnis dan throttle didaftarkan ke `$exceptions->dontReport(...)` di `bootstrap/app.php` sehingga tidak mengotori file log produksi dengan stack trace.
 
+### Pengaman Terpusat Pelanggaran Kunci Unik (Unique Constraint Safety):
+- Batasan `UNIQUE KEY` MariaDB mencakup seluruh baris termasuk baris yang telah dihapus (*soft-deleted*) karena tidak memiliki partial index.
+- Aturan validasi `Rule::unique` di FormRequest tidak memakai `whereNull('deleted_at')` agar konsisten dengan integritas database.
+- Untuk mengantisipasi kondisi balapan (*race condition*) antar-request paralel, `UniqueConstraintViolationException` ditangani secara terpusat di `bootstrap/app.php`:
+  - Mengonversi database error menjadi `ValidationException` (HTTP 422 untuk JSON / session error inline untuk web/Inertia) pada field terkait (`code`, `sku`, `barcode`, `email`).
+  - Didaftarkan pada `$exceptions->dontReport(...)` agar race condition validasi tidak menimbulkan log fatal 500.
+
 ---
 
 ## 8. Kontrak Query Daftar Aman (`ListQuery`, `ListRequest`, `Paginated`)

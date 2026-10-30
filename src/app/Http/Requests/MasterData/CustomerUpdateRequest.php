@@ -20,7 +20,7 @@ final class CustomerUpdateRequest extends BaseMasterDataRequest
         $id = is_object($customer) ? $customer->getKey() : $customer;
 
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('customers', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('customers', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:150'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:30'],

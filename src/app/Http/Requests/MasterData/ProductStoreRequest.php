@@ -15,11 +15,11 @@ final class ProductStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->whereNull('deleted_at')],
+            'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')],
             'name' => ['required', 'string', 'max:150'],
             'category_id' => ['required', 'integer', Rule::exists('product_categories', 'id')->whereNull('deleted_at')],
             'base_unit_id' => ['required', 'integer', Rule::exists('units', 'id')->whereNull('deleted_at')],
-            'barcode' => ['nullable', 'string', 'max:50', Rule::unique('products', 'barcode')->whereNull('deleted_at')],
+            'barcode' => ['nullable', 'string', 'max:50', Rule::unique('products', 'barcode')],
             'description' => ['nullable', 'string', 'max:1000'],
             'track_stock' => ['boolean'],
             'selling_price' => ['required', new DecimalString(16, 2, '0')],

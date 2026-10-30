@@ -20,7 +20,7 @@ final class TaxRateUpdateRequest extends BaseMasterDataRequest
         $id = is_object($taxRate) ? $taxRate->getKey() : $taxRate;
 
         return [
-            'code' => ['required', 'string', 'max:20', Rule::unique('tax_rates', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:20', Rule::unique('tax_rates', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:100'],
             'rate' => ['required', new DecimalString(3, 2, '0', '100')],
             'is_active' => ['boolean'],

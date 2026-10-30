@@ -15,7 +15,7 @@ final class CustomerStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('customers', 'code')->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('customers', 'code')],
             'name' => ['required', 'string', 'max:150'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:30'],

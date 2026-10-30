@@ -14,7 +14,7 @@ final class PaymentTermStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:20', Rule::unique('payment_terms', 'code')->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:20', Rule::unique('payment_terms', 'code')],
             'name' => ['required', 'string', 'max:100'],
             'days' => ['required', 'integer', 'min:0', 'max:3650'],
         ];

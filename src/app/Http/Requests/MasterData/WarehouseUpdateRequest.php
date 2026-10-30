@@ -19,7 +19,7 @@ final class WarehouseUpdateRequest extends BaseMasterDataRequest
         $id = is_object($warehouse) ? $warehouse->getKey() : $warehouse;
 
         return [
-            'code' => ['required', 'string', 'max:20', Rule::unique('warehouses', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:20', Rule::unique('warehouses', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['boolean'],

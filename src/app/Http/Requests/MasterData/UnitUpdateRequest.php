@@ -19,7 +19,7 @@ final class UnitUpdateRequest extends BaseMasterDataRequest
         $id = is_object($unit) ? $unit->getKey() : $unit;
 
         return [
-            'code' => ['required', 'string', 'max:10', Rule::unique('units', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:10', Rule::unique('units', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:50'],
         ];
     }

@@ -15,7 +15,7 @@ final class TaxRateStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:20', Rule::unique('tax_rates', 'code')->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:20', Rule::unique('tax_rates', 'code')],
             'name' => ['required', 'string', 'max:100'],
             'rate' => ['required', new DecimalString(3, 2, '0', '100')],
             'is_active' => ['boolean'],

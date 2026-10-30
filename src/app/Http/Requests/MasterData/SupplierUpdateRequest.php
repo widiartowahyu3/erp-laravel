@@ -19,7 +19,7 @@ final class SupplierUpdateRequest extends BaseMasterDataRequest
         $id = is_object($supplier) ? $supplier->getKey() : $supplier;
 
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('suppliers', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('suppliers', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:150'],
             'contact_name' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:30'],

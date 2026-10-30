@@ -14,7 +14,7 @@ final class ProductCategoryStoreRequest extends BaseMasterDataRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('product_categories', 'code')->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('product_categories', 'code')],
             'name' => ['required', 'string', 'max:100'],
             'parent_id' => ['nullable', 'integer', Rule::exists('product_categories', 'id')->whereNull('deleted_at')],
         ];

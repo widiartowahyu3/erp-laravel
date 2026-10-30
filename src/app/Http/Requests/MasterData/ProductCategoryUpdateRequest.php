@@ -19,7 +19,7 @@ final class ProductCategoryUpdateRequest extends BaseMasterDataRequest
         $id = is_object($category) ? $category->getKey() : $category;
 
         return [
-            'code' => ['required', 'string', 'max:30', Rule::unique('product_categories', 'code')->ignore($id)->whereNull('deleted_at')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('product_categories', 'code')->ignore($id)],
             'name' => ['required', 'string', 'max:100'],
             'parent_id' => [
                 'nullable',
