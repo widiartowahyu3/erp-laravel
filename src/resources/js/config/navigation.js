@@ -86,18 +86,18 @@ export const navigationGroups = [
         items: [
             {
                 name: 'Pesanan Pembelian (PO)',
-                href: '#',
+                href: '/purchasing/purchase-orders',
                 icon: 'FileText',
                 permission: 'purchase_orders.view',
-                available: false,
+                available: true,
                 description: 'Dokumen pesanan pembelian barang ke pemasok.',
             },
             {
                 name: 'Penerimaan Barang (GR)',
-                href: '#',
+                href: '/purchasing/goods-receipts',
                 icon: 'PackageCheck',
                 permission: 'goods_receipts.view',
-                available: false,
+                available: true,
                 description: 'Pencatatan penerimaan fisik barang dari pemasok.',
             },
             {

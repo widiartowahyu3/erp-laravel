@@ -123,6 +123,8 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Mutasi Stok');
         expect(availableNames).toContain('Kartu Stok');
         expect(availableNames).toContain('Penyesuaian Stok');
-        expect(availableItems.length).toBe(13);
+        expect(availableNames).toContain('Pesanan Pembelian (PO)');
+        expect(availableNames).toContain('Penerimaan Barang (GR)');
+        expect(availableItems.length).toBe(15);
     });
 });
