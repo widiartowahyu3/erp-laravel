@@ -22,8 +22,11 @@ test('PurchaseOrderStatus transition matrix enforces valid transitions and rejec
         [PurchaseOrderStatus::APPROVED, PurchaseOrderStatus::PARTIALLY_RECEIVED],
         [PurchaseOrderStatus::APPROVED, PurchaseOrderStatus::RECEIVED],
         [PurchaseOrderStatus::APPROVED, PurchaseOrderStatus::VOID],
+        [PurchaseOrderStatus::PARTIALLY_RECEIVED, PurchaseOrderStatus::APPROVED],
         [PurchaseOrderStatus::PARTIALLY_RECEIVED, PurchaseOrderStatus::RECEIVED],
         [PurchaseOrderStatus::PARTIALLY_RECEIVED, PurchaseOrderStatus::CLOSED],
+        [PurchaseOrderStatus::RECEIVED, PurchaseOrderStatus::APPROVED],
+        [PurchaseOrderStatus::RECEIVED, PurchaseOrderStatus::PARTIALLY_RECEIVED],
         [PurchaseOrderStatus::RECEIVED, PurchaseOrderStatus::CLOSED],
     ];
 
