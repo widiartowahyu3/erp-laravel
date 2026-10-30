@@ -145,6 +145,8 @@ const cellAlignClasses = {
                             :class="[
                                 'px-4 py-3 text-slate-800 dark:text-slate-200',
                                 alignClasses[col.align || 'left'],
+                                col.class || '',
+                                ['code', 'sku'].includes(col.key) ? 'whitespace-nowrap' : '',
                             ]"
                         >
                             <slot
@@ -167,7 +169,16 @@ const cellAlignClasses = {
                                     <StatusBadge :status="row[col.key]" size="sm" />
                                 </template>
                                 <template v-else>
-                                    {{ row[col.key] ?? '-' }}
+                                    <span
+                                        v-if="['code', 'sku'].includes(col.key)"
+                                        class="whitespace-nowrap truncate inline-block max-w-44 font-mono font-medium text-slate-900 dark:text-slate-100 align-bottom"
+                                        :title="row[col.key] || ''"
+                                    >
+                                        {{ row[col.key] ?? '-' }}
+                                    </span>
+                                    <span v-else>
+                                        {{ row[col.key] ?? '-' }}
+                                    </span>
                                 </template>
                             </slot>
                         </td>

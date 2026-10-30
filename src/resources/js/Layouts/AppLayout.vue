@@ -362,10 +362,10 @@ function isItemActive(href) {
                     <p class="text-sm font-bold text-slate-900 dark:text-white truncate" :title="user?.name">
                         {{ user?.name || 'Pengguna' }}
                     </p>
-                    <p class="text-xs text-indigo-600 dark:text-indigo-400 font-medium truncate" :title="user?.role">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate" :title="user?.role">
                         {{ user?.role || 'Pengguna' }}
                     </p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5" :title="user?.email">
+                    <p class="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5" :title="user?.email">
                         {{ user?.email || '' }}
                     </p>
                 </div>
@@ -601,15 +601,17 @@ function isItemActive(href) {
                                     >
                                         {{ userInitials }}
                                     </div>
-                                    <div class="text-left hidden sm:block">
+                                    <div class="text-left hidden sm:block" data-testid="topbar-user-block">
                                         <div
-                                            class="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-40"
+                                            data-testid="topbar-user-name"
+                                            class="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate max-w-44"
                                             :title="user?.name || 'Pengguna'"
                                         >
                                             {{ user?.name || 'Pengguna' }}
                                         </div>
                                         <div
-                                            class="text-2xs text-slate-500 dark:text-slate-400 truncate max-w-40"
+                                            data-testid="topbar-user-role"
+                                            class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-44"
                                             :title="user?.role || 'Pengguna'"
                                         >
                                             {{ user?.role || 'Pengguna' }}

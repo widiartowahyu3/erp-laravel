@@ -7,11 +7,5 @@ parameters:
 
     level: 6
 
-    reportUnmatchedIgnoredErrors: false
-
     parallel:
         maximumNumberOfProcesses: 1
-
-    ignoreErrors:
-        -
-            identifier: trait.unused

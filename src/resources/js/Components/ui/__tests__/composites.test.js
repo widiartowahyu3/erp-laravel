@@ -183,6 +183,16 @@ describe('Composite UI Components', () => {
             const wrapper = mount(DataTable, { props: { columns, data: [], loading: true } });
             expect(wrapper.text()).toContain('Memuat data...');
         });
+
+        it('applies whitespace-nowrap and safe truncate on code and sku column cells', () => {
+            const wrapper = mount(DataTable, { props: { columns, data } });
+            const codeCell = wrapper.find('td.whitespace-nowrap');
+            expect(codeCell.exists()).toBe(true);
+            const truncateSpan = codeCell.find('span.truncate');
+            expect(truncateSpan.exists()).toBe(true);
+            expect(truncateSpan.text()).toBe('CUST-001');
+            expect(truncateSpan.attributes('title')).toBe('CUST-001');
+        });
     });
 
     describe('Pagination', () => {

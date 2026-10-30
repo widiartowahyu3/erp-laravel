@@ -9,7 +9,7 @@ export const masterDataModules = {
         permission: 'units',
         description: 'Standar unit pengukuran dan faktor konversi satuan.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Satuan', sortable: true },
             { key: 'created_at', label: 'Dibuat Pada', sortable: true, type: 'date' },
         ],
@@ -24,7 +24,7 @@ export const masterDataModules = {
         permission: 'product_categories',
         description: 'Struktur hierarki dan pengelompokan kategori barang.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Kategori', sortable: true },
             { key: 'parent_name', label: 'Kategori Induk', sortable: false },
             { key: 'created_at', label: 'Dibuat Pada', sortable: true, type: 'date' },
@@ -40,7 +40,7 @@ export const masterDataModules = {
         permission: 'products',
         description: 'Katalog barang dagang, SKU, barcode, dan informasi harga.',
         columns: [
-            { key: 'sku', label: 'SKU / Kode', sortable: true },
+            { key: 'sku', label: 'SKU / Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Produk', sortable: true },
             { key: 'category_name', label: 'Kategori', sortable: false },
             { key: 'base_unit_name', label: 'Satuan', sortable: false },
@@ -60,7 +60,7 @@ export const masterDataModules = {
         permission: 'warehouses',
         description: 'Master lokasi penyimpanan dan fasilitas fisik gudang.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Gudang', sortable: true },
             { key: 'address', label: 'Alamat', sortable: false },
             { key: 'is_active', label: 'Status', sortable: true, type: 'status', align: 'center' },
@@ -76,7 +76,7 @@ export const masterDataModules = {
         permission: 'suppliers',
         description: 'Data mitra pemasok, kontak, dan syarat pembayaran.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Pemasok', sortable: true },
             { key: 'contact_name', label: 'Kontak', sortable: false },
             { key: 'phone', label: 'Telepon', sortable: false },
@@ -94,7 +94,7 @@ export const masterDataModules = {
         permission: 'customers',
         description: 'Data mitra pelanggan, kontak, dan limit kredit.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Pelanggan', sortable: true },
             { key: 'contact_name', label: 'Kontak', sortable: false },
             { key: 'phone', label: 'Telepon', sortable: false },
@@ -113,7 +113,7 @@ export const masterDataModules = {
         permission: 'tax_rates',
         description: 'Daftar tarif pajak (PPN, PPh) dan akun akuntansi terkait.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Tarif', sortable: true },
             { key: 'rate', label: 'Tarif (%)', sortable: true, type: 'percent', align: 'right' },
             { key: 'is_active', label: 'Status', sortable: true, type: 'status', align: 'center' },
@@ -129,7 +129,7 @@ export const masterDataModules = {
         permission: 'payment_terms',
         description: 'Termin pembayaran seperti COD dan tempo hari/bulan.',
         columns: [
-            { key: 'code', label: 'Kode', sortable: true },
+            { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Syarat', sortable: true },
             { key: 'days', label: 'Tempo (Hari)', sortable: true, align: 'right' },
             { key: 'created_at', label: 'Dibuat Pada', sortable: true, type: 'date' },

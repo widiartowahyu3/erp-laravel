@@ -92,11 +92,14 @@ final class ProductCategoryService
      *
      * @throws BusinessRuleException
      */
-    public function getParentChainDepth(int $parentId, ?int $categoryId = null): int
+    public function getParentChainDepth(?int $parentId, ?int $categoryId = null): int
     {
+        if ($parentId === null) {
+            return 0;
+        }
+
         $visited = $categoryId !== null ? [$categoryId => true] : [];
         $depth = 0;
-        /** @var int|null $currentId */
         $currentId = $parentId;
 
         while ($currentId !== null) {
