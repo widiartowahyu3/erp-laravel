@@ -16,6 +16,7 @@ use App\Http\Controllers\MasterData\SupplierController;
 use App\Http\Controllers\MasterData\TaxRateController;
 use App\Http\Controllers\MasterData\UnitController;
 use App\Http\Controllers\MasterData\WarehouseController;
+use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Middleware\EnforceSessionTimeouts;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Session\Middleware\AuthenticateSession;
@@ -126,6 +127,19 @@ Route::middleware([
         Route::put('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'update'])->middleware(['can:stock_adjustments.update', 'throttle:erp-write'])->name('stock-adjustments.update');
         Route::post('stock-adjustments/{stock_adjustment}/post', [StockAdjustmentController::class, 'post'])->middleware(['can:stock_adjustments.post', 'throttle:erp-write'])->name('stock-adjustments.post');
         Route::post('stock-adjustments/{stock_adjustment}/void', [StockAdjustmentController::class, 'void'])->middleware(['can:stock_adjustments.void', 'throttle:erp-write'])->name('stock-adjustments.void');
+    });
+
+    // Purchasing module routes
+    Route::prefix('purchasing')->name('purchasing.')->group(function (): void {
+        Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('can:purchase_orders.view')->name('purchase-orders.index');
+        Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->middleware('can:purchase_orders.create')->name('purchase-orders.create');
+        Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware(['can:purchase_orders.create', 'throttle:erp-write'])->name('purchase-orders.store');
+        Route::get('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'show'])->middleware('can:purchase_orders.view')->name('purchase-orders.show');
+        Route::get('purchase-orders/{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->middleware('can:purchase_orders.update')->name('purchase-orders.edit');
+        Route::put('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'update'])->middleware(['can:purchase_orders.update', 'throttle:erp-write'])->name('purchase-orders.update');
+        Route::post('purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])->middleware(['can:purchase_orders.approve', 'throttle:erp-write'])->name('purchase-orders.approve');
+        Route::post('purchase-orders/{purchase_order}/void', [PurchaseOrderController::class, 'void'])->middleware(['can:purchase_orders.void', 'throttle:erp-write'])->name('purchase-orders.void');
+        Route::post('purchase-orders/{purchase_order}/close', [PurchaseOrderController::class, 'close'])->middleware(['can:purchase_orders.update', 'throttle:erp-write'])->name('purchase-orders.close');
     });
 });
 
