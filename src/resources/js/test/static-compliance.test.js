@@ -119,6 +119,10 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Gudang');
         expect(availableNames).toContain('Tarif Pajak');
         expect(availableNames).toContain('Syarat Pembayaran');
-        expect(availableItems.length).toBe(9);
+        expect(availableNames).toContain('Saldo Stok');
+        expect(availableNames).toContain('Mutasi Stok');
+        expect(availableNames).toContain('Kartu Stok');
+        expect(availableNames).toContain('Penyesuaian Stok');
+        expect(availableItems.length).toBe(13);
     });
 });
