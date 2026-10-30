@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Inventory\StockBalanceController;
+use App\Http\Controllers\Inventory\StockCardController;
+use App\Http\Controllers\Inventory\StockMovementController;
 use App\Http\Controllers\MasterData\CustomerController;
 use App\Http\Controllers\MasterData\PaymentTermController;
 use App\Http\Controllers\MasterData\ProductCategoryController;
@@ -105,6 +108,13 @@ Route::middleware([
         Route::get('payment-terms/{payment_term}/edit', [PaymentTermController::class, 'edit'])->middleware('can:payment_terms.update')->name('payment-terms.edit');
         Route::put('payment-terms/{payment_term}', [PaymentTermController::class, 'update'])->middleware('can:payment_terms.update')->name('payment-terms.update');
         Route::delete('payment-terms/{payment_term}', [PaymentTermController::class, 'destroy'])->middleware('can:payment_terms.delete')->name('payment-terms.destroy');
+    });
+
+    // Inventory routes
+    Route::prefix('inventory')->name('inventory.')->group(function (): void {
+        Route::get('stock-balances', [StockBalanceController::class, 'index'])->middleware('can:stock_balances.view')->name('stock-balances.index');
+        Route::get('stock-movements', [StockMovementController::class, 'index'])->middleware('can:stock_movements.view')->name('stock-movements.index');
+        Route::get('stock-card', [StockCardController::class, 'index'])->middleware('can:stock_movements.view')->name('stock-card.index');
     });
 });
 
