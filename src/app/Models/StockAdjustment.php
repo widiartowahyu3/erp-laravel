@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $number
  * @property int $warehouse_id
- * @property CarbonImmutable $adjustment_date
+ * @property CarbonImmutable|string $adjustment_date
  * @property string $reason
  * @property StockAdjustmentStatus $status
  * @property string|null $notes
