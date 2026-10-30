@@ -5,10 +5,29 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StockMovementType;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
+/**
+ * @property int $id
+ * @property CarbonImmutable $movement_date
+ * @property int $product_id
+ * @property int $warehouse_id
+ * @property StockMovementType $movement_type
+ * @property string $quantity
+ * @property string $unit_cost
+ * @property string $balance_after
+ * @property string $avg_cost_after
+ * @property string $source_type
+ * @property int $source_id
+ * @property int|null $created_by
+ * @property CarbonImmutable|null $created_at
+ * @property-read Product $product
+ * @property-read Warehouse $warehouse
+ * @property-read User|null $creator
+ */
 class StockMovement extends Model
 {
     public const ?string UPDATED_AT = null;

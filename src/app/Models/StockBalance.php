@@ -4,9 +4,21 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $product_id
+ * @property int $warehouse_id
+ * @property string $quantity
+ * @property string $avg_cost
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Product $product
+ * @property-read Warehouse $warehouse
+ */
 class StockBalance extends Model
 {
     /**

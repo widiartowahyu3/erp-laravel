@@ -4,9 +4,24 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $stock_adjustment_id
+ * @property int $line_no
+ * @property int $product_id
+ * @property string $system_quantity
+ * @property string $counted_quantity
+ * @property string $difference_quantity
+ * @property string $unit_cost
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read StockAdjustment $adjustment
+ * @property-read Product $product
+ */
 class StockAdjustmentItem extends Model
 {
     /**

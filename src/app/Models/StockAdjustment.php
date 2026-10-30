@@ -7,11 +7,34 @@ namespace App\Models;
 use App\Enums\StockAdjustmentStatus;
 use App\Models\Concerns\HasAuditUsers;
 use App\Models\Concerns\RecordsAudit;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
+ * @property int $id
+ * @property string $number
+ * @property int $warehouse_id
+ * @property CarbonImmutable $adjustment_date
+ * @property string $reason
+ * @property StockAdjustmentStatus $status
+ * @property string|null $notes
+ * @property int|null $posted_by
+ * @property CarbonImmutable|null $posted_at
+ * @property int|null $voided_by
+ * @property CarbonImmutable|null $voided_at
+ * @property string|null $void_reason
+ * @property int|null $created_by
+ * @property int|null $updated_by
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Warehouse $warehouse
+ * @property-read Collection<int, StockAdjustmentItem> $items
+ * @property-read User|null $poster
+ * @property-read User|null $voider
+ *
  * @method static void restored(\Closure $callback)
  */
 class StockAdjustment extends Model
