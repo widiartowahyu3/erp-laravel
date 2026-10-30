@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { nextTick, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { usePermission } from '../usePermission';
 import { useConfirm } from '../useConfirm';
@@ -6,6 +7,7 @@ import { useToast } from '../useToast';
 import { useTheme } from '../useTheme';
 import { useFormatters } from '../useFormatters';
 import { useListQuery } from '../useListQuery';
+import { useFocusFirstField } from '../useFocusFirstField';
 import Can from '@/Components/ui/Can.vue';
 import { router } from '@inertiajs/vue3';
 import { setMockPageProps, resetMockPageProps } from '@/test-setup';
@@ -204,6 +206,83 @@ describe('Frontend Composables', () => {
             setPage(2);
             setFilter('status', 'active');
             expect(currentPage.value).toBe(1);
+        });
+    });
+
+    describe('useFocusFirstField', () => {
+        it('focuses the first interactive input on mounted', async () => {
+            const TestComponent = {
+                setup() {
+                    const { formRef } = useFocusFirstField();
+                    return { formRef };
+                },
+                template: `
+                    <form ref="formRef">
+                        <input id="hidden-input" type="hidden" />
+                        <input id="disabled-input" disabled />
+                        <input id="first-field" />
+                        <input id="second-field" />
+                    </form>
+                `,
+            };
+
+            const wrapper = mount(TestComponent, { attachTo: document.body });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 20));
+
+            expect(document.activeElement?.id).toBe('first-field');
+            wrapper.unmount();
+        });
+
+        it('focuses the first field with aria-invalid="true" when error exists', async () => {
+            const TestComponent = {
+                setup() {
+                    const { formRef } = useFocusFirstField();
+                    return { formRef };
+                },
+                template: `
+                    <form ref="formRef">
+                        <input id="first-field" />
+                        <input id="error-field" aria-invalid="true" />
+                        <input id="second-error-field" aria-invalid="true" />
+                    </form>
+                `,
+            };
+
+            const wrapper = mount(TestComponent, { attachTo: document.body });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 20));
+
+            expect(document.activeElement?.id).toBe('error-field');
+            wrapper.unmount();
+        });
+
+        it('re-focuses first invalid field when errors change reactively', async () => {
+            const errors = ref({});
+            const TestComponent = {
+                setup() {
+                    const { formRef } = useFocusFirstField(() => errors.value);
+                    return { formRef, errors };
+                },
+                template: `
+                    <form ref="formRef">
+                        <input id="first-field" :aria-invalid="errors.first ? 'true' : 'false'" />
+                        <input id="second-field" :aria-invalid="errors.second ? 'true' : 'false'" />
+                    </form>
+                `,
+            };
+
+            const wrapper = mount(TestComponent, { attachTo: document.body });
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            expect(document.activeElement?.id).toBe('first-field');
+
+            errors.value = { second: 'Error on second' };
+            await nextTick();
+            await new Promise((resolve) => setTimeout(resolve, 20));
+
+            expect(document.activeElement?.id).toBe('second-field');
+            wrapper.unmount();
         });
     });
 });

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
+import { useFocusFirstField } from '@/composables/useFocusFirstField';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
@@ -42,6 +43,8 @@ const form = useForm({
     is_active: props.product ? Boolean(props.product.is_active) : true,
 });
 
+const { formRef } = useFocusFirstField(() => form.errors);
+
 const categoryOptions = computed(() => [
     { value: '', label: '-- Pilih Kategori Produk --' },
     ...props.categories.map((c) => ({
@@ -81,7 +84,7 @@ function submit() {
             {{ form.errors.form }}
         </Alert>
 
-        <form class="space-y-5" novalidate @submit.prevent="submit">
+        <form ref="formRef" class="space-y-5" novalidate @submit.prevent="submit">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <!-- SKU / Kode Produk -->
                 <FormField
@@ -100,7 +103,6 @@ function submit() {
                             :aria-describedby="describedBy"
                             class="uppercase"
                             required
-                            autofocus
                         />
                     </template>
                 </FormField>

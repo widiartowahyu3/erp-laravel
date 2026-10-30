@@ -1,5 +1,6 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3';
+import { useFocusFirstField } from '@/composables/useFocusFirstField';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
@@ -26,6 +27,8 @@ const form = useForm({
     is_active: props.warehouse ? Boolean(props.warehouse.is_active) : true,
 });
 
+const { formRef } = useFocusFirstField(() => form.errors);
+
 function submit() {
     if (props.isEdit) {
         form.put(`/master/warehouses/${props.warehouse.id}`, {
@@ -49,7 +52,7 @@ function submit() {
             {{ form.errors.form }}
         </Alert>
 
-        <form class="space-y-5" novalidate @submit.prevent="submit">
+        <form ref="formRef" class="space-y-5" novalidate @submit.prevent="submit">
             <!-- Kode Gudang -->
             <FormField
                 id="warehouse-code"
@@ -67,7 +70,6 @@ function submit() {
                         :aria-describedby="describedBy"
                         class="uppercase"
                         required
-                        autofocus
                     />
                 </template>
             </FormField>

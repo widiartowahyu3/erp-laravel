@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo test test-js lint analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -19,9 +19,11 @@ help:
 	@echo "  make seed         - Run DB seeders (--force)"
 	@echo "  make seed-demo    - Run demo master data seeder (non-production only)"
 	@echo "  make test         - Run PHP test suite (auto migrates test database)"
-	@echo "  make lint         - Run code style checks (Pint)"
+	@echo "  make test-js      - Run frontend unit and component tests (Vitest)"
+	@echo "  make lint         - Run backend code style checks (Pint)"
+	@echo "  make lint-js      - Run frontend code style checks (ESLint)"
 	@echo "  make analyse      - Run static analysis (PHPStan/Larastan)"
-	@echo "  make check        - Run all quality checks (lint, analyse, test)"
+	@echo "  make check        - Run all quality checks (lint, analyse, test, test-js, lint-js)"
 	@echo "  make dev          - Start development environment"
 	@echo "  make verify       - Run the hardening verification script"
 	@echo "  make fresh        - Destroy containers and volumes (requires confirmation)"
@@ -93,10 +95,13 @@ test-js:
 lint:
 	docker compose run --rm php ./vendor/bin/pint --test
 
+lint-js:
+	docker compose --profile tools run --rm node npm run lint
+
 analyse:
 	docker compose run --rm php ./vendor/bin/phpstan analyse
 
-check: lint analyse test test-js
+check: lint analyse test test-js lint-js
 
 dev:
 	docker compose up

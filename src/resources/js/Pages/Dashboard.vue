@@ -131,8 +131,8 @@ const hasAnyAccessibleModule = computed(() => {
                             :key="item.name"
                             :href="item.href"
                             class="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-xl"
-                            :aria-label="`Buka modul ${item.name}`"
                         >
+                            <span class="sr-only">Buka modul {{ item.name }}</span>
                             <Card
                                 padding="md"
                                 class="h-full border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-sm transition-all"

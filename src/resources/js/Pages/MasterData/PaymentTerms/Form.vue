@@ -1,5 +1,6 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3';
+import { useFocusFirstField } from '@/composables/useFocusFirstField';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Button from '@/Components/ui/Button.vue';
@@ -22,6 +23,8 @@ const form = useForm({
     name: props.paymentTerm?.name || '',
     days: props.paymentTerm?.days !== undefined ? Number(props.paymentTerm.days) : 0,
 });
+
+const { formRef } = useFocusFirstField(() => form.errors);
 
 function submit() {
     if (props.isEdit) {
@@ -46,7 +49,7 @@ function submit() {
             {{ form.errors.form }}
         </Alert>
 
-        <form class="space-y-5" novalidate @submit.prevent="submit">
+        <form ref="formRef" class="space-y-5" novalidate @submit.prevent="submit">
             <!-- Kode Syarat Pembayaran -->
             <FormField
                 id="term-code"
@@ -64,7 +67,6 @@ function submit() {
                         :aria-describedby="describedBy"
                         class="uppercase"
                         required
-                        autofocus
                     />
                 </template>
             </FormField>

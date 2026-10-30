@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
+import { useFocusFirstField } from '@/composables/useFocusFirstField';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Select from '@/Components/ui/Select.vue';
@@ -28,6 +29,8 @@ const form = useForm({
     name: props.category?.name || '',
     parent_id: props.category?.parent_id ? String(props.category.parent_id) : '',
 });
+
+const { formRef } = useFocusFirstField(() => form.errors);
 
 const parentOptions = computed(() => [
     { value: '', label: '-- Tanpa Induk (Kategori Utama) --' },
@@ -60,7 +63,7 @@ function submit() {
             {{ form.errors.form }}
         </Alert>
 
-        <form class="space-y-5" novalidate @submit.prevent="submit">
+        <form ref="formRef" class="space-y-5" novalidate @submit.prevent="submit">
             <!-- Kode Kategori -->
             <FormField
                 id="category-code"
@@ -78,7 +81,6 @@ function submit() {
                         :aria-describedby="describedBy"
                         class="uppercase"
                         required
-                        autofocus
                     />
                 </template>
             </FormField>

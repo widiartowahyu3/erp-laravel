@@ -320,7 +320,6 @@ function isItemActive(href) {
                             v-if="!item.disabled"
                             :href="item.href"
                             :title="item.name"
-                            :aria-label="item.name"
                             :class="[
                                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-400',
                                 isItemActive(item.href)
@@ -448,7 +447,6 @@ function isItemActive(href) {
                                 v-if="!item.disabled"
                                 :href="item.href"
                                 :title="item.name"
-                                :aria-label="item.name"
                                 :class="[
                                     'flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:focus-visible:ring-indigo-400',
                                     isSidebarCollapsed
