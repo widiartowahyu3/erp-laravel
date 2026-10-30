@@ -16,6 +16,7 @@ use App\Http\Controllers\MasterData\SupplierController;
 use App\Http\Controllers\MasterData\TaxRateController;
 use App\Http\Controllers\MasterData\UnitController;
 use App\Http\Controllers\MasterData\WarehouseController;
+use App\Http\Controllers\Purchasing\GoodsReceiptController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Middleware\EnforceSessionTimeouts;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -140,6 +141,15 @@ Route::middleware([
         Route::post('purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])->middleware(['can:purchase_orders.approve', 'throttle:erp-write'])->name('purchase-orders.approve');
         Route::post('purchase-orders/{purchase_order}/void', [PurchaseOrderController::class, 'void'])->middleware(['can:purchase_orders.void', 'throttle:erp-write'])->name('purchase-orders.void');
         Route::post('purchase-orders/{purchase_order}/close', [PurchaseOrderController::class, 'close'])->middleware(['can:purchase_orders.update', 'throttle:erp-write'])->name('purchase-orders.close');
+
+        Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('can:goods_receipts.view')->name('goods-receipts.index');
+        Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('can:goods_receipts.create')->name('goods-receipts.create');
+        Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware(['can:goods_receipts.create', 'throttle:erp-write'])->name('goods-receipts.store');
+        Route::get('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'show'])->middleware('can:goods_receipts.view')->name('goods-receipts.show');
+        Route::get('goods-receipts/{goods_receipt}/edit', [GoodsReceiptController::class, 'edit'])->middleware('can:goods_receipts.update')->name('goods-receipts.edit');
+        Route::put('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'update'])->middleware(['can:goods_receipts.update', 'throttle:erp-write'])->name('goods-receipts.update');
+        Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post'])->middleware(['can:goods_receipts.post', 'throttle:erp-write'])->name('goods-receipts.post');
+        Route::post('goods-receipts/{goods_receipt}/void', [GoodsReceiptController::class, 'void'])->middleware(['can:goods_receipts.void', 'throttle:erp-write'])->name('goods-receipts.void');
     });
 });
 
