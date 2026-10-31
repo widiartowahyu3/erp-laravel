@@ -102,4 +102,19 @@ describe('useSubmitLock', () => {
         expect(() => submit(brokenSend)).toThrow('Sync error');
         expect(busy.value).toBe(false);
     });
+
+    it('allows immediate subsequent submissions once not busy when throttleMs is 0', () => {
+        const { busy, submit } = useSubmitLock({ throttleMs: 0 });
+        const sendFn = vi.fn(({ onFinish }) => {
+            onFinish?.();
+        });
+
+        // 1st call at t = 0 finishes immediately
+        expect(submit(sendFn)).toBe(true);
+        expect(busy.value).toBe(false);
+
+        // 2nd call at t = 0 is immediately allowed because throttleMs is 0
+        expect(submit(sendFn)).toBe(true);
+        expect(sendFn).toHaveBeenCalledTimes(2);
+    });
 });

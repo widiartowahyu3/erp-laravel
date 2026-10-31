@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 
@@ -124,4 +125,28 @@ test('erp-write rate limiter never throttles GET requests even after 100 request
         $response = $this->getJson('/_test/erp-read-probe');
         expect($response->status())->toBe(200, "GET request #{$i} should not be throttled");
     }
+});
+
+test('erp-write rate limiter resets quota after 1 minute using time manipulation without sleep', function (): void {
+    $user = User::factory()->create();
+    RateLimiter::clear((string) $user->getAuthIdentifier());
+
+    $this->actingAs($user);
+
+    Carbon::setTestNow('2026-10-31 10:00:00');
+
+    for ($i = 1; $i <= 60; $i++) {
+        expect($this->postJson('/_test/erp-write-probe')->status())->toBe(200);
+    }
+
+    // 61st request is throttled
+    expect($this->postJson('/_test/erp-write-probe')->status())->toBe(429);
+
+    // Advance time by 61 seconds without sleep()
+    Carbon::setTestNow('2026-10-31 10:01:01');
+
+    // Should succeed again immediately
+    expect($this->postJson('/_test/erp-write-probe')->status())->toBe(200);
+
+    Carbon::setTestNow();
 });

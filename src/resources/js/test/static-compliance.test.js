@@ -134,49 +134,29 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(content).toContain('form.errors[`items.${index}.discount_amount`]');
     });
 
-    it('ensures all 6 inventory and purchasing document show and form pages use useSubmitLock', () => {
-        const requiredFiles = [
-            'Pages/Inventory/StockAdjustments/Show.vue',
-            'Pages/Inventory/StockAdjustments/Form.vue',
-            'Pages/Purchasing/PurchaseOrders/Show.vue',
-            'Pages/Purchasing/PurchaseOrders/Form.vue',
-            'Pages/Purchasing/GoodsReceipts/Show.vue',
-            'Pages/Purchasing/GoodsReceipts/Form.vue',
-        ];
+    it('ensures every page in Pages/** that mutates data via router or form uses useSubmitLock', () => {
+        const pagesDir = path.resolve(jsRoot, 'Pages');
+        const pageFiles = getAllFiles(pagesDir, ['.vue']);
+        const mutationRegex = /\b(?:router\.(?:post|put|delete|patch)|form\.(?:post|put|delete|patch))\s*\(/;
 
-        for (const relPath of requiredFiles) {
-            const filePath = path.resolve(jsRoot, relPath);
-            const content = fs.readFileSync(filePath, 'utf-8');
-            expect(content).toContain('useSubmitLock');
-            expect(content).toMatch(/useSubmitLock\s*\(/);
+        const mutatingPages = pageFiles.filter((file) => {
+            const content = fs.readFileSync(file, 'utf-8');
+            return mutationRegex.test(content);
+        });
+
+        // Ensure we discovered all mutating pages (at least 24 pages)
+        expect(mutatingPages.length).toBeGreaterThanOrEqual(24);
+
+        const violations = [];
+        for (const file of mutatingPages) {
+            const content = fs.readFileSync(file, 'utf-8');
+            const hasImport = content.includes('useSubmitLock');
+            const hasInvoke = /useSubmitLock\s*\(/.test(content);
+            if (!hasImport || !hasInvoke) {
+                violations.push(path.relative(jsRoot, file));
+            }
         }
-    });
 
-    it('ensures all 8 master data Index and Form pages and Account/Password.vue use useSubmitLock', () => {
-        const masterDataModules = [
-            'Units',
-            'ProductCategories',
-            'Warehouses',
-            'TaxRates',
-            'PaymentTerms',
-            'Suppliers',
-            'Customers',
-            'Products',
-        ];
-
-        const files = [
-            'Pages/Account/Password.vue',
-            ...masterDataModules.flatMap((m) => [
-                `Pages/MasterData/${m}/Index.vue`,
-                `Pages/MasterData/${m}/Form.vue`,
-            ]),
-        ];
-
-        for (const relPath of files) {
-            const filePath = path.resolve(jsRoot, relPath);
-            const content = fs.readFileSync(filePath, 'utf-8');
-            expect(content, `${relPath} should import useSubmitLock`).toContain('useSubmitLock');
-            expect(content, `${relPath} should invoke useSubmitLock`).toMatch(/useSubmitLock\s*\(/);
-        }
+        expect(violations).toEqual([]);
     });
 });

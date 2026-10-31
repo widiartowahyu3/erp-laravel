@@ -362,3 +362,38 @@ test('purchase order service create and update reject line discount exceeding li
         expect($e->getMessage())->toBe('Diskon tidak boleh melebihi nilai baris.');
     }
 });
+
+test('purchase order service update rejects closed purchase order with DocumentNotEditableException', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct();
+
+    $service = new PurchaseOrderService;
+    $po = $service->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-31',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '5.0000',
+                'unit_price' => '10000.0000',
+            ],
+        ],
+    ]);
+
+    $po->update(['status' => PurchaseOrderStatus::CLOSED]);
+
+    expect(fn () => $service->update($po, [
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-31',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '5.0000',
+                'unit_price' => '10000.0000',
+            ],
+        ],
+    ]))->toThrow(DocumentNotEditableException::class);
+});

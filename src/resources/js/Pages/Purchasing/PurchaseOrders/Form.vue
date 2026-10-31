@@ -391,8 +391,8 @@ function submit() {
                                     :disabled="form.processing"
                                     :aria-label="`Diskon baris ke-${index + 1}`"
                                 />
-                                <div v-if="form.errors[`items.${index}.discount_amount`]" class="text-xs text-rose-500 mt-1 text-right">
-                                    {{ form.errors[`items.${index}.discount_amount`] }}
+                                <div v-if="form.errors[`items.${index}.discount_amount`] || form.errors[`items.${index}.discount_percent`]" class="text-xs text-rose-500 mt-1 text-right">
+                                    {{ form.errors[`items.${index}.discount_amount`] || form.errors[`items.${index}.discount_percent`] }}
                                 </div>
                             </td>
                             <td class="py-2.5 px-3">

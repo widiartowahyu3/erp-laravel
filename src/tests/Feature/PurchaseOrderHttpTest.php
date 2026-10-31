@@ -273,3 +273,37 @@ test('validation rejects invalid purchase order payloads on specific fields', fu
         ->assertRedirect('/purchasing/purchase-orders/create')
         ->assertSessionHasErrors('items.0.product_id');
 });
+
+test('purchase order controller update rejects closed purchase order with 409 conflict', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct();
+
+    $user = userWithPermissions(['purchase_orders.update']);
+
+    $po = PurchaseOrder::create([
+        'number' => 'PO/202610/00099',
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-31',
+        'status' => PurchaseOrderStatus::CLOSED,
+        'subtotal' => '50000.00',
+        'total' => '50000.00',
+    ]);
+
+    $this->actingAs($user)
+        ->from("/purchasing/purchase-orders/{$po->id}/edit")
+        ->put("/purchasing/purchase-orders/{$po->id}", [
+            'supplier_id' => $supplierId,
+            'warehouse_id' => $warehouseId,
+            'order_date' => '2026-10-31',
+            'items' => [
+                [
+                    'product_id' => $productId,
+                    'quantity' => '5.0000',
+                    'unit_price' => '10000.0000',
+                ],
+            ],
+        ])
+        ->assertStatus(409);
+});

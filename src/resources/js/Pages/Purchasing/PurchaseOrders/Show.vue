@@ -181,7 +181,7 @@ async function handleVoid() {
 
                         <Button
                             v-if="canClosePurchaseOrder(order)"
-                            variant="warning"
+                            variant="secondary"
                             size="sm"
                             :loading="busy"
                             :disabled="busy"

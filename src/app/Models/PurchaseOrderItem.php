@@ -87,7 +87,14 @@ class PurchaseOrderItem extends Model
 
     public function remainingQuantity(): string
     {
-        return Decimal::sub($this->quantity, $this->received_quantity, Decimal::SCALE_QUANTITY);
+        $rem = Decimal::sub($this->quantity, $this->received_quantity, Decimal::SCALE_QUANTITY);
+
+        return Decimal::isNegative($rem) ? '0.0000' : $rem;
+    }
+
+    public function isFullyReceived(): bool
+    {
+        return Decimal::cmp($this->received_quantity, $this->quantity) >= 0;
     }
 
     public function netUnitCost(): string

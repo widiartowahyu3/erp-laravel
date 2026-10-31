@@ -7,6 +7,9 @@ import TextInput from '../../Components/ui/TextInput.vue';
 import PasswordInput from '../../Components/ui/PasswordInput.vue';
 import Button from '../../Components/ui/Button.vue';
 import Alert from '../../Components/ui/Alert.vue';
+import { useSubmitLock } from '@/composables/useSubmitLock';
+
+const { busy, submit: lockSubmit } = useSubmitLock();
 
 const form = useForm({
     email: '',
@@ -14,8 +17,10 @@ const form = useForm({
 });
 
 function submit() {
-    form.post('/login', {
-        onFinish: () => form.reset('password'),
+    lockSubmit(() => {
+        form.post('/login', {
+            onFinish: () => form.reset('password'),
+        });
     });
 }
 </script>
@@ -90,7 +95,9 @@ function submit() {
                     type="submit"
                     variant="primary"
                     block
-                    :loading="form.processing"
+                    :loading="form.processing || busy"
+                    :disabled="busy"
+                    :aria-busy="busy"
                 >
                     <template #icon>
                         <LogIn class="w-4 h-4" aria-hidden="true" />
