@@ -108,6 +108,13 @@ resources/js/
    - Digunakan untuk toggle atau membaca tema aktif (`light` vs `dark`).
 6. **`useFormatters`**:
    - Berisi fungsi format aman float: `formatRupiah`, `formatKuantitas`, `formatTanggal`, `formatPersen`.
+7. **`useActionGuard` (Pemeriksaan Hak Akses & Status Dokumen)**:
+   - Digunakan untuk memeriksa **apa yang boleh dilakukan** (*what is allowed*): mengevaluasi apakah user memiliki permission yang sesuai DAN apakah status dokumen mengizinkan aksi tersebut berdasarkan matriks status (misal draf hanya boleh diedit/diposting/dibatalkan).
+   - Peran `useActionGuard` murni deklaratif dan **TIDAK** menangani status sibuk (*busy*) atau klik ganda.
+8. **`useSubmitLock` (Pengaman Klik Ganda & Status Sibuk)**:
+   - Digunakan untuk mengatur **kapan tombol boleh diklik** (*when it can be clicked*): mencegah pengiriman ganda pada mutasi HTTP dokumen (`router.post/put/delete` dan `form.post/put`) akibat klik cepat berulang (*rapid double-click*).
+   - Menyediakan ref `busy` dan fungsi pembungkus `submit(sendFn, options)` dengan throttle bawaan 1000ms serta penanganan otomatis pembersihan status pada `onFinish`, `onError`, dan `onCancel`.
+   - Seluruh tombol aksi dokumen wajib mengikat atribut: `:loading="busy || form.processing"`, `:disabled="busy || form.processing"`, dan `:aria-busy="busy || form.processing"`.
 
 ---
 

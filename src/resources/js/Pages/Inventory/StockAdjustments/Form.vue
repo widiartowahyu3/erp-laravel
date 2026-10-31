@@ -13,6 +13,7 @@ import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import { subtractDecimals } from '@/Support/decimal';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
     adjustment: {
@@ -99,20 +100,26 @@ function removeItem(index) {
     });
 }
 
+const { busy, submit: submitWithLock } = useSubmitLock();
+
 function calculateDifference(item) {
     return subtractDecimals(item.counted_quantity || '0.0000', item.system_quantity || '0.0000', 4);
 }
 
 function submit() {
-    if (props.isEdit) {
-        form.put(`/inventory/stock-adjustments/${props.adjustment.id}`, {
-            preserveScroll: true,
-        });
-    } else {
-        form.post('/inventory/stock-adjustments', {
-            preserveScroll: true,
-        });
-    }
+    submitWithLock((options) => {
+        if (props.isEdit) {
+            form.put(`/inventory/stock-adjustments/${props.adjustment.id}`, {
+                preserveScroll: true,
+                ...options,
+            });
+        } else {
+            form.post('/inventory/stock-adjustments', {
+                preserveScroll: true,
+                ...options,
+            });
+        }
+    });
 }
 </script>
 
@@ -379,10 +386,12 @@ function submit() {
                 <Button
                     type="submit"
                     variant="primary"
-                    :disabled="form.processing"
+                    :loading="busy || form.processing"
+                    :disabled="busy || form.processing"
+                    :aria-busy="busy || form.processing"
                 >
                     <Save class="w-4 h-4 mr-1.5" aria-hidden="true" />
-                    {{ form.processing ? 'Menyimpan...' : (isEdit ? 'Perbarui Draf' : 'Simpan Draf') }}
+                    {{ (busy || form.processing) ? 'Menyimpan...' : (isEdit ? 'Perbarui Draf' : 'Simpan Draf') }}
                 </Button>
             </div>
         </form>

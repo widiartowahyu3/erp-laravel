@@ -133,4 +133,22 @@ describe('Frontend Static Compliance & Security Audits', () => {
         const content = fs.readFileSync(formPath, 'utf-8');
         expect(content).toContain('form.errors[`items.${index}.discount_amount`]');
     });
+
+    it('ensures all 6 inventory and purchasing document show and form pages use useSubmitLock', () => {
+        const requiredFiles = [
+            'Pages/Inventory/StockAdjustments/Show.vue',
+            'Pages/Inventory/StockAdjustments/Form.vue',
+            'Pages/Purchasing/PurchaseOrders/Show.vue',
+            'Pages/Purchasing/PurchaseOrders/Form.vue',
+            'Pages/Purchasing/GoodsReceipts/Show.vue',
+            'Pages/Purchasing/GoodsReceipts/Form.vue',
+        ];
+
+        for (const relPath of requiredFiles) {
+            const filePath = path.resolve(jsRoot, relPath);
+            const content = fs.readFileSync(filePath, 'utf-8');
+            expect(content).toContain('useSubmitLock');
+            expect(content).toMatch(/useSubmitLock\s*\(/);
+        }
+    });
 });

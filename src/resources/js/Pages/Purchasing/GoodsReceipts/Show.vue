@@ -13,6 +13,7 @@ import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
 import { goodsReceiptStatusConfig } from '@/config/purchasing';
 
@@ -26,6 +27,7 @@ const props = defineProps({
 const page = usePage();
 const { canEditGoodsReceipt, canPostGoodsReceipt, canVoidGoodsReceipt } = useActionGuard();
 const { confirm } = useConfirm();
+const { busy, submit } = useSubmitLock();
 
 const breadcrumbs = [
     { label: 'Penerimaan Barang', href: '/purchasing/goods-receipts' },
@@ -37,6 +39,8 @@ const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
 
 async function handlePost() {
+    if (busy.value) return;
+
     const ok = await confirm({
         title: 'Posting Penerimaan Barang',
         message: `Apakah Anda yakin ingin memposting penerimaan barang "${props.receipt.number}"? Kuantitas fisik barang akan langsung menambah stok persediaan gudang dan memperbarui status pesanan pembelian terkait.`,
@@ -45,13 +49,18 @@ async function handlePost() {
     });
 
     if (ok) {
-        router.post(`/purchasing/goods-receipts/${props.receipt.id}/post`, {}, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/purchasing/goods-receipts/${props.receipt.id}/post`, {}, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
 
 async function handleVoid() {
+    if (busy.value) return;
+
     const res = await confirm({
         title: 'Batalkan (Void) Penerimaan Barang',
         message: `Masukkan alasan pembatalan dokumen "${props.receipt.number}". Jika dokumen sudah diposting, sistem akan mengurangi kembali stok fisik gudang dan mengembalikan progres pesanan pembelian.`,
@@ -63,10 +72,13 @@ async function handleVoid() {
     });
 
     if (res && res.confirmed) {
-        router.post(`/purchasing/goods-receipts/${props.receipt.id}/void`, {
-            reason: res.reason,
-        }, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/purchasing/goods-receipts/${props.receipt.id}/void`, {
+                reason: res.reason,
+            }, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
@@ -123,6 +135,9 @@ async function handleVoid() {
                             v-if="canPostGoodsReceipt(receipt)"
                             variant="primary"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handlePost"
                         >
                             <CheckCircle2 class="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -133,6 +148,9 @@ async function handleVoid() {
                             v-if="canVoidGoodsReceipt(receipt)"
                             variant="danger"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handleVoid"
                         >
                             <Ban class="w-4 h-4 mr-1.5" aria-hidden="true" />

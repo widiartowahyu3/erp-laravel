@@ -13,6 +13,7 @@ import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
 import { purchaseOrderStatusConfig, goodsReceiptStatusConfig } from '@/config/purchasing';
 import { subtractDecimals } from '@/Support/decimal';
@@ -34,6 +35,7 @@ const {
 } = useActionGuard();
 
 const { confirm } = useConfirm();
+const { busy, submit } = useSubmitLock();
 
 const breadcrumbs = [
     { label: 'Pesanan Pembelian', href: '/purchasing/purchase-orders' },
@@ -45,6 +47,8 @@ const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
 
 async function handleApprove() {
+    if (busy.value) return;
+
     const ok = await confirm({
         title: 'Setujui Pesanan Pembelian',
         message: `Apakah Anda yakin ingin menyetujui pesanan pembelian "${props.order.number}"? Dokumen yang disetujui dapat mulai diproses penerimaan barangnya di gudang.`,
@@ -53,13 +57,18 @@ async function handleApprove() {
     });
 
     if (ok) {
-        router.post(`/purchasing/purchase-orders/${props.order.id}/approve`, {}, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/purchasing/purchase-orders/${props.order.id}/approve`, {}, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
 
 async function handleClose() {
+    if (busy.value) return;
+
     const ok = await confirm({
         title: 'Tutup Pesanan Pembelian',
         message: `Apakah Anda yakin ingin menutup pesanan pembelian "${props.order.number}"? Pesanan yang ditutup tidak dapat menerima barang tambahan lagi.`,
@@ -68,13 +77,18 @@ async function handleClose() {
     });
 
     if (ok) {
-        router.post(`/purchasing/purchase-orders/${props.order.id}/close`, {}, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/purchasing/purchase-orders/${props.order.id}/close`, {}, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
 
 async function handleVoid() {
+    if (busy.value) return;
+
     const res = await confirm({
         title: 'Batalkan (Void) Pesanan Pembelian',
         message: `Masukkan alasan pembatalan dokumen "${props.order.number}". Tindakan ini bersifat permanen.`,
@@ -86,10 +100,13 @@ async function handleVoid() {
     });
 
     if (res && res.confirmed) {
-        router.post(`/purchasing/purchase-orders/${props.order.id}/void`, {
-            reason: res.reason,
-        }, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/purchasing/purchase-orders/${props.order.id}/void`, {
+                reason: res.reason,
+            }, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
@@ -143,6 +160,9 @@ async function handleVoid() {
                             v-if="canApprovePurchaseOrder(order)"
                             variant="primary"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handleApprove"
                         >
                             <CheckCircle2 class="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -163,6 +183,9 @@ async function handleVoid() {
                             v-if="canClosePurchaseOrder(order)"
                             variant="warning"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handleClose"
                         >
                             <Lock class="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -173,6 +196,9 @@ async function handleVoid() {
                             v-if="canVoidPurchaseOrder(order)"
                             variant="danger"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handleVoid"
                         >
                             <Ban class="w-4 h-4 mr-1.5" aria-hidden="true" />

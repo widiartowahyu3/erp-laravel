@@ -14,6 +14,7 @@ import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
 import { stockMovementTypeConfig } from '@/config/inventory';
 
@@ -31,6 +32,7 @@ const props = defineProps({
 const page = usePage();
 const { canEditAdjustment, canPostAdjustment, canVoidAdjustment } = useActionGuard();
 const { confirm } = useConfirm();
+const { busy, submit } = useSubmitLock();
 
 const breadcrumbs = [
     { label: 'Penyesuaian Stok', href: '/inventory/stock-adjustments' },
@@ -42,6 +44,8 @@ const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
 
 async function handlePost() {
+    if (busy.value) return;
+
     const ok = await confirm({
         title: 'Posting Penyesuaian Stok',
         message: `Apakah Anda yakin ingin memposting penyesuaian stok "${props.item.number}"? Saldo persediaan gudang akan segera diperbarui dan dicatat ke mutasi stok. Tindakan ini tidak dapat diedit kembali setelah diposting.`,
@@ -50,13 +54,18 @@ async function handlePost() {
     });
 
     if (ok) {
-        router.post(`/inventory/stock-adjustments/${props.item.id}/post`, {}, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/inventory/stock-adjustments/${props.item.id}/post`, {}, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
 
 async function handleVoid() {
+    if (busy.value) return;
+
     const res = await confirm({
         title: 'Batalkan (Void) Penyesuaian Stok',
         message: `Masukkan alasan pembatalan dokumen "${props.item.number}". Jika dokumen sudah diposting, sistem akan membuat mutasi pembalik otomatis.`,
@@ -68,10 +77,13 @@ async function handleVoid() {
     });
 
     if (res && res.confirmed) {
-        router.post(`/inventory/stock-adjustments/${props.item.id}/void`, {
-            reason: res.reason,
-        }, {
-            preserveScroll: true,
+        submit((options) => {
+            router.post(`/inventory/stock-adjustments/${props.item.id}/void`, {
+                reason: res.reason,
+            }, {
+                preserveScroll: true,
+                ...options,
+            });
         });
     }
 }
@@ -128,6 +140,9 @@ async function handleVoid() {
                             v-if="canPostAdjustment(item)"
                             variant="primary"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handlePost"
                         >
                             <CheckCircle2 class="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -138,6 +153,9 @@ async function handleVoid() {
                             v-if="canVoidAdjustment(item)"
                             variant="danger"
                             size="sm"
+                            :loading="busy"
+                            :disabled="busy"
+                            :aria-busy="busy"
                             @click="handleVoid"
                         >
                             <Ban class="w-4 h-4 mr-1.5" aria-hidden="true" />

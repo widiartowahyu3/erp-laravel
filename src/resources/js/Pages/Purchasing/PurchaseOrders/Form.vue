@@ -13,6 +13,7 @@ import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import { addDecimals, calculatePurchaseOrderItem } from '@/Support/decimal';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
     order: {
@@ -188,12 +189,20 @@ const calculatedSummary = computed(() => {
     };
 });
 
+const { busy, submit: submitWithLock } = useSubmitLock();
+
 function submit() {
-    if (props.isEdit) {
-        form.put(`/purchasing/purchase-orders/${props.order.id}`);
-    } else {
-        form.post('/purchasing/purchase-orders');
-    }
+    submitWithLock((options) => {
+        if (props.isEdit) {
+            form.put(`/purchasing/purchase-orders/${props.order.id}`, {
+                ...options,
+            });
+        } else {
+            form.post('/purchasing/purchase-orders', {
+                ...options,
+            });
+        }
+    });
 }
 </script>
 
@@ -454,11 +463,12 @@ function submit() {
             <Button
                 type="submit"
                 variant="primary"
-                :loading="form.processing"
-                :disabled="form.processing"
+                :loading="busy || form.processing"
+                :disabled="busy || form.processing"
+                :aria-busy="busy || form.processing"
             >
                 <Save class="w-4 h-4 mr-1.5" aria-hidden="true" />
-                {{ isEdit ? 'Simpan Perubahan Draf' : 'Buat Pesanan Pembelian' }}
+                {{ (busy || form.processing) ? 'Menyimpan...' : (isEdit ? 'Simpan Perubahan Draf' : 'Buat Pesanan Pembelian') }}
             </Button>
         </div>
     </form>

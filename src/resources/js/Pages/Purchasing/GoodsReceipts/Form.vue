@@ -14,6 +14,7 @@ import Alert from '@/Components/ui/Alert.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import { subtractDecimals, compareDecimals } from '@/Support/decimal';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
     receipt: {
@@ -124,12 +125,20 @@ function removeItem(index) {
     });
 }
 
+const { busy, submit: submitWithLock } = useSubmitLock();
+
 function submit() {
-    if (props.isEdit) {
-        form.put(`/purchasing/goods-receipts/${props.receipt.id}`);
-    } else {
-        form.post('/purchasing/goods-receipts');
-    }
+    submitWithLock((options) => {
+        if (props.isEdit) {
+            form.put(`/purchasing/goods-receipts/${props.receipt.id}`, {
+                ...options,
+            });
+        } else {
+            form.post('/purchasing/goods-receipts', {
+                ...options,
+            });
+        }
+    });
 }
 </script>
 
@@ -309,11 +318,12 @@ function submit() {
             <Button
                 type="submit"
                 variant="primary"
-                :loading="form.processing"
-                :disabled="form.processing || form.items.length === 0"
+                :loading="busy || form.processing"
+                :disabled="busy || form.processing || form.items.length === 0"
+                :aria-busy="busy || form.processing"
             >
                 <Save class="w-4 h-4 mr-1.5" aria-hidden="true" />
-                {{ isEdit ? 'Simpan Perubahan Draf' : 'Simpan Draf Penerimaan Barang' }}
+                {{ (busy || form.processing) ? 'Menyimpan...' : (isEdit ? 'Simpan Perubahan Draf' : 'Simpan Draf Penerimaan Barang') }}
             </Button>
         </div>
     </form>
