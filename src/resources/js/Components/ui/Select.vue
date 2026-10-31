@@ -22,6 +22,18 @@ const props = defineProps({
         type: String,
         default: undefined,
     },
+    size: {
+        type: String,
+        default: 'md',
+    },
+    ariaLabel: {
+        type: String,
+        default: undefined,
+    },
+    ariaLabelledby: {
+        type: String,
+        default: undefined,
+    },
     disabled: {
         type: Boolean,
         default: false,
@@ -47,6 +59,8 @@ const emit = defineEmits(['update:modelValue', 'change', 'blur', 'focus']);
             :value="modelValue"
             :disabled="disabled"
             :required="required"
+            :aria-label="ariaLabel || $attrs['aria-label']"
+            :aria-labelledby="ariaLabelledby || $attrs['aria-labelledby']"
             :aria-invalid="invalid ? 'true' : 'false'"
             :class="[
                 'w-full min-h-[40px] pl-3 pr-10 py-2 text-sm rounded-lg border appearance-none transition-colors cursor-pointer',

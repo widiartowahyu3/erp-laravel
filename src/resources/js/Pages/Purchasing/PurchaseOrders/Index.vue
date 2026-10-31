@@ -258,12 +258,9 @@ const hasActiveFilters = computed(() => {
             </DataTable>
 
             <Pagination
-                :current-page="items.meta?.current_page || 1"
-                :last-page="items.meta?.last_page || 1"
-                :total="items.meta?.total || 0"
-                :per-page="items.meta?.per_page || 15"
-                @page-change="setPage"
-                @per-page-change="setPerPage"
+                :meta="items.meta"
+                @change-page="setPage"
+                @change-per-page="setPerPage"
             />
         </div>
     </AppLayout>

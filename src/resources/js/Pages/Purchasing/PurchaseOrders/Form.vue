@@ -291,7 +291,7 @@ function submit() {
                     >
                         <Textarea
                             v-model="form.notes"
-                            rows="2"
+                            :rows="2"
                             placeholder="Catatan tambahan untuk pemasok atau bagian logistik gudang..."
                             :disabled="form.processing"
                             aria-label="Catatan atau instruksi pesanan"

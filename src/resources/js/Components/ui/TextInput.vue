@@ -10,6 +10,10 @@ const props = defineProps({
         type: String,
         default: 'text',
     },
+    size: {
+        type: String,
+        default: 'md',
+    },
     id: {
         type: String,
         default: undefined,

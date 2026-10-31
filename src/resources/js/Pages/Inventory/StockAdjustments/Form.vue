@@ -222,7 +222,7 @@ function submit() {
                                 placeholder="Tambahkan catatan khusus bila diperlukan..."
                                 :invalid="hasError"
                                 :aria-describedby="describedBy"
-                                rows="3"
+                                :rows="3"
                                 maxlength="1000"
                             />
                         </template>

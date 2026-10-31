@@ -250,7 +250,7 @@ function submit() {
                         :id="id"
                         v-model="form.description"
                         placeholder="Masukkan catatan spesifikasi barang..."
-                        rows="3"
+                        :rows="3"
                         :invalid="hasError"
                         :aria-describedby="describedBy"
                     />

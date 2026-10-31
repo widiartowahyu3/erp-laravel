@@ -228,7 +228,7 @@ function submit() {
                         :id="id"
                         v-model="form.address"
                         placeholder="Masukkan alamat lengkap pemasok..."
-                        rows="3"
+                        :rows="3"
                         :invalid="hasError"
                         :aria-describedby="describedBy"
                     />
