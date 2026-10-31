@@ -179,13 +179,7 @@ class GoodsReceiptService
         return DB::transaction(function () use ($receipt, $data, $userId): GoodsReceipt {
             $effectiveUserId = $userId ?? Auth::id();
 
-            // 1. Strict lock order: Lock PO first
-            $po = PurchaseOrder::query()
-                ->whereKey($receipt->purchase_order_id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            // 2. Lock GR
+            // 1. Lock GR
             $lockedGr = GoodsReceipt::query()
                 ->whereKey($receipt->id)
                 ->lockForUpdate()
@@ -194,6 +188,12 @@ class GoodsReceiptService
             if (! $lockedGr->isEditable()) {
                 throw new DocumentNotEditableException('Hanya draf penerimaan barang yang dapat diubah.');
             }
+
+            // 2. Lock PO
+            $po = PurchaseOrder::query()
+                ->whereKey($lockedGr->purchase_order_id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             if ($po->status !== PurchaseOrderStatus::APPROVED && $po->status !== PurchaseOrderStatus::PARTIALLY_RECEIVED) {
                 throw new BusinessRuleException(
@@ -287,9 +287,17 @@ class GoodsReceiptService
         return DB::transaction(function () use ($receipt, $userId): GoodsReceipt {
             $effectiveUserId = $userId ?? Auth::id();
 
-            // 1. Strict lock order: Lock PO first
+            // 1. Lock GR and verify document state transition
+            $lockedGr = GoodsReceipt::query()
+                ->whereKey($receipt->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            DocumentStateMachine::assertTransition($lockedGr->status, GoodsReceiptStatus::POSTED);
+
+            // 2. Lock PO and verify purchase order status
             $lockedPo = PurchaseOrder::query()
-                ->whereKey($receipt->purchase_order_id)
+                ->whereKey($lockedGr->purchase_order_id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -300,14 +308,6 @@ class GoodsReceiptService
                     'status'
                 );
             }
-
-            // 2. Lock GR
-            $lockedGr = GoodsReceipt::query()
-                ->whereKey($receipt->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            DocumentStateMachine::assertTransition($lockedGr->status, GoodsReceiptStatus::POSTED);
 
             // 3. Lock PO items ordered by id ASC
             $poItems = PurchaseOrderItem::query()
@@ -396,19 +396,19 @@ class GoodsReceiptService
         return DB::transaction(function () use ($receipt, $reason, $userId): GoodsReceipt {
             $effectiveUserId = $userId ?? Auth::id();
 
-            // 1. Strict lock order: Lock PO first
-            $lockedPo = PurchaseOrder::query()
-                ->whereKey($receipt->purchase_order_id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            // 2. Lock GR
+            // 1. Lock GR and verify document state transition
             $lockedGr = GoodsReceipt::query()
                 ->whereKey($receipt->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             DocumentStateMachine::assertTransition($lockedGr->status, GoodsReceiptStatus::VOID);
+
+            // 2. Lock PO
+            $lockedPo = PurchaseOrder::query()
+                ->whereKey($lockedGr->purchase_order_id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             $trimmedReason = trim($reason);
             if ($trimmedReason === '') {

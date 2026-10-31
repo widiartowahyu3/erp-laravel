@@ -10,6 +10,7 @@ use App\Enums\StockMovementType;
 use App\Exceptions\BusinessRuleException;
 use App\Exceptions\DocumentNotEditableException;
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\InvalidStateTransitionException;
 use App\Models\StockBalance;
 use App\Models\StockMovement;
 use App\Services\Inventory\StockService;
@@ -699,4 +700,55 @@ test('complete workflow: PO qty 10 -> GR1 posted 4 -> GR2 draft 3 -> close PO re
     $balance->refresh();
     expect($balance->quantity)->toBe('4.0000');
     expect($po->fresh()->status)->toBe(PurchaseOrderStatus::CLOSED);
+});
+
+test('GoodsReceiptService post checks GR status before PO status when PO is closed', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true]);
+
+    $poService = app(PurchaseOrderService::class);
+    $grService = app(GoodsReceiptService::class);
+
+    $po = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-31',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+                'unit_price' => '10000.0000',
+                'discount_percent' => '0.00',
+            ],
+        ],
+    ]);
+    $poService->approve($po);
+    $poItem = $po->items->first();
+    assert($poItem !== null);
+
+    $gr = $grService->create([
+        'purchase_order_id' => $po->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-31',
+        'items' => [
+            [
+                'purchase_order_item_id' => $poItem->id,
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+            ],
+        ],
+    ]);
+
+    $postedGr = $grService->post($gr);
+    expect($postedGr->status)->toBe(GoodsReceiptStatus::POSTED);
+
+    // Close PO
+    $closedPo = $poService->close($po->fresh());
+    expect($closedPo->status)->toBe(PurchaseOrderStatus::CLOSED);
+
+    // Attempting to post the already posted GR on closed PO must throw InvalidStateTransitionException
+    expect(fn () => $grService->post($postedGr))
+        ->toThrow(InvalidStateTransitionException::class);
 });
