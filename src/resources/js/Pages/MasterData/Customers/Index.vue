@@ -9,6 +9,7 @@ import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
 import Button from '@/Components/ui/Button.vue';
 import IconButton from '@/Components/ui/IconButton.vue';
+import Select from '@/Components/ui/Select.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Can from '@/Components/ui/Can.vue';
@@ -25,13 +26,26 @@ const props = defineProps({
 });
 
 const config = masterDataModules.customers;
-const { search, sortKey, sortDirection, setSearch, setSort, setPage, setPerPage } = useListQuery('/master/customers', {
+const { search, sortKey, sortDirection, filters, setSearch, setSort, setFilter, resetFilters, setPage, setPerPage } = useListQuery('/master/customers', {
     defaults: {
         search: props.items.query?.search || '',
         sort: props.items.query?.sort || 'name',
         direction: props.items.query?.direction || 'asc',
         perPage: props.items.meta?.per_page || 25,
+        filters: {
+            is_active: props.items.query?.filter?.is_active ?? '',
+        },
     },
+});
+
+const statusOptions = [
+    { value: '', label: 'Semua Status' },
+    { value: '1', label: 'Aktif' },
+    { value: '0', label: 'Non-aktif' },
+];
+
+const hasActiveFilters = computed(() => {
+    return Boolean(filters.value.is_active !== '' && filters.value.is_active !== undefined);
 });
 
 const columns = computed(() => [
@@ -86,9 +100,19 @@ async function handleDelete(item) {
                 <FilterBar
                     :search="search"
                     search-placeholder="Cari kode, nama, kontak, email, atau telepon pelanggan..."
+                    :has-active-filters="hasActiveFilters"
                     @update:search="setSearch"
-                    @reset="setSearch('')"
-                />
+                    @reset="resetFilters"
+                >
+                    <div class="w-36">
+                        <Select
+                            :model-value="filters.is_active"
+                            :options="statusOptions"
+                            aria-label="Filter berdasarkan status aktif"
+                            @update:model-value="setFilter('is_active', $event)"
+                        />
+                    </div>
+                </FilterBar>
 
                 <DataTable
                     :columns="columns"
