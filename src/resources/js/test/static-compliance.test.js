@@ -159,4 +159,17 @@ describe('Frontend Static Compliance & Security Audits', () => {
 
         expect(violations).toEqual([]);
     });
+
+    it('ensures no files in Pages/** contain goods-receipts/create?po_id', () => {
+        const pagesDir = path.resolve(jsRoot, 'Pages');
+        const pageFiles = getAllFiles(pagesDir, ['.vue', '.js']);
+        const violations = [];
+        for (const file of pageFiles) {
+            const content = fs.readFileSync(file, 'utf-8');
+            if (content.includes('goods-receipts/create?po_id')) {
+                violations.push(path.relative(jsRoot, file));
+            }
+        }
+        expect(violations).toEqual([]);
+    });
 });

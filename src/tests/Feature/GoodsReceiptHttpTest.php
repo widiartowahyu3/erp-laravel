@@ -323,3 +323,139 @@ test('validation rejects invalid goods receipt payloads on specific fields', fun
         ])
         ->assertSessionHasErrors('items.0.quantity');
 });
+
+test('goods receipt create entry flow requires valid approved purchase order with eligible items', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true]);
+
+    $createUser = userWithPermissions(['goods_receipts.create', 'goods_receipts.view']);
+    $this->actingAs($createUser);
+
+    // (b) tanpa kunci, atau dengan po_id= => redirect ke daftar PO dengan flash error
+    $resNoKey = $this->get('/purchasing/goods-receipts/create');
+    $resNoKey->assertRedirect(route('purchasing.purchase-orders.index'));
+    $resNoKey->assertSessionHas('error', 'Silakan pilih pesanan pembelian terlebih dahulu untuk membuat penerimaan barang.');
+
+    $resLegacyKey = $this->get('/purchasing/goods-receipts/create?po_id=123');
+    $resLegacyKey->assertRedirect(route('purchasing.purchase-orders.index'));
+    $resLegacyKey->assertSessionHas('error', 'Silakan pilih pesanan pembelian terlebih dahulu untuk membuat penerimaan barang.');
+
+    // (c) PO draft => redirect dengan flash error
+    $poDraft = PurchaseOrder::create([
+        'number' => 'PO/202611/00001',
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => PurchaseOrderStatus::DRAFT,
+        'subtotal' => '10000.00',
+        'total' => '10000.00',
+    ]);
+    PurchaseOrderItem::create([
+        'purchase_order_id' => $poDraft->id,
+        'line_no' => 1,
+        'product_id' => $productId,
+        'quantity' => '5.0000',
+        'received_quantity' => '0.0000',
+        'unit_price' => '2000.0000',
+        'line_total' => '10000.00',
+    ]);
+
+    $resDraft = $this->get("/purchasing/goods-receipts/create?purchase_order_id={$poDraft->id}");
+    $resDraft->assertRedirect(route('purchasing.purchase-orders.index'));
+    $resDraft->assertSessionHas('error', 'Pesanan pembelian tidak ditemukan atau belum disetujui untuk diterima.');
+
+    // (c) PO closed => redirect dengan flash error
+    $poClosed = PurchaseOrder::create([
+        'number' => 'PO/202611/00002',
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => PurchaseOrderStatus::CLOSED,
+        'subtotal' => '10000.00',
+        'total' => '10000.00',
+    ]);
+    PurchaseOrderItem::create([
+        'purchase_order_id' => $poClosed->id,
+        'line_no' => 1,
+        'product_id' => $productId,
+        'quantity' => '5.0000',
+        'received_quantity' => '0.0000',
+        'unit_price' => '2000.0000',
+        'line_total' => '10000.00',
+    ]);
+
+    $resClosed = $this->get("/purchasing/goods-receipts/create?purchase_order_id={$poClosed->id}");
+    $resClosed->assertRedirect(route('purchasing.purchase-orders.index'));
+    $resClosed->assertSessionHas('error', 'Pesanan pembelian tidak ditemukan atau belum disetujui untuk diterima.');
+
+    // (c) PO diterima penuh => redirect ke show PO dengan flash error
+    $poFull = PurchaseOrder::create([
+        'number' => 'PO/202611/00003',
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => PurchaseOrderStatus::APPROVED,
+        'subtotal' => '10000.00',
+        'total' => '10000.00',
+    ]);
+    PurchaseOrderItem::create([
+        'purchase_order_id' => $poFull->id,
+        'line_no' => 1,
+        'product_id' => $productId,
+        'quantity' => '5.0000',
+        'received_quantity' => '5.0000',
+        'unit_price' => '2000.0000',
+        'line_total' => '10000.00',
+    ]);
+
+    $resFull = $this->get("/purchasing/goods-receipts/create?purchase_order_id={$poFull->id}");
+    $resFull->assertRedirect(route('purchasing.purchase-orders.show', $poFull));
+    $resFull->assertSessionHas('error', 'Semua barang pada pesanan pembelian ini telah diterima secara penuh.');
+
+    // (a) GET create?purchase_order_id=<PO approved> 200 dan props memuat eligibleItems
+    $poApproved = PurchaseOrder::create([
+        'number' => 'PO/202611/00004',
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => PurchaseOrderStatus::APPROVED,
+        'subtotal' => '10000.00',
+        'total' => '10000.00',
+    ]);
+    $approvedItem = PurchaseOrderItem::create([
+        'purchase_order_id' => $poApproved->id,
+        'line_no' => 1,
+        'product_id' => $productId,
+        'quantity' => '10.0000',
+        'received_quantity' => '3.0000',
+        'unit_price' => '1000.0000',
+        'line_total' => '10000.00',
+    ]);
+
+    $resOk = $this->get("/purchasing/goods-receipts/create?purchase_order_id={$poApproved->id}");
+    $resOk->assertStatus(200);
+    $resOk->assertInertia(fn (Assert $page) => $page
+        ->component('Purchasing/GoodsReceipts/Create')
+        ->has('purchaseOrder')
+        ->has('eligibleItems', 1)
+        ->where('eligibleItems.0.id', $approvedItem->id)
+    );
+});
+
+test('static audit: no files in resources/js/Pages contain goods-receipts/create?po_id', function (): void {
+    $pagesDir = resource_path('js/Pages');
+    $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($pagesDir));
+
+    $violations = [];
+    foreach ($iterator as $file) {
+        if ($file->isFile() && in_array($file->getExtension(), ['vue', 'js'], true)) {
+            $content = (string) file_get_contents($file->getPathname());
+            if (str_contains($content, 'goods-receipts/create?po_id')) {
+                $violations[] = $file->getPathname();
+            }
+        }
+    }
+
+    expect($violations)->toBeEmpty('No file in Pages/** may contain goods-receipts/create?po_id');
+});
