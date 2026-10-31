@@ -67,7 +67,7 @@ const form = useForm({
 const { formRef } = useFocusFirstField(() => form.errors);
 
 const warehouseOptions = computed(() => [
-    { value: '', label: '-- Pilih Fasilitas Gudang --' },
+    { value: '', label: '-- Pilih Gudang --' },
     ...props.warehouses.map((w) => ({
         value: String(w.id),
         label: `${w.code} - ${w.name}`,

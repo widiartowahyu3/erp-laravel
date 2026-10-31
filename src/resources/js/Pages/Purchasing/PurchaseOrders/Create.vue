@@ -43,7 +43,7 @@ const breadcrumbs = [
 
             <PageHeader
                 title="Buat Pesanan Pembelian"
-                description="Formulir pengajuan pesanan pembelian baru kepada pihak mitra pemasok."
+                description="Formulir pengajuan pesanan pembelian baru kepada pemasok."
             />
 
             <Form

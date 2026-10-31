@@ -23,7 +23,7 @@ defineProps({
         <div class="space-y-6">
             <PageHeader
                 title="Ubah Master Pemasok"
-                :description="`Perbarui informasi mitra pemasok ${item.name} (${item.code}).`"
+                :description="`Perbarui informasi pemasok ${item.name} (${item.code}).`"
             />
 
             <Form :supplier="item" :payment-terms="paymentTerms" :is-edit="true" />

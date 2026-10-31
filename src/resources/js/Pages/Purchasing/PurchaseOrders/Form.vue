@@ -85,7 +85,7 @@ const form = useForm({
 const { formRef } = useFocusFirstField(() => form.errors);
 
 const supplierOptions = computed(() => [
-    { value: '', label: '-- Pilih Mitra Pemasok --' },
+    { value: '', label: '-- Pilih Pemasok --' },
     ...props.suppliers.map((s) => ({
         value: String(s.id),
         label: `${s.code} - ${s.name}`,
@@ -93,7 +93,7 @@ const supplierOptions = computed(() => [
 ]);
 
 const warehouseOptions = computed(() => [
-    { value: '', label: '-- Pilih Fasilitas Gudang --' },
+    { value: '', label: '-- Pilih Gudang --' },
     ...props.warehouses.map((w) => ({
         value: String(w.id),
         label: `${w.code} - ${w.name}`,
@@ -218,11 +218,11 @@ function submit() {
         <!-- Informasi Utama PO -->
         <Card>
             <template #title>Informasi Pesanan Pembelian</template>
-            <template #description>Identitas mitra pemasok, lokasi penerimaan gudang, dan termin transaksi.</template>
+            <template #description>Identitas pemasok, lokasi penerimaan gudang, dan termin transaksi.</template>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
-                    label="Mitra Pemasok"
+                    label="Pemasok"
                     required
                     :error="form.errors.supplier_id"
                 >
@@ -230,12 +230,12 @@ function submit() {
                         v-model="form.supplier_id"
                         :options="supplierOptions"
                         :disabled="form.processing"
-                        aria-label="Pilih mitra pemasok"
+                        aria-label="Pilih pemasok"
                     />
                 </FormField>
 
                 <FormField
-                    label="Gudang Tujuan"
+                    label="Gudang"
                     required
                     :error="form.errors.warehouse_id"
                 >
@@ -243,7 +243,7 @@ function submit() {
                         v-model="form.warehouse_id"
                         :options="warehouseOptions"
                         :disabled="form.processing"
-                        aria-label="Pilih gudang tujuan penerimaan barang"
+                        aria-label="Pilih gudang penerimaan barang"
                     />
                 </FormField>
 
@@ -304,7 +304,7 @@ function submit() {
         <!-- Daftar Baris Item PO -->
         <Card>
             <template #title>Rincian Barang yang Dipesan</template>
-            <template #description>Pilih barang dagang, kuantitas, harga penawaran satuan, diskon, dan tarif pajak.</template>
+            <template #description>Pilih produk, kuantitas, harga penawaran satuan, diskon, dan tarif pajak.</template>
             <template #actions>
                 <Button
                     type="button"

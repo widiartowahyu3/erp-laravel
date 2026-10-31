@@ -214,7 +214,7 @@ async function handleVoid() {
                     <template #title>Informasi Pengadaan</template>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                         <div>
-                            <span class="text-xs text-slate-500 block">Mitra Pemasok</span>
+                            <span class="text-xs text-slate-500 block">Pemasok</span>
                             <span class="font-medium text-slate-800 dark:text-slate-100">
                                 {{ order.supplier?.name || '-' }}
                             </span>

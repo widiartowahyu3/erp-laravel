@@ -136,7 +136,7 @@ const hasActiveFilters = computed(() => {
                             :model-value="filters.supplier_id"
                             :options="supplierOptions"
                             size="sm"
-                            aria-label="Filter berdasarkan mitra pemasok"
+                            aria-label="Filter berdasarkan pemasok"
                             @update:model-value="setFilter('supplier_id', $event)"
                         />
                     </div>
@@ -145,7 +145,7 @@ const hasActiveFilters = computed(() => {
                             :model-value="filters.warehouse_id"
                             :options="warehouseOptions"
                             size="sm"
-                            aria-label="Filter berdasarkan fasilitas gudang"
+                            aria-label="Filter berdasarkan gudang"
                             @update:model-value="setFilter('warehouse_id', $event)"
                         />
                     </div>

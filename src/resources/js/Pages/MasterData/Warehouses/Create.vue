@@ -12,7 +12,7 @@ import Form from './Form.vue';
         <div class="space-y-6">
             <PageHeader
                 title="Tambah Master Gudang"
-                description="Daftarkan fasilitas gudang fisik atau lokasi penyimpanan baru."
+                description="Daftarkan gudang fisik atau lokasi penyimpanan baru."
             />
 
             <Form />

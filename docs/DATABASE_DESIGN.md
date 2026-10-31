@@ -95,11 +95,11 @@ Dokumen ini mendefinisikan standar teknis, konvensi arsitektur data, kamus data 
     - **Tujuan:** Kategori hierarkis klasifikasi produk dagang.
     - **Kolom Kunci:** `id`, `parent_id` (self FK nullable), `code(30)` (UNIQUE), `name(100)`, timestamps, `deleted_at`, audit.
 11. **`products`**
-    - **Tujuan:** Master data barang dagang.
+    - **Tujuan:** Master data produk.
     - **Kolom Kunci:** `id`, `sku(50)` (UNIQUE), `name(150)`, `category_id` (FK), `base_unit_id` (FK `units`), `barcode(50)` (UNIQUE nullable), `description(text)`, `track_stock(bool)`, `selling_price(decimal 18,2)`, `min_stock(decimal 18,4)`, `is_active(bool)`, timestamps, `deleted_at`, audit.
     - **Constraint:** CHECK `selling_price >= 0` dan `min_stock >= 0`. Indeks: `(category_id)`, `(name)`.
 12. **`warehouses`**
-    - **Tujuan:** Lokasi penyimpanan fisik stok barang dagang.
+    - **Tujuan:** Lokasi penyimpanan fisik stok produk.
     - **Kolom Kunci:** `id`, `code(20)` (UNIQUE), `name(100)`, `address(text)`, `is_active(bool)`, timestamps, `deleted_at`, audit.
 13. **`suppliers`**
     - **Tujuan:** Master data pemasok/rekanan pengadaan.

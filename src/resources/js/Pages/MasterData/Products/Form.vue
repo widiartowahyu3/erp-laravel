@@ -137,7 +137,7 @@ function submit() {
                 id="product-name"
                 label="Nama Produk Dagang"
                 :error="form.errors.name"
-                help="Nama resmi produk komersial barang dagang"
+                help="Nama resmi produk komersial"
                 required
             >
                 <template #default="{ id, describedBy, hasError }">

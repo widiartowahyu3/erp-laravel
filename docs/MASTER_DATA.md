@@ -15,9 +15,9 @@ Sesuai dengan skema database 37 tabel hasil Fase 2, modul Master Data Fase 6 men
 | 3 | **Gudang** | `warehouses` | `id` (BIGINT UNSIGNED) | Lokasi fisik penyimpanan dan pergerakan stok barang |
 | 4 | **Tarif Pajak** | `tax_rates` | `id` (BIGINT UNSIGNED) | Tarif persentase perpajakan (PPN, PPh, dll., rentang 0–100%) |
 | 5 | **Syarat Pembayaran** | `payment_terms` | `id` (BIGINT UNSIGNED) | Termin jatuh tempo pembayaran dalam hari (mis. COD, NET 30) |
-| 6 | **Pemasok** | `suppliers` | `id` (BIGINT UNSIGNED) | Data rekanan vendor / supplier pembelian barang dagang |
+| 6 | **Pemasok** | `suppliers` | `id` (BIGINT UNSIGNED) | Data rekanan vendor / pemasok |
 | 7 | **Pelanggan** | `customers` | `id` (BIGINT UNSIGNED) | Data pelanggan / customer penjualan barang |
-| 8 | **Produk** | `products` | `id` (BIGINT UNSIGNED) | Katalog master barang dagang beserta harga beli, jual, dan unit dasar |
+| 8 | **Produk** | `products` | `id` (BIGINT UNSIGNED) | Katalog master produk beserta harga beli, jual, dan unit dasar |
 
 > [!NOTE]
 > Modul master data Fase 6 strictly dibatasi pada 8 entitas di atas. Dokumen transaksi operasional (PO, SO, GR, DO, Faktur, Pembayaran, Jurnal, dan Mutasi Stok) serta manajemen pengguna/role berada di luar lingkup Fase 6.

@@ -81,7 +81,7 @@ async function handleDelete(item) {
         <div class="space-y-6">
             <PageHeader
                 title="Master Gudang"
-                description="Kelola data lokasi fasilitas gudang penyimpanan barang dan distribusi."
+                description="Kelola data lokasi gudang penyimpanan barang dan distribusi."
             >
                 <template #actions>
                     <Can permission="warehouses.create">

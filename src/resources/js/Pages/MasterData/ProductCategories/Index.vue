@@ -66,7 +66,7 @@ async function handleDelete(item) {
         <div class="space-y-6">
             <PageHeader
                 title="Kategori Produk"
-                description="Kelola hierarki dan pengelompokan kategori produk barang dagang."
+                description="Kelola hierarki dan pengelompokan kategori produk."
             >
                 <template #actions>
                     <Can permission="product_categories.create">

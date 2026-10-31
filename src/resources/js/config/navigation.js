@@ -21,7 +21,7 @@ export const navigationGroups = [
                 icon: 'Package',
                 permission: 'products.view',
                 available: true,
-                description: 'Katalog barang dagang, SKU, barcode, dan informasi harga.',
+                description: 'Katalog produk, SKU, barcode, dan informasi harga.',
             },
             {
                 name: 'Kategori Produk',
@@ -45,7 +45,7 @@ export const navigationGroups = [
                 icon: 'Truck',
                 permission: 'suppliers.view',
                 available: true,
-                description: 'Data mitra pemasok, kontak, dan syarat pembayaran.',
+                description: 'Data pemasok, kontak, dan syarat pembayaran.',
             },
             {
                 name: 'Pelanggan',

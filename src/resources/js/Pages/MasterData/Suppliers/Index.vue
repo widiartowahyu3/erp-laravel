@@ -119,7 +119,7 @@ async function handleDelete(item) {
                     :sort-key="sortKey"
                     :sort-direction="sortDirection"
                     empty-title="Belum ada data pemasok"
-                    empty-description="Mulai tambahkan mitra pemasok baru dengan menekan tombol Tambah Pemasok."
+                    empty-description="Mulai tambahkan pemasok baru dengan menekan tombol Tambah Pemasok."
                     @sort="setSort($event.key, $event.direction)"
                 >
                     <template #cell(payment_term_name)="{ row }">

@@ -106,7 +106,7 @@ const hasActiveFilters = computed(() => {
         <div class="space-y-6">
             <PageHeader
                 title="Pesanan Pembelian (PO)"
-                description="Pengelolaan pengadaan barang, pesanan pembelian kepada mitra pemasok, dan kontrol penerimaan barang."
+                description="Pengelolaan pengadaan barang, pesanan pembelian kepada pemasok, dan kontrol penerimaan barang."
             >
                 <template #actions>
                     <Can permission="purchase_orders.create">
@@ -133,7 +133,7 @@ const hasActiveFilters = computed(() => {
                             :model-value="filters.supplier_id"
                             :options="supplierOptions"
                             size="sm"
-                            aria-label="Filter berdasarkan mitra pemasok"
+                            aria-label="Filter berdasarkan pemasok"
                             @update:model-value="setFilter('supplier_id', $event)"
                         />
                     </div>
@@ -142,7 +142,7 @@ const hasActiveFilters = computed(() => {
                             :model-value="filters.warehouse_id"
                             :options="warehouseOptions"
                             size="sm"
-                            aria-label="Filter berdasarkan fasilitas gudang"
+                            aria-label="Filter berdasarkan gudang"
                             @update:model-value="setFilter('warehouse_id', $event)"
                         />
                     </div>

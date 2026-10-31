@@ -356,7 +356,7 @@ function setPerPage(perPage) {
             <Card v-else class="py-12">
                 <EmptyState
                     title="Pilih Produk dan Gudang"
-                    description="Silakan tentukan produk dan fasilitas gudang di atas untuk menampilkan rincian kartu stok persediaan."
+                    description="Silakan tentukan produk dan gudang di atas untuk menampilkan rincian kartu stok persediaan."
                 >
                     <template #icon>
                         <BookOpen class="w-12 h-12 text-slate-400 mx-auto" aria-hidden="true" />

@@ -31,7 +31,7 @@ const breadcrumbs = [
 
             <PageHeader
                 title="Penerimaan Barang (GR)"
-                description="Pencatatan barang masuk dari pesanan pembelian yang tiba di fasilitas gudang."
+                description="Pencatatan barang masuk dari pesanan pembelian yang tiba di gudang."
             />
 
             <Form

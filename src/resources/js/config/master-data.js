@@ -38,7 +38,7 @@ export const masterDataModules = {
         routePrefix: 'master.products',
         url: '/master/products',
         permission: 'products',
-        description: 'Katalog barang dagang, SKU, barcode, dan informasi harga.',
+        description: 'Katalog produk, SKU, barcode, dan informasi harga.',
         columns: [
             { key: 'sku', label: 'SKU / Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Produk', sortable: true },
@@ -74,7 +74,7 @@ export const masterDataModules = {
         routePrefix: 'master.suppliers',
         url: '/master/suppliers',
         permission: 'suppliers',
-        description: 'Data mitra pemasok, kontak, dan syarat pembayaran.',
+        description: 'Data pemasok, kontak, dan syarat pembayaran.',
         columns: [
             { key: 'code', label: 'Kode', sortable: true, class: 'whitespace-nowrap' },
             { key: 'name', label: 'Nama Pemasok', sortable: true },

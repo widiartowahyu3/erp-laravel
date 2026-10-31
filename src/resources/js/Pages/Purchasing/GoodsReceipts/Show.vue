@@ -177,7 +177,7 @@ async function handleVoid() {
                     </div>
 
                     <div>
-                        <span class="text-xs text-slate-500 block">Mitra Pemasok</span>
+                        <span class="text-xs text-slate-500 block">Pemasok</span>
                         <span class="font-medium text-slate-800 dark:text-slate-100">
                             {{ receipt.supplier?.name || '-' }}
                         </span>

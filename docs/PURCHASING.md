@@ -8,7 +8,7 @@ Dokumen ini mendefinisikan alur pengadaan barang, kalkulasi finansial pesanan pe
 
 ---
 
-## 1. Alur Pengadaan Barang Dagang (Procurement Lifecycle)
+## 1. Alur Pengadaan Produk (Procurement Lifecycle)
 
 Alur bisnis pengadaan dirancang mengikuti prinsip pemisahan wewenang (*separation of duties*) antara bagian pembelian (*purchasing*) dan operasional logistik gudang (*warehouse*):
 

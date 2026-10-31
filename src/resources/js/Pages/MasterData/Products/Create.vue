@@ -23,7 +23,7 @@ defineProps({
         <div class="space-y-6">
             <PageHeader
                 title="Tambah Master Produk"
-                description="Daftarkan barang dagang baru dengan SKU, harga jual, dan aturan pelacakan persediaan."
+                description="Daftarkan produk baru dengan SKU, harga jual, dan aturan pelacakan persediaan."
             />
 
             <Form :categories="categories" :units="units" />

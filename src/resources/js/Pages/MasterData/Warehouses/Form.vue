@@ -85,7 +85,7 @@ function submit() {
                 id="warehouse-name"
                 label="Nama Gudang"
                 :error="form.errors.name"
-                help="Nama fasilitas gudang atau lokasi penyimpanan"
+                help="Nama gudang atau lokasi penyimpanan"
                 required
             >
                 <template #default="{ id, describedBy, hasError }">
@@ -105,7 +105,7 @@ function submit() {
                 id="warehouse-address"
                 label="Alamat Gudang"
                 :error="form.errors.address"
-                help="Alamat fisik lengkap fasilitas gudang"
+                help="Alamat fisik lengkap gudang"
             >
                 <template #default="{ id, describedBy, hasError }">
                     <Textarea

@@ -150,3 +150,16 @@ Gunakan komponen `<Quantity :value="qty" :decimals="2" />` atau fungsi `formatKu
 Gunakan komponen `<DateDisplay :value="timestamp" :with-time="true" />` atau fungsi `formatTanggal(timestamp, withTime)`:
 - Format tanggal standar: `DD MMMM YYYY` (contoh: `28 Maret 2026`).
 - Format dengan waktu: `DD MMMM YYYY, HH:mm WIB` (contoh: `28 Maret 2026, 14:30 WIB`).
+
+---
+
+## 6. Glosarium Istilah UI Baku
+
+Untuk menjaga keseragaman antarmuka pengguna pada seluruh modul ERP, istilah UI dibakukan sebagai berikut:
+
+| Istilah Baku | Istilah Terlarang / Usang | Konteks & Catatan Penggunaan |
+|---|---|---|
+| **Pemasok** | Mitra Pemasok, Rekanan Vendor | Digunakan pada seluruh label, tombol, placeholder, opsi pilihan, dan pesan terkait entitas pemasok (`suppliers`). |
+| **Gudang** | Fasilitas Gudang, Gudang Tujuan (umum) | Digunakan pada seluruh label, filter, tabel, dan formulir lokasi penyimpanan stok (`warehouses`). Frasa "Gudang Tujuan" hanya boleh digunakan jika secara semantik merujuk pada gudang tujuan mutasi persediaan antargudang. |
+| **Produk** | Barang Dagang | Digunakan pada seluruh label, katalog, tabel, rincian dokumen pengadaan, dan inventori (`products`). |
+

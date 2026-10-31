@@ -172,4 +172,26 @@ describe('Frontend Static Compliance & Security Audits', () => {
         }
         expect(violations).toEqual([]);
     });
+
+    it('ensures forbidden UI terminology does not appear across Pages/**', () => {
+        const pagesDir = path.resolve(jsRoot, 'Pages');
+        const pageFiles = getAllFiles(pagesDir, ['.vue', '.js']);
+        const forbiddenPatterns = [
+            /mitra\s+pemasok/i,
+            /fasilitas\s+gudang/i,
+            /barang\s+dagang/i,
+            /gudang\s+tujuan/i,
+        ];
+
+        const violations = [];
+        for (const file of pageFiles) {
+            const content = fs.readFileSync(file, 'utf-8');
+            for (const pattern of forbiddenPatterns) {
+                if (pattern.test(content)) {
+                    violations.push(`${path.relative(jsRoot, file)} matches ${pattern}`);
+                }
+            }
+        }
+        expect(violations).toEqual([]);
+    });
 });

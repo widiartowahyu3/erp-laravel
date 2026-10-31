@@ -105,7 +105,7 @@ function submit() {
                     id="supplier-name"
                     label="Nama Badan Usaha / Pemasok"
                     :error="form.errors.name"
-                    help="Nama resmi perusahaan mitra pemasok"
+                    help="Nama resmi perusahaan pemasok"
                     required
                 >
                     <template #default="{ id, describedBy, hasError }">
@@ -221,7 +221,7 @@ function submit() {
                 id="supplier-address"
                 label="Alamat Lengkap"
                 :error="form.errors.address"
-                help="Alamat fisik surat atau kantor mitra pemasok"
+                help="Alamat fisik surat atau kantor pemasok"
             >
                 <template #default="{ id, describedBy, hasError }">
                     <Textarea
