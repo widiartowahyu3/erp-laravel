@@ -191,11 +191,15 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 - **Hashing Kunci Cache**: Alamat email pada kunci pembatas laju login dienkripsi satu arah menggunakan algoritma SHA-256: `login:email:hash('sha256', strtolower(trim($email)))`. Kunci cache yang tersimpan di tabel `cache` MariaDB tidak memuat email teks mentah (*plaintext email*), mencegah kebocoran data pengguna (*data privacy*).
 - **Deduplikasi Log Audit (Anti-Storage DoS)**: Peristiwa penolakan berulang (`login.throttled` dan `access.denied`) dideduplikasi secara otomatis selama 60 detik melalui atomic lock cache `Cache::add()`, mencegah banjir penyimpanan disk database dari ribuan request serangan brute force.
 
-### J. Pengelolaan Dependensi Aman & Self-Hosted Assets
-- Dependensi Composer dilindungi oleh `roave/security-advisories:dev-latest`.
-- Audit otomatis `composer audit` dan `npm audit` 100% bebas kerentanan (0 vulnerabilities).
-- Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
-- Berkas `.npmrc` mengaktifkan `ignore-scripts=true`.
+### J. Pengelolaan Dependensi Aman, Self-Hosted Assets & Audit Dependensi
+- **Dependensi Backend (Composer)**: Dilindungi oleh `roave/security-advisories:dev-latest`. Audit `composer audit` bersih 100% tanpa celah keamanan (0 vulnerabilities).
+- **Dependensi Frontend Produksi (NPM)**: Audit dependensi runtime `npm audit --omit=dev` bersih 100% (0 vulnerabilities). Bundle produksi dikompilasi statis tanpa dependensi server-side Node.js pada lingkungan produksi.
+- **Audit Dependensi Dev (Accepted Risk)**:
+  - Temuan pada `npm audit` (pengecekan termasuk devDependencies) mencakup advisory moderat pada dependensi *build-time / testing-only* (seperti `glob`, `minimatch`, `js-beautify`, `@vue/test-utils`, `eslint`).
+  - Kerentanan ini terisolasi secara ketat pada lingkungan build / runner pengujian (CI/CD) dan container dev isolated (`node`), serta TIDAK PERNAH masuk ke dalam bundle JavaScript klien/produksi yang disajikan oleh Nginx.
+  - Advisory ini diklasifikasikan sebagai *risiko terkelola yang diterima (accepted risk)* sampai vendor / upstream ekosistem merilis pembaruan semver non-breaking (patch/minor) tanpa memaksa breaking change pada toolchain Vite/Vue 3.
+- **Aset Mandiri (Self-Hosted)**: Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
+- **Keamanan Skrip Paket**: Berkas `.npmrc` mengaktifkan `ignore-scripts=true` untuk mencegah eksekusi skrip post-install arbitrary code execution pada siklus pasang paket.
 
 ### K. Pemindai Keamanan Statis (Static Security Scanner) & Keterbatasan Deteksi
 Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berkala melalui `StaticSecurityScanTest.php` untuk memindai seluruh direktori `app/`, `routes/`, `database/`, `config/`, dan `bootstrap/`. Pemindai memvalidasi ketiadaan fungsi berbahaya (`eval`, `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`, `unserialize`, `assert`, `create_function`, `extract`, `call_user_func`, `call_user_func_array`, `forward_static_call`, `forward_static_call_array`, `pcntl_exec`, `phpinfo`, `highlight_file`, `show_source`), backtick execution, argumen non-literal pada SQL mentah (`raw`, `whereRaw`, `statement`, dll), serta penyertaan dinamis (`include`, `require`, `include_once`, `require_once` non-literal).
