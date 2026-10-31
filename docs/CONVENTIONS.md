@@ -75,6 +75,21 @@ Pest architecture test (`tests/Arch/SecurityArchTest.php`) secara otomatis melar
 - **Larastan**: Wajib lolos analisis statis level 6 (`make analyse`).
 - **Laravel Pint**: Wajib diformat sesuai standar Laravel PSR-12 (`make lint`).
 
+### G. Kebijakan Waktu (Timezone Policy - K1)
+Sistem menerapkan keselarasan zona waktu di seluruh lapisan aplikasi:
+1. **Zona Waktu Aplikasi**: `config('app.timezone')` dikonfigurasi menggunakan `APP_TIMEZONE=Asia/Jakarta` (WIB, UTC+7).
+2. **Koneksi Database**: Sesi MariaDB dikonfigurasi dengan `timezone = '+07:00'`.
+3. **PHP Runtime**: `date.timezone = Asia/Jakarta` pada konfigurasi PHP-FPM dan PHP CLI.
+4. **Penyimpanan Tanggal & Waktu**:
+   - Kolom bertipe `date` menyimpan tanggal lokal kalender WIB (`Y-m-d`).
+   - Kolom bertipe `datetime` / `timestamp` ditulis oleh Laravel dalam WIB dan dibaca kembali dalam WIB.
+   - Nilai waktu yang dikirim ke frontend wajib berupa ISO-8601 dengan offset waktu (diatur oleh cast Eloquent atau `toIso8601String()`).
+5. **Format Frontend**:
+   - Komponen `DateDisplay.vue` dan fungsi helper `formatTanggal` memformat waktu dengan `timeZone: 'Asia/Jakarta'` secara eksplisit sehingga label "WIB" akurat terlepas dari zona waktu browser klien.
+   - String tanggal murni (`YYYY-MM-DD`) diparse berdasarkan komponen tanggal murni tanpa mengalami pergeseran hari di zona waktu negatif.
+6. **Data Lingkungan Dev Lama**:
+   - Karena belum ada data transaksi produksi, data development lama yang tersimpan sebelum perbaikan ini mungkin memiliki selisih waktu 7 jam dan dapat disinkronkan melalui seeder baru.
+
 ---
 
 ## 3. Standar Frontend Vue 3 & UI

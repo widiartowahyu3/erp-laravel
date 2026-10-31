@@ -13,9 +13,17 @@ const props = defineProps({
     },
 });
 
+function parseDateValue(val) {
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
+        const [year, month, day] = val.trim().split('-').map(Number);
+        return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    }
+    return val instanceof Date ? val : new Date(val);
+}
+
 const formatted = computed(() => {
     if (!props.value) return '-';
-    const date = props.value instanceof Date ? props.value : new Date(props.value);
+    const date = parseDateValue(props.value);
     if (isNaN(date.getTime())) return '-';
 
     if (props.format === 'short') {
@@ -23,6 +31,7 @@ const formatted = computed(() => {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
+            timeZone: 'Asia/Jakarta',
         }).format(date);
     }
 
@@ -31,13 +40,15 @@ const formatted = computed(() => {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
+            timeZone: 'Asia/Jakarta',
         }).format(date);
 
         const timePart = new Intl.DateTimeFormat('id-ID', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
-        }).format(date);
+            timeZone: 'Asia/Jakarta',
+        }).format(date).replace('.', ':');
 
         return `${datePart}, ${timePart} WIB`;
     }
@@ -46,12 +57,13 @@ const formatted = computed(() => {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
+        timeZone: 'Asia/Jakarta',
     }).format(date);
 });
 </script>
 
 <template>
-    <time :datetime="typeof value === 'string' ? value : undefined" class="whitespace-nowrap">
+    <time :datetime="props.value ? String(props.value) : undefined">
         {{ formatted }}
     </time>
 </template>

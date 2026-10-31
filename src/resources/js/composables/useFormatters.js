@@ -50,7 +50,15 @@ export function formatKuantitas(val, unit = '') {
  */
 export function formatTanggal(val, format = 'medium') {
     if (!val) return '-';
-    const date = val instanceof Date ? val : new Date(val);
+
+    let date;
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
+        const [year, month, day] = val.trim().split('-').map(Number);
+        date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    } else {
+        date = val instanceof Date ? val : new Date(val);
+    }
+
     if (isNaN(date.getTime())) return '-';
 
     if (format === 'short') {
@@ -58,6 +66,7 @@ export function formatTanggal(val, format = 'medium') {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
+            timeZone: 'Asia/Jakarta',
         }).format(date);
     }
 
@@ -66,13 +75,15 @@ export function formatTanggal(val, format = 'medium') {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
+            timeZone: 'Asia/Jakarta',
         }).format(date);
 
         const timePart = new Intl.DateTimeFormat('id-ID', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
-        }).format(date);
+            timeZone: 'Asia/Jakarta',
+        }).format(date).replace('.', ':');
 
         return `${datePart}, ${timePart} WIB`;
     }
@@ -81,6 +92,7 @@ export function formatTanggal(val, format = 'medium') {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
+        timeZone: 'Asia/Jakarta',
     }).format(date);
 }
 
