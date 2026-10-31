@@ -72,7 +72,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->header('X-Inertia')) {
                 return redirect()->back()
-                    ->withInput($request->input())
+                    ->withInput($request->except(['password', 'current_password', 'password_confirmation', '_token']))
                     ->with('error', $message)
                     ->setStatusCode(303)
                     ->withHeaders($headers);
@@ -112,7 +112,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 return redirect()->back()
-                    ->withInput($request->input())
+                    ->withInput($request->except(['password', 'current_password', 'password_confirmation', '_token']))
                     ->withErrors([$field => $validationMsg]);
             }
 
@@ -128,7 +128,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return redirect()->back()
-                ->withInput($request->input())
+                ->withInput($request->except(['password', 'current_password', 'password_confirmation', '_token']))
                 ->with('error', $genericConflictMsg)
                 ->setStatusCode(303);
         });
