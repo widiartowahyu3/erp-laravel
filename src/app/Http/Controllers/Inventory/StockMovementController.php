@@ -41,6 +41,14 @@ final class StockMovementController extends Controller
                     default => null,
                 };
 
+                $sourceLabel = match ($movement->source_type) {
+                    'goods_receipt_void' => 'Pembatalan Penerimaan Barang',
+                    'goods_receipt' => 'Penerimaan Barang',
+                    'stock_adjustment' => 'Penyesuaian Stok',
+                    'stock_adjustment_void' => 'Pembatalan Penyesuaian Stok',
+                    default => $movement->source_type,
+                };
+
                 return [
                     'id' => $movement->id,
                     'movement_date' => $movement->movement_date->toISOString(),
@@ -55,6 +63,7 @@ final class StockMovementController extends Controller
                     'source_type' => $movement->source_type,
                     'source_id' => $movement->source_id,
                     'source_url' => $sourceUrl,
+                    'source_label' => $sourceLabel,
                     'created_by' => $movement->created_by,
                     'created_at' => $movement->created_at?->toISOString(),
                     'creator' => $movement->creator ? [

@@ -426,7 +426,7 @@ class GoodsReceiptService
                         productId: $grItem->product_id,
                         warehouseId: $lockedGr->warehouse_id,
                         quantity: $grItem->quantity,
-                        type: StockMovementType::DELIVERY,
+                        type: StockMovementType::ADJUSTMENT_OUT,
                         sourceType: StockService::SOURCE_GOODS_RECEIPT_VOID,
                         sourceId: $lockedGr->id
                     );

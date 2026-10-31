@@ -11,6 +11,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Exceptions\DocumentNotEditableException;
 use App\Exceptions\InsufficientStockException;
 use App\Models\StockBalance;
+use App\Models\StockMovement;
 use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
 use App\Services\Purchasing\PurchaseOrderService;
@@ -304,4 +305,75 @@ test('updating non-draft goods receipt throws DocumentNotEditableException', fun
             ],
         ],
     ]))->toThrow(DocumentNotEditableException::class, 'Hanya draf penerimaan barang yang dapat diubah.');
+});
+
+test('voiding goods receipt records stock movement with type adjustment_out instead of delivery', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true]);
+
+    $poService = new PurchaseOrderService;
+    $stockService = new StockService;
+    $grService = new GoodsReceiptService($stockService);
+
+    $po = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-26',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+                'unit_price' => '10000.00',
+            ],
+        ],
+    ]);
+    $poService->approve($po);
+    $poItem = $po->items()->firstOrFail();
+
+    $gr = $grService->create([
+        'purchase_order_id' => $po->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-26',
+        'items' => [
+            [
+                'purchase_order_item_id' => $poItem->id,
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+            ],
+        ],
+    ]);
+    $postedGr = $grService->post($gr);
+
+    // Void the posted GR
+    $grService->void($postedGr, 'Batal penerimaan');
+
+    // Positive control: original receipt movement remains untouched
+    $receiptMovement = StockMovement::query()
+        ->where('product_id', $productId)
+        ->where('source_type', StockService::SOURCE_GOODS_RECEIPT)
+        ->where('source_id', $postedGr->id)
+        ->first();
+    expect($receiptMovement)->not->toBeNull();
+    expect($receiptMovement->movement_type)->toBe(StockMovementType::RECEIPT);
+    expect($receiptMovement->quantity)->toBe('10.0000');
+
+    // Reversal movement must be adjustment_out, negative qty matching GR
+    $reversalMovement = StockMovement::query()
+        ->where('product_id', $productId)
+        ->where('source_type', StockService::SOURCE_GOODS_RECEIPT_VOID)
+        ->where('source_id', $postedGr->id)
+        ->first();
+
+    expect($reversalMovement)->not->toBeNull();
+    expect($reversalMovement->movement_type)->toBe(StockMovementType::ADJUSTMENT_OUT);
+    expect($reversalMovement->quantity)->toBe('-10.0000');
+
+    // Assert NO delivery movement exists for this product
+    $deliveryMovementCount = StockMovement::query()
+        ->where('product_id', $productId)
+        ->where('movement_type', StockMovementType::DELIVERY)
+        ->count();
+    expect($deliveryMovementCount)->toBe(0);
 });

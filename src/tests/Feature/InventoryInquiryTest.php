@@ -119,22 +119,28 @@ test('stock movements index returns filtered list and maps source_url', function
     $stockService = new StockService;
     $m1 = $stockService->increase($p, $wh, '10.0000', '1000.0000', StockMovementType::RECEIPT, StockService::SOURCE_GOODS_RECEIPT, 77);
     $m2 = $stockService->decrease($p, $wh, '3.0000', StockMovementType::DELIVERY, 'delivery_order', 88);
+    $m3 = $stockService->decrease($p, $wh, '2.0000', StockMovementType::ADJUSTMENT_OUT, StockService::SOURCE_GOODS_RECEIPT_VOID, 77);
 
     $res = $this->get('/inventory/stock-movements');
     $res->assertStatus(200)
-        ->assertInertia(function (Assert $page) use ($m1, $m2): void {
+        ->assertInertia(function (Assert $page) use ($m1, $m2, $m3): void {
             $page->component('Inventory/StockMovements/Index')
                 ->has('items.data')
                 ->has('movementTypes')
-                ->where('items.data', function ($items) use ($m1, $m2): bool {
+                ->where('items.data', function ($items) use ($m1, $m2, $m3): bool {
                     $row1 = collect($items)->firstWhere('id', $m1->id);
                     $row2 = collect($items)->firstWhere('id', $m2->id);
+                    $row3 = collect($items)->firstWhere('id', $m3->id);
 
                     return $row1['quantity'] === '10.0000'
                         && $row1['movement_type'] === 'receipt'
+                        && $row1['source_label'] === 'Penerimaan Barang'
                         && $row2['quantity'] === '-3.0000'
                         && $row2['movement_type'] === 'delivery'
-                        && $row2['source_url'] === null;
+                        && $row2['source_url'] === null
+                        && $row3['quantity'] === '-2.0000'
+                        && $row3['movement_type'] === 'adjustment_out'
+                        && $row3['source_label'] === 'Pembatalan Penerimaan Barang';
                 });
         });
 
