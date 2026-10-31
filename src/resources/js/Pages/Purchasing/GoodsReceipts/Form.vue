@@ -233,7 +233,7 @@ function submit() {
                     <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase text-slate-500">
                         <tr>
                             <th class="py-3 px-2 w-10 text-center">#</th>
-                            <th class="py-3 px-3">Barang Dagang</th>
+                            <th class="py-3 px-3">Produk</th>
                             <th class="py-3 px-3 text-right">Pesanan PO</th>
                             <th class="py-3 px-3 text-right">Sudah Diterima</th>
                             <th class="py-3 px-3 text-right">Sisa PO</th>

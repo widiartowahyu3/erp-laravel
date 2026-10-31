@@ -327,11 +327,11 @@ function submit() {
                     <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase text-slate-500">
                         <tr>
                             <th class="py-3 px-2 w-10 text-center">#</th>
-                            <th class="py-3 px-3 min-w-[200px]">Barang Dagang</th>
+                            <th class="py-3 px-3 min-w-[200px]">Produk</th>
                             <th class="py-3 px-3 w-32 text-right">Kuantitas</th>
                             <th class="py-3 px-3 w-36 text-right">Harga Satuan (Rp)</th>
                             <th class="py-3 px-3 w-32 text-right">Diskon (Rp)</th>
-                            <th class="py-3 px-3 w-36">Pajak</th>
+                            <th class="py-3 px-3 w-52">Pajak</th>
                             <th class="py-3 px-3 w-36 text-right">Subtotal (Rp)</th>
                             <th class="py-3 px-2 w-12 text-center">Aksi</th>
                         </tr>
@@ -395,7 +395,7 @@ function submit() {
                                     {{ form.errors[`items.${index}.discount_amount`] || form.errors[`items.${index}.discount_percent`] }}
                                 </div>
                             </td>
-                            <td class="py-2.5 px-3">
+                            <td class="py-2.5 px-3 w-52 min-w-[200px]">
                                 <Select
                                     v-model="item.tax_rate_id"
                                     :options="taxRateOptions"
