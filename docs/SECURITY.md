@@ -197,7 +197,7 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 - Seluruh aset font (`@fontsource-variable/inter`) disimpan dan dilayani mandiri dari server lokal, dilarang keras memuat font dari Google Fonts atau CDN publik.
 - Berkas `.npmrc` mengaktifkan `ignore-scripts=true`.
 
-### J. Pemindai Keamanan Statis (Static Security Scanner) & Keterbatasan Deteksi
+### K. Pemindai Keamanan Statis (Static Security Scanner) & Keterbatasan Deteksi
 Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berkala melalui `StaticSecurityScanTest.php` untuk memindai seluruh direktori `app/`, `routes/`, `database/`, `config/`, dan `bootstrap/`. Pemindai memvalidasi ketiadaan fungsi berbahaya (`eval`, `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`, `unserialize`, `assert`, `create_function`, `extract`, `call_user_func`, `call_user_func_array`, `forward_static_call`, `forward_static_call_array`, `pcntl_exec`, `phpinfo`, `highlight_file`, `show_source`), backtick execution, argumen non-literal pada SQL mentah (`raw`, `whereRaw`, `statement`, dll), serta penyertaan dinamis (`include`, `require`, `include_once`, `require_once` non-literal).
 
 **Keterbatasan Pemindai Statis**:
@@ -208,6 +208,17 @@ Pemindai keamanan statis berbasis token AST (`token_get_all`) diuji secara berka
 
 **Mitigasi Berlapis Terhadap Keterbatasan Pemindai**:
 - Hardening runtime PHP-FPM (`disable_functions` memuat `exec, passthru, shell_exec, system, proc_open, popen, pcntl_exec`) yang mematikan eksekusi di tingkat binary C PHP engine terlepas dari cara fungsi tersebut dipanggil.
+- Pest Architecture Test (`tests/Arch/SecurityArchTest.php`) memvalidasi ketiadaan Process facades dan panggilan berbahaya di tingkat CI/commit.
+
+### L. Kebijakan Audit Fail-Closed vs Fail-Open (K2)
+Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
+1. **Audit Mutasi Data (Fail-Closed, `strict: true`)**:
+   - Seluruh mutasi model domain ber-`RecordsAudit` (created, updated, deleted, restored) memanggil `AuditLogger::record(..., strict: true)`.
+   - Jika penulisan baris ke tabel `audit_logs` gagal (misalnya pelanggaran foreign key `user_id`, koneksi putus, disk penuh), exception akan dilempar ulang (*rethrow*).
+   - Seluruh penulisan model ber-`RecordsAudit` **wajib** berada di dalam `DB::transaction(...)` pada service layer. Ketika audit gagal, seluruh transaksi database akan di-rollback, menjamin tidak ada perubahan data yang tersimpan tanpa jejak audit.
+2. **Audit Keamanan & Autentikasi (Fail-Open, `strict: false`)**:
+   - Peristiwa keamanan (percobaan login, logout, akses ditolak 403, pembatasan laju 429, timeout sesi) mencatat audit dengan `strict: false`.
+   - Jika pencatatan log audit keamanan gagal, error dicatat ke `Log::error` dan fungsi mengembalikan `false` tanpa melempar exception. Kegagalan audit tidak boleh menghalangi alur login yang sah atau mekanisme penolakan akses.
 - Hardening container (`read_only: true`, `cap_drop: ALL`, `no-new-privileges: true`) yang membatasi kemampuan proses sistem operasi.
 - Pest Architectural Test (`SecurityArchTest.php`) yang melarang penggunaan process execution component di seluruh kode aplikasi.
 

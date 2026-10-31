@@ -17,6 +17,9 @@ final class AuditLogger
      *
      * @param  array<string, mixed>|null  $old
      * @param  array<string, mixed>|null  $new
+     * @param  bool  $strict  When true, rethrows exceptions on failure (fail-closed); when false, logs and returns false (fail-open).
+     *
+     * @throws Throwable
      */
     public static function record(
         string $event,
@@ -24,7 +27,8 @@ final class AuditLogger
         int $auditableId,
         ?array $old = null,
         ?array $new = null,
-        ?int $userId = null
+        ?int $userId = null,
+        bool $strict = false
     ): bool {
         try {
             $effectiveUserId = $userId ?? Auth::id();
@@ -61,6 +65,10 @@ final class AuditLogger
                 'auditable_id' => $auditableId,
                 'exception' => $e,
             ]);
+
+            if ($strict) {
+                throw $e;
+            }
 
             return false;
         }

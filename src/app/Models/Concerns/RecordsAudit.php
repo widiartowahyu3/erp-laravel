@@ -38,7 +38,8 @@ trait RecordsAudit
                 auditableId: (int) $model->getKey(),
                 old: null,
                 new: $attributes,
-                userId: Auth::id() ? (int) Auth::id() : null
+                userId: Auth::id() ? (int) Auth::id() : null,
+                strict: true
             );
         });
 
@@ -80,7 +81,8 @@ trait RecordsAudit
                 auditableId: (int) $model->getKey(),
                 old: $old,
                 new: $new,
-                userId: Auth::id() ? (int) Auth::id() : null
+                userId: Auth::id() ? (int) Auth::id() : null,
+                strict: true
             );
         });
 
@@ -98,7 +100,8 @@ trait RecordsAudit
                 auditableId: (int) $model->getKey(),
                 old: $attributes,
                 new: null,
-                userId: Auth::id() ? (int) Auth::id() : null
+                userId: Auth::id() ? (int) Auth::id() : null,
+                strict: true
             );
         });
 
@@ -112,7 +115,8 @@ trait RecordsAudit
                     auditableId: (int) $model->getKey(),
                     old: null,
                     new: $attributes,
-                    userId: Auth::id() ? (int) Auth::id() : null
+                    userId: Auth::id() ? (int) Auth::id() : null,
+                    strict: true
                 );
             });
         }
