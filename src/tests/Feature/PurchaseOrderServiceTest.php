@@ -212,8 +212,54 @@ test('voiding purchase order fails if there is an active goods receipt', functio
         'status' => GoodsReceiptStatus::DRAFT,
     ]);
 
-    expect(fn () => $service->void($po, 'Mencoba batalkan'))
-        ->toThrow(BusinessRuleException::class, 'Pesanan pembelian yang memiliki penerimaan barang aktif tidak dapat dibatalkan langsung.');
+    try {
+        $service->void($po, 'Mencoba batalkan');
+        test()->fail('Expected BusinessRuleException was not thrown.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getStatusCode())->toBe(409);
+        expect($e->getField())->toBe('status');
+        expect($e->getMessage())->toBe('Pesanan pembelian yang memiliki penerimaan barang aktif tidak dapat dibatalkan langsung.');
+    }
+});
+
+test('closing purchase order is rejected with 409 if active draft goods receipt exists', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct();
+
+    $service = new PurchaseOrderService;
+    $po = $service->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-30',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '5.0000',
+                'unit_price' => '10000.0000',
+            ],
+        ],
+    ]);
+    $service->approve($po);
+    $po->update(['status' => PurchaseOrderStatus::PARTIALLY_RECEIVED]);
+
+    GoodsReceipt::create([
+        'number' => 'GR/202610/00088',
+        'purchase_order_id' => $po->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-30',
+        'status' => GoodsReceiptStatus::DRAFT,
+    ]);
+
+    try {
+        $service->close($po);
+        test()->fail('Expected BusinessRuleException was not thrown.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getStatusCode())->toBe(409);
+        expect($e->getField())->toBe('status');
+        expect($e->getMessage())->toBe('Masih ada penerimaan barang berstatus draf. Posting atau batalkan terlebih dahulu.');
+    }
 });
 
 test('closes purchase order from partially received or received status', function (): void {

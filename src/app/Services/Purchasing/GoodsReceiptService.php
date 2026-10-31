@@ -195,6 +195,14 @@ class GoodsReceiptService
                 throw new DocumentNotEditableException('Hanya draf penerimaan barang yang dapat diubah.');
             }
 
+            if ($po->status !== PurchaseOrderStatus::APPROVED && $po->status !== PurchaseOrderStatus::PARTIALLY_RECEIVED) {
+                throw new BusinessRuleException(
+                    'Penerimaan barang hanya dapat diubah untuk pesanan pembelian yang disetujui atau diterima sebagian.',
+                    409,
+                    'status'
+                );
+            }
+
             if (empty($data['items'])) {
                 throw new BusinessRuleException('Penerimaan barang harus memiliki minimal 1 baris barang.', 422, 'items');
             }
@@ -284,6 +292,14 @@ class GoodsReceiptService
                 ->whereKey($receipt->purchase_order_id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            if ($lockedPo->status !== PurchaseOrderStatus::APPROVED && $lockedPo->status !== PurchaseOrderStatus::PARTIALLY_RECEIVED) {
+                throw new BusinessRuleException(
+                    'Penerimaan barang hanya dapat diposting untuk pesanan pembelian yang disetujui atau diterima sebagian.',
+                    409,
+                    'status'
+                );
+            }
 
             // 2. Lock GR
             $lockedGr = GoodsReceipt::query()
@@ -401,6 +417,14 @@ class GoodsReceiptService
 
             // If previously posted, revert received quantities and inventory stock
             if ($lockedGr->status === GoodsReceiptStatus::POSTED) {
+                if ($lockedPo->status === PurchaseOrderStatus::CLOSED) {
+                    throw new BusinessRuleException(
+                        'Penerimaan barang pada pesanan pembelian yang sudah ditutup tidak dapat dibatalkan.',
+                        409,
+                        'status'
+                    );
+                }
+
                 // 3. Lock PO items ordered by id ASC
                 $poItems = PurchaseOrderItem::query()
                     ->where('purchase_order_id', $lockedPo->id)

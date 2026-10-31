@@ -279,7 +279,7 @@ class PurchaseOrderService
             if ($hasActiveReceipts) {
                 throw new BusinessRuleException(
                     'Pesanan pembelian yang memiliki penerimaan barang aktif tidak dapat dibatalkan langsung.',
-                    422,
+                    409,
                     'status'
                 );
             }
@@ -313,6 +313,19 @@ class PurchaseOrderService
                 ->firstOrFail();
 
             DocumentStateMachine::assertTransition($locked->status, PurchaseOrderStatus::CLOSED);
+
+            $hasDraftReceipts = GoodsReceipt::query()
+                ->where('purchase_order_id', $locked->id)
+                ->where('status', GoodsReceiptStatus::DRAFT)
+                ->exists();
+
+            if ($hasDraftReceipts) {
+                throw new BusinessRuleException(
+                    'Masih ada penerimaan barang berstatus draf. Posting atau batalkan terlebih dahulu.',
+                    409,
+                    'status'
+                );
+            }
 
             $locked->status = PurchaseOrderStatus::CLOSED;
             if ($effectiveUserId !== null) {
