@@ -221,10 +221,12 @@ test('reference guard prevents deleting master records referenced downstream', f
             ->and($e->getMessage())->toContain('Produk');
     }
 
-    // Controller destroy action returns 409 and flash error
+    // Controller destroy action returns 303 redirect with flash error for Inertia requests
     $destroyer = userWithPermissions(['units.delete']);
-    $response = $this->actingAs($destroyer)->delete("/master/units/{$unit->id}");
-    $response->assertStatus(409);
+    $response = $this->actingAs($destroyer)->delete("/master/units/{$unit->id}", [], [
+        'X-Inertia' => 'true',
+    ]);
+    $response->assertStatus(303);
     $response->assertSessionHas('error');
 
     // JSON delete returns 409 JSON

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\MasterData;
 
 use App\Exceptions\BusinessRuleException;
+use App\Http\Controllers\Concerns\RespondsToDeleteConflict;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MasterData\TaxRateStoreRequest;
 use App\Http\Requests\MasterData\TaxRateUpdateRequest;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 final class TaxRateController extends Controller
 {
+    use RespondsToDeleteConflict;
+
     public function __construct(
         private readonly TaxRateService $taxRateService
     ) {}
@@ -77,16 +80,7 @@ final class TaxRateController extends Controller
 
             return back()->with('success', 'Tarif pajak berhasil dihapus.');
         } catch (BusinessRuleException $e) {
-            $message = 'Tidak dapat menghapus data: '.$e->getMessage();
-
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'message' => $message,
-                    'errors' => ['form' => [$message]],
-                ], 409);
-            }
-
-            return back()->with('error', $message)->setStatusCode(409);
+            return $this->respondToDeleteConflict($request, $e);
         }
     }
 }
