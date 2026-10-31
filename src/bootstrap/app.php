@@ -55,40 +55,55 @@ return Application::configure(basePath: dirname(__DIR__))
             InvalidStateTransitionException::class,
             InsufficientStockException::class,
             DocumentNotEditableException::class,
-            UniqueConstraintViolationException::class,
         ]);
 
         $exceptions->render(function (UniqueConstraintViolationException $e, Request $request) {
             $msg = $e->getMessage();
-            $field = 'code';
-            $validationMsg = 'Kode sudah dipakai, termasuk oleh data yang sudah dihapus.';
-
-            if (str_contains($msg, 'products_sku_unique') || str_contains($msg, '_sku_unique')) {
-                $field = 'sku';
-                $validationMsg = 'Kode SKU sudah dipakai, termasuk oleh data yang sudah dihapus.';
-            } elseif (str_contains($msg, 'products_barcode_unique') || str_contains($msg, '_barcode_unique')) {
-                $field = 'barcode';
-                $validationMsg = 'Kode barcode sudah dipakai, termasuk oleh data yang sudah dihapus.';
-            } elseif (str_contains($msg, 'users_email_unique') || str_contains($msg, '_email_unique')) {
-                $field = 'email';
-                $validationMsg = 'Email sudah dipakai, termasuk oleh data yang sudah dihapus.';
-            } elseif (str_contains($msg, '_code_unique')) {
-                $field = 'code';
-                $validationMsg = 'Kode sudah dipakai, termasuk oleh data yang sudah dihapus.';
+            $constraint = '';
+            if (preg_match("/for key '([^']+)'/", $msg, $matches)) {
+                $constraint = (string) preg_replace('/^.*\./', '', $matches[1]);
             }
+
+            // Strictly check for known master data and user unique constraints
+            if ($constraint !== '' && preg_match('/^(units|product_categories|products|warehouses|suppliers|customers|tax_rates|payment_terms|users)_(code|sku|barcode|email)_unique$/', $constraint, $m)) {
+                $column = $m[2];
+                $field = $column;
+                $validationMsg = match ($column) {
+                    'sku' => 'Kode SKU sudah dipakai, termasuk oleh data yang sudah dihapus.',
+                    'barcode' => 'Kode barcode sudah dipakai, termasuk oleh data yang sudah dihapus.',
+                    'email' => 'Email sudah dipakai, termasuk oleh data yang sudah dihapus.',
+                    default => 'Kode sudah dipakai, termasuk oleh data yang sudah dihapus.',
+                };
+
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => $validationMsg,
+                        'errors' => [
+                            $field => [$validationMsg],
+                        ],
+                    ], 422);
+                }
+
+                return redirect()->back()
+                    ->withInput($request->input())
+                    ->withErrors([$field => $validationMsg]);
+            }
+
+            // Unknown unique violation indicates a bug or document concurrency collision
+            report($e);
+
+            $genericConflictMsg = 'Terjadi konflik data. Silakan muat ulang dan coba lagi.';
 
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
-                    'message' => $validationMsg,
-                    'errors' => [
-                        $field => [$validationMsg],
-                    ],
-                ], 422);
+                    'message' => $genericConflictMsg,
+                ], 409);
             }
 
             return redirect()->back()
                 ->withInput($request->input())
-                ->withErrors([$field => $validationMsg]);
+                ->with('error', $genericConflictMsg)
+                ->setStatusCode(303);
         });
 
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
