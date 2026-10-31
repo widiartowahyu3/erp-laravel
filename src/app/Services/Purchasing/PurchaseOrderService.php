@@ -56,6 +56,8 @@ class PurchaseOrderService
                 throw new BusinessRuleException('Pesanan pembelian harus memiliki minimal 1 baris barang.', 422, 'items');
             }
 
+            $this->validateItemDiscounts($data['items']);
+
             $orderDate = (string) $data['order_date'];
             $number = DocumentNumberService::generate(DocumentType::PO, $orderDate);
 
@@ -155,6 +157,8 @@ class PurchaseOrderService
             if (empty($data['items'])) {
                 throw new BusinessRuleException('Pesanan pembelian harus memiliki minimal 1 baris barang.', 422, 'items');
             }
+
+            $this->validateItemDiscounts($data['items']);
 
             $calcData = $this->prepareCalculatorInput($data['items']);
             $calc = PurchaseOrderCalculator::calculate($calcData);
@@ -383,5 +387,32 @@ class PurchaseOrderService
         }
 
         return $prepared;
+    }
+
+    /**
+     * @param  iterable<int, array<string, mixed>>  $items
+     *
+     * @throws BusinessRuleException
+     */
+    private function validateItemDiscounts(iterable $items): void
+    {
+        foreach ($items as $index => $itemData) {
+            $qty = (string) $itemData['quantity'];
+            $price = (string) $itemData['unit_price'];
+            $disc = isset($itemData['discount_amount']) && trim((string) $itemData['discount_amount']) !== ''
+                ? (string) $itemData['discount_amount']
+                : '0.00';
+
+            $gross = Decimal::mul($qty, $price, Decimal::SCALE_MONEY);
+            $discRounded = Decimal::round($disc, Decimal::SCALE_MONEY);
+
+            if (Decimal::cmp($discRounded, $gross) > 0) {
+                throw new BusinessRuleException(
+                    'Diskon tidak boleh melebihi nilai baris.',
+                    422,
+                    "items.{$index}.discount_amount"
+                );
+            }
+        }
     }
 }

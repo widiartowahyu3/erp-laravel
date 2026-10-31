@@ -127,4 +127,10 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Penerimaan Barang (GR)');
         expect(availableItems.length).toBe(15);
     });
+
+    it('ensures PurchaseOrders/Form.vue renders discount_amount error per item row', () => {
+        const formPath = path.resolve(jsRoot, 'Pages/Purchasing/PurchaseOrders/Form.vue');
+        const content = fs.readFileSync(formPath, 'utf-8');
+        expect(content).toContain('form.errors[`items.${index}.discount_amount`]');
+    });
 });

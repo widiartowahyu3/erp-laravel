@@ -56,6 +56,10 @@ final class PurchaseOrderCalculator
             // 1. Gross amount: quantity * unit_price
             $lineGross = Decimal::mul($qty, $price, Decimal::SCALE_MONEY);
 
+            if (Decimal::cmp($disc, $lineGross) > 0) {
+                throw new \InvalidArgumentException('Diskon tidak boleh melebihi nilai baris.');
+            }
+
             // 2. Net amount: gross - discount
             $lineNet = Decimal::sub($lineGross, $disc, Decimal::SCALE_MONEY);
             if (Decimal::isNegative($lineNet)) {

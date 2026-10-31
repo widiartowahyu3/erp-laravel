@@ -289,3 +289,76 @@ test('closes purchase order from partially received or received status', functio
     $closed = $service->close($po);
     expect($closed->status)->toBe(PurchaseOrderStatus::CLOSED);
 });
+
+test('purchase order service create and update reject line discount exceeding line gross with 422', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct();
+
+    $service = new PurchaseOrderService;
+
+    // 1. Create with discount > gross (qty 2 * 1000 = 2000, discount 2000.01)
+    try {
+        $service->create([
+            'supplier_id' => $supplierId,
+            'warehouse_id' => $warehouseId,
+            'order_date' => '2026-10-30',
+            'items' => [
+                [
+                    'product_id' => $productId,
+                    'quantity' => '2.0000',
+                    'unit_price' => '1000.0000',
+                    'discount_amount' => '2000.01',
+                ],
+            ],
+        ]);
+        test()->fail('Expected BusinessRuleException on create was not thrown.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getStatusCode())->toBe(422);
+        expect($e->getField())->toBe('items.0.discount_amount');
+        expect($e->getMessage())->toBe('Diskon tidak boleh melebihi nilai baris.');
+    }
+
+    // 2. Valid draft PO
+    $po = $service->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-30',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '2.0000',
+                'unit_price' => '1000.0000',
+                'discount_amount' => '500.00',
+            ],
+        ],
+    ]);
+
+    // 3. Update with discount > gross on line index 1
+    try {
+        $service->update($po, [
+            'supplier_id' => $supplierId,
+            'warehouse_id' => $warehouseId,
+            'order_date' => '2026-10-30',
+            'items' => [
+                [
+                    'product_id' => $productId,
+                    'quantity' => '1.0000',
+                    'unit_price' => '1000.0000',
+                    'discount_amount' => '500.00',
+                ],
+                [
+                    'product_id' => $productId,
+                    'quantity' => '3.0000',
+                    'unit_price' => '500.0000', // gross 1500
+                    'discount_amount' => '1500.01', // discount > gross
+                ],
+            ],
+        ]);
+        test()->fail('Expected BusinessRuleException on update was not thrown.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getStatusCode())->toBe(422);
+        expect($e->getField())->toBe('items.1.discount_amount');
+        expect($e->getMessage())->toBe('Diskon tidak boleh melebihi nilai baris.');
+    }
+});
