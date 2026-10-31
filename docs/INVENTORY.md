@@ -70,6 +70,17 @@ $$\text{avg\_cost}_{\text{baru}} = \frac{(\text{qty}_{\text{lama}} \times \text{
 - Mutasi keluar **TIDAK MENGUBAH** nilai `avg_cost` persediaan tersisa.
 - **Pemeriksaan Stok Negatif:** Bila $\text{qty}_{\text{keluar}} > \text{qty}_{\text{saldo}}$, sistem segera membatalkan transaksi dan melempar `InsufficientStockException` (HTTP 422).
 
+### C. Batasan Penilaian Biaya Saat Pembatalan GR (Deliberate Limitation)
+- Biaya perolehan rata-rata bergerak (*moving average cost*) **TIDAK DIPULIHKAN** saat Goods Receipt dibatalkan (*void*).
+- **Alasan Teknis & Integritas:** Menghitung ulang rata-rata bergerak historis memerlukan penulisan ulang riwayat transaksi atau kalkulasi mundur yang rentan memicu inkonsistensi matematis saat sudah ada mutasi barang keluar atau mutasi lain setelah GR tersebut tercatat di buku besar mutasi.
+- **Contoh Numerik Batasan:**
+  1. Saldo awal: 0 unit, `avg_cost`: 0.
+  2. GR1 diposting: masuk 10 unit @ 100 $\rightarrow$ kuantitas 10 unit, `avg_cost`: 100.
+  3. GR2 diposting: masuk 10 unit @ 200 $\rightarrow$ kuantitas 20 unit, `avg_cost`: 150.
+  4. GR2 dibatalkan (*void*): kuantitas fisik berkurang 10 menjadi 10 unit, tetapi `avg_cost` **tetap 150** (tidak kembali ke 100).
+- **Prosedur Koreksi:** Jika pihak manajemen/akuntansi membutuhkan penyesuaian HPP pasca pembatalan, tindakan koreksi wajib dilakukan secara eksplisit melalui modul **Penyesuaian Stok (*Stock Adjustment*)** bertipe penyesuaian opname/biaya.
+- **Jenis Mutasi Pembalik GR:** Pembalikan stok fisik akibat pembatalan GR dicatat menggunakan tipe mutasi **`adjustment_out`** dengan atribut audit `source_type = goods_receipt_void` (bukan `delivery`). Penggunaan `delivery` dilarang untuk pembalikan GR agar tidak mencemari metrik penjualan, kartu stok pengiriman, dan laporan *delivery order* pada fase berikutnya.
+
 ---
 
 ## 3. Protokol Penguncian Konkurensi (*Concurrency Locking Order*)

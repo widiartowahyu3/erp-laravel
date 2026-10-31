@@ -2,6 +2,10 @@
 
 Dokumen ini mendefinisikan alur pengadaan barang, kalkulasi finansial pesanan pembelian, mesin status dokumen (*document state machine*), protokol penguncian konkurensi penerimaan barang, dan matriks keamanan untuk modul pembelian (Fase 7) ERP Distribusi/Trading.
 
+> [!NOTE] Catatan Ralat Arsitektur Frontend
+> Composable `useActionGuard` hanya berfungsi memeriksa hak akses (RBAC) dan izin status dokumen secara deklaratif (*apa yang boleh dilakukan*).
+> Pengaman klik ganda (*double-click / spamming*) dan status tombol sibuk (*busy state*) ditangani secara terpisah oleh composable `useSubmitLock` (*kapan aksi boleh dikirim*).
+
 ---
 
 ## 1. Alur Pengadaan Barang Dagang (Procurement Lifecycle)
@@ -52,6 +56,17 @@ Untuk setiap item pesanan:
 2. $\text{discount\_amount} = \sum \text{discount\_amount}$
 3. $\text{tax\_amount} = \sum \text{tax\_amount}$
 4. $\text{total} = \text{subtotal} - \text{discount\_amount} + \text{tax\_amount} = \sum \text{line\_total}$
+
+### C. Aturan Validasi Diskon Baris
+Diskon baris dibatasi maksimal sebesar nilai kotor baris ($\text{discount\_amount} \le \text{line\_gross}$).
+- Jika $\text{discount\_amount} > \text{line\_gross}$, pembuatan atau pembaruan PO ditolak dengan `BusinessRuleException` status HTTP 422 (`items.<index>.discount_amount`).
+- Diskon 100% ($\text{discount\_amount} = \text{line\_gross}$) diizinkan dan menghasilkan $\text{line\_net} = 0$, $\text{line\_total} = 0$, dengan header tetap konsisten secara matematis.
+
+### D. Biaya Perolehan Persediaan dari Penerimaan Barang (GR)
+Biaya satuan persediaan pada Goods Receipt dihitung berdasarkan harga bersih setelah diskon tanpa memperhitungkan pajak:
+$$\text{unit\_cost}_{\text{GR}} = \frac{\text{line\_gross} - \text{discount\_amount}}{\text{quantity}} = \frac{\text{line\_net}}{\text{quantity}}$$
+- Pajak masukan (PPN) tidak dikapitalisasi ke dalam biaya persediaan karena dapat dikreditkan secara fiskal (bukan beban perolehan persediaan dagang).
+- Nilai ini dievaluasi ulang saat posting GR untuk menjamin mutasi stok dan biaya rata-rata bergerak (*moving average*) dihitung dari nilai perolehan bersih aktual.
 
 ---
 
@@ -113,6 +128,20 @@ Saat sebuah dokumen Penerimaan Barang (`GoodsReceipt`) berstatus `posted` dibata
      | VOID  |                    |  VOID  | (Terminal)
      +-------+                    +--------+
 ```
+
+### C. Aturan Ketergantungan Status PO & GR
+1. **Pembuatan, Pengubahan, dan Posting GR:**
+   - Goods Receipt hanya dapat dibuat (`create`), diubah (`update`), atau diposting (`post`) jika PO induk berstatus `APPROVED` atau `PARTIALLY_RECEIVED`.
+   - Percobaan operasi GR pada PO yang berstatus `CLOSED` atau `VOID` ditolak dengan `BusinessRuleException` status HTTP 409 Conflict (`field: 'status'`).
+2. **Pembatalan (*Void*) Goods Receipt:**
+   - GR berstatus `DRAFT` dapat dibatalkan kapan saja tanpa memandang status PO induk.
+   - GR berstatus `POSTED` **HANYA** dapat dibatalkan jika PO induk belum berstatus `CLOSED`. Jika PO sudah `CLOSED`, pembatalan ditolak dengan HTTP 409 Conflict ("Penerimaan barang pada pesanan pembelian yang sudah ditutup tidak dapat dibatalkan.").
+   - Pembalikan mutasi stok saat void GR dicatat sebagai **`adjustment_out`** dengan `source_type = goods_receipt_void` (bukan `delivery`).
+3. **Penutupan (*Close*) Purchase Order:**
+   - PO hanya dapat ditutup (`close`) jika tidak ada dokumen Goods Receipt yang masih berstatus `DRAFT` pada PO tersebut.
+   - Jika masih ada GR draf, penutupan PO ditolak dengan HTTP 409 Conflict ("Masih ada penerimaan barang berstatus draf. Posting atau batalkan terlebih dahulu.").
+4. **Pembatalan (*Void*) Purchase Order:**
+   - PO yang memiliki dokumen Goods Receipt aktif (berstatus selain `VOID`) tidak dapat dibatalkan langsung dan ditolak dengan HTTP 409 Conflict (`field: 'status'`).
 
 ---
 
