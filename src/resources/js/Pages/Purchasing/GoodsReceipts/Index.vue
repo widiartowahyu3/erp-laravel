@@ -110,10 +110,13 @@ const hasActiveFilters = computed(() => {
             >
                 <template #actions>
                     <Can permission="goods_receipts.create">
-                        <Link href="/purchasing/goods-receipts/create">
+                        <Link
+                            href="/purchasing/purchase-orders?status=approved"
+                            title="Penerimaan barang dibuat dari pesanan pembelian (PO) yang telah disetujui"
+                        >
                             <Button variant="primary">
                                 <Plus class="w-4 h-4 mr-1.5" aria-hidden="true" />
-                                Terima Barang
+                                Terima dari PO
                             </Button>
                         </Link>
                     </Can>

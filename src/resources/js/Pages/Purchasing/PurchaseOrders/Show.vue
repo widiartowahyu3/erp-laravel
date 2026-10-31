@@ -171,7 +171,7 @@ async function handleVoid() {
 
                         <Link
                             v-if="canCreateReceiptFromPO(order)"
-                            :href="`/purchasing/goods-receipts/create?po_id=${order.id}`"
+                            :href="`/purchasing/goods-receipts/create?purchase_order_id=${order.id}`"
                         >
                             <Button variant="primary" size="sm">
                                 <PackageCheck class="w-4 h-4 mr-1.5" aria-hidden="true" />
