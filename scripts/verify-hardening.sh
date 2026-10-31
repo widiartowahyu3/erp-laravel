@@ -1332,21 +1332,21 @@ else
 fi
 
 if [ "$UNPROT_INV" -eq 0 ]; then
-    pass "Seluruh rute /inventory/* terlindungi oleh middleware '\''auth'\'' (0 rute tanpa autentikasi)"
+    pass "Seluruh rute /inventory/* terlindungi oleh middleware 'auth' (0 rute tanpa autentikasi)"
 else
-    fail "Ditemukan $UNPROT_INV rute /inventory/* yang tidak memiliki middleware '\''auth'\''"
+    fail "Ditemukan $UNPROT_INV rute /inventory/* yang tidak memiliki middleware 'auth'"
 fi
 
 if [ "$MISSING_CAN_INV" -eq 0 ]; then
-    pass "Seluruh rute /inventory/* memiliki middleware otorisasi spesifik '\''can:'\'' (0 rute tanpa '\''can:'\'')"
+    pass "Seluruh rute /inventory/* memiliki middleware otorisasi spesifik 'can:' (0 rute tanpa 'can:')"
 else
-    fail "Ditemukan $MISSING_CAN_INV rute /inventory/* yang tidak memiliki middleware '\''can:'\''"
+    fail "Ditemukan $MISSING_CAN_INV rute /inventory/* yang tidak memiliki middleware 'can:'"
 fi
 
 if [ "$MISSING_THROTTLE_INV" -eq 0 ]; then
-    pass "Seluruh aksi mutasi /inventory/* terlindungi oleh rate limiter '\''throttle:erp-write'\''"
+    pass "Seluruh aksi mutasi /inventory/* terlindungi oleh rate limiter 'throttle:erp-write'"
 else
-    fail "Ditemukan $MISSING_THROTTLE_INV rute mutasi /inventory/* tanpa '\''throttle:erp-write'\''"
+    fail "Ditemukan $MISSING_THROTTLE_INV rute mutasi /inventory/* tanpa 'throttle:erp-write'"
 fi
 
 GUEST_INV_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/inventory/stock-balances" || true)
@@ -1413,21 +1413,21 @@ else
 fi
 
 if [ "$UNPROT_PURCH" -eq 0 ]; then
-    pass "Seluruh rute /purchasing/* terlindungi oleh middleware '\''auth'\'' (0 rute tanpa autentikasi)"
+    pass "Seluruh rute /purchasing/* terlindungi oleh middleware 'auth' (0 rute tanpa autentikasi)"
 else
-    fail "Ditemukan $UNPROT_PURCH rute /purchasing/* yang tidak memiliki middleware '\''auth'\''"
+    fail "Ditemukan $UNPROT_PURCH rute /purchasing/* yang tidak memiliki middleware 'auth'"
 fi
 
 if [ "$MISSING_CAN_PURCH" -eq 0 ]; then
-    pass "Seluruh rute /purchasing/* memiliki middleware otorisasi spesifik '\''can:'\'' (0 rute tanpa '\''can:'\'')"
+    pass "Seluruh rute /purchasing/* memiliki middleware otorisasi spesifik 'can:' (0 rute tanpa 'can:')"
 else
-    fail "Ditemukan $MISSING_CAN_PURCH rute /purchasing/* yang tidak memiliki middleware '\''can:'\''"
+    fail "Ditemukan $MISSING_CAN_PURCH rute /purchasing/* yang tidak memiliki middleware 'can:'"
 fi
 
 if [ "$MISSING_THROTTLE_PURCH" -eq 0 ]; then
-    pass "Seluruh aksi mutasi /purchasing/* terlindungi oleh rate limiter '\''throttle:erp-write'\''"
+    pass "Seluruh aksi mutasi /purchasing/* terlindungi oleh rate limiter 'throttle:erp-write'"
 else
-    fail "Ditemukan $MISSING_THROTTLE_PURCH rute mutasi /purchasing/* tanpa '\''throttle:erp-write'\''"
+    fail "Ditemukan $MISSING_THROTTLE_PURCH rute mutasi /purchasing/* tanpa 'throttle:erp-write'"
 fi
 
 GUEST_PURCH_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/purchasing/purchase-orders" || true)
