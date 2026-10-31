@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import { useFocusFirstField } from '@/composables/useFocusFirstField';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
@@ -44,6 +45,7 @@ const form = useForm({
 });
 
 const { formRef } = useFocusFirstField(() => form.errors);
+const { busy, submit: submitWithLock } = useSubmitLock();
 
 const categoryOptions = computed(() => [
     { value: '', label: '-- Pilih Kategori Produk --' },
@@ -62,15 +64,19 @@ const unitOptions = computed(() => [
 ]);
 
 function submit() {
-    if (props.isEdit) {
-        form.put(`/master/products/${props.product.id}`, {
-            preserveScroll: true,
-        });
-    } else {
-        form.post('/master/products', {
-            preserveScroll: true,
-        });
-    }
+    submitWithLock((options) => {
+        if (props.isEdit) {
+            form.put(`/master/products/${props.product.id}`, {
+                ...options,
+                preserveScroll: true,
+            });
+        } else {
+            form.post('/master/products', {
+                ...options,
+                preserveScroll: true,
+            });
+        }
+    });
 }
 </script>
 
@@ -279,8 +285,9 @@ function submit() {
                 <Button
                     type="submit"
                     variant="primary"
-                    :loading="form.processing"
-                    :disabled="form.processing"
+                    :loading="form.processing || busy"
+                    :disabled="form.processing || busy"
+                    :aria-busy="form.processing || busy"
                 >
                     {{ isEdit ? 'Perbarui Produk' : 'Simpan Produk' }}
                 </Button>

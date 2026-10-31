@@ -151,4 +151,32 @@ describe('Frontend Static Compliance & Security Audits', () => {
             expect(content).toMatch(/useSubmitLock\s*\(/);
         }
     });
+
+    it('ensures all 8 master data Index and Form pages and Account/Password.vue use useSubmitLock', () => {
+        const masterDataModules = [
+            'Units',
+            'ProductCategories',
+            'Warehouses',
+            'TaxRates',
+            'PaymentTerms',
+            'Suppliers',
+            'Customers',
+            'Products',
+        ];
+
+        const files = [
+            'Pages/Account/Password.vue',
+            ...masterDataModules.flatMap((m) => [
+                `Pages/MasterData/${m}/Index.vue`,
+                `Pages/MasterData/${m}/Form.vue`,
+            ]),
+        ];
+
+        for (const relPath of files) {
+            const filePath = path.resolve(jsRoot, relPath);
+            const content = fs.readFileSync(filePath, 'utf-8');
+            expect(content, `${relPath} should import useSubmitLock`).toContain('useSubmitLock');
+            expect(content, `${relPath} should invoke useSubmitLock`).toMatch(/useSubmitLock\s*\(/);
+        }
+    });
 });

@@ -1,6 +1,7 @@
 <script setup>
 import { useForm, Link } from '@inertiajs/vue3';
 import { useFocusFirstField } from '@/composables/useFocusFirstField';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
@@ -28,17 +29,22 @@ const form = useForm({
 });
 
 const { formRef } = useFocusFirstField(() => form.errors);
+const { busy, submit: submitWithLock } = useSubmitLock();
 
 function submit() {
-    if (props.isEdit) {
-        form.put(`/master/warehouses/${props.warehouse.id}`, {
-            preserveScroll: true,
-        });
-    } else {
-        form.post('/master/warehouses', {
-            preserveScroll: true,
-        });
-    }
+    submitWithLock((options) => {
+        if (props.isEdit) {
+            form.put(`/master/warehouses/${props.warehouse.id}`, {
+                ...options,
+                preserveScroll: true,
+            });
+        } else {
+            form.post('/master/warehouses', {
+                ...options,
+                preserveScroll: true,
+            });
+        }
+    });
 }
 </script>
 
@@ -134,8 +140,9 @@ function submit() {
                 <Button
                     type="submit"
                     variant="primary"
-                    :loading="form.processing"
-                    :disabled="form.processing"
+                    :loading="form.processing || busy"
+                    :disabled="form.processing || busy"
+                    :aria-busy="form.processing || busy"
                 >
                     {{ isEdit ? 'Perbarui Gudang' : 'Simpan Gudang' }}
                 </Button>

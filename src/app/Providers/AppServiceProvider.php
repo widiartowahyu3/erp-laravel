@@ -58,6 +58,12 @@ class AppServiceProvider extends ServiceProvider
             return null;
         });
 
-        RateLimiter::for('erp-write', fn (Request $request) => Limit::perMinute(60)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
+        RateLimiter::for('erp-write', function (Request $request) {
+            if (in_array($request->method(), ['GET', 'HEAD', 'OPTIONS'], true)) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(60)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip()));
+        });
     }
 }

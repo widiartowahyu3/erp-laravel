@@ -1438,6 +1438,75 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# Butir 25: Verifikasi Rate Limiting Rute Tulis Global (throttle:erp-write)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 25: Verifikasi Rate Limiting Rute Tulis Global (throttle:erp-write) ---"
+info "Memeriksa seluruh rute non-GET aplikasi terhadap middleware throttle:erp-write..."
+
+GLOBAL_WRITE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $routes = $app["router"]->getRoutes();
+    $unthrottledWrites = [];
+    $totalWrites = 0;
+
+    foreach ($routes as $route) {
+        $methods = array_diff($route->methods(), ["GET", "HEAD", "OPTIONS"]);
+        if (empty($methods)) {
+            continue;
+        }
+        $totalWrites++;
+        $uri = $route->uri();
+        if ($uri === "login") {
+            continue;
+        }
+        $middleware = $route->gatherMiddleware();
+        $hasThrottle = false;
+        foreach ($middleware as $m) {
+            if (is_string($m) && str_starts_with($m, "throttle:")) {
+                $hasThrottle = true;
+                break;
+            }
+        }
+        if (!$hasThrottle) {
+            $unthrottledWrites[] = implode("|", $methods) . " " . $uri;
+        }
+    }
+
+    echo $totalWrites . ":" . count($unthrottledWrites);
+' 2>/dev/null || echo "0:1")
+
+IFS=':' read -r TOTAL_WRITES UNTHROTTLED_WRITES <<< "$GLOBAL_WRITE_CHECK"
+
+if [ "$UNTHROTTLED_WRITES" -eq 0 ]; then
+    pass "Seluruh rute tulis aplikasi ($TOTAL_WRITES rute) terlindungi oleh limiter (0 rute tanpa limiter)"
+else
+    fail "Ditemukan $UNTHROTTLED_WRITES rute tulis tanpa rate limiter"
+fi
+
+# Kontrol positif: pastikan GET /login tidak terpasang throttle:erp-write
+GET_LOGIN_THROTTLE=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $route = $app["router"]->getRoutes()->getByName("login");
+    $hasErpWrite = $route ? in_array("throttle:erp-write", $route->gatherMiddleware(), true) : false;
+    echo $hasErpWrite ? "yes" : "no";
+' 2>/dev/null || echo "unknown")
+
+if [ "$GET_LOGIN_THROTTLE" = "no" ]; then
+    pass "Rute publik GET /login bebas dari limiter tulis throttle:erp-write"
+else
+    fail "Rute publik GET /login keliru dipasangi throttle:erp-write"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""

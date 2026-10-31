@@ -15,6 +15,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,11 +52,37 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontReport([
             TooManyAttemptsException::class,
+            ThrottleRequestsException::class,
             BusinessRuleException::class,
             InvalidStateTransitionException::class,
             InsufficientStockException::class,
             DocumentNotEditableException::class,
         ]);
+
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            $headers = $e->getHeaders();
+            $seconds = (int) ($headers['Retry-After'] ?? 60);
+            $message = "Terlalu banyak permintaan. Coba lagi dalam {$seconds} detik.";
+
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => $message,
+                ], 429, $headers);
+            }
+
+            if ($request->header('X-Inertia')) {
+                return redirect()->back()
+                    ->withInput($request->input())
+                    ->with('error', $message)
+                    ->setStatusCode(303)
+                    ->withHeaders($headers);
+            }
+
+            return response()->view('errors.minimal', [
+                'status' => 429,
+                'message' => $message,
+            ], 429, $headers);
+        });
 
         $exceptions->render(function (UniqueConstraintViolationException $e, Request $request) {
             $msg = $e->getMessage();
@@ -107,7 +134,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
-            if ($e instanceof TooManyAttemptsException || $e instanceof BusinessRuleException || $e instanceof UniqueConstraintViolationException) {
+            if ($e instanceof TooManyAttemptsException || $e instanceof ThrottleRequestsException || $e instanceof BusinessRuleException || $e instanceof UniqueConstraintViolationException) {
                 return $response;
             }
 

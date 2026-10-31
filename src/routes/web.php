@@ -36,6 +36,7 @@ Route::middleware([
     AuthenticateSession::class,
     EnforceSessionTimeouts::class,
     EnsureUserIsActive::class,
+    'throttle:erp-write',
 ])->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
@@ -122,34 +123,34 @@ Route::middleware([
         // Stock Adjustments
         Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->middleware('can:stock_adjustments.view')->name('stock-adjustments.index');
         Route::get('stock-adjustments/create', [StockAdjustmentController::class, 'create'])->middleware('can:stock_adjustments.create')->name('stock-adjustments.create');
-        Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->middleware(['can:stock_adjustments.create', 'throttle:erp-write'])->name('stock-adjustments.store');
+        Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->middleware('can:stock_adjustments.create')->name('stock-adjustments.store');
         Route::get('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'show'])->middleware('can:stock_adjustments.view')->name('stock-adjustments.show');
         Route::get('stock-adjustments/{stock_adjustment}/edit', [StockAdjustmentController::class, 'edit'])->middleware('can:stock_adjustments.update')->name('stock-adjustments.edit');
-        Route::put('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'update'])->middleware(['can:stock_adjustments.update', 'throttle:erp-write'])->name('stock-adjustments.update');
-        Route::post('stock-adjustments/{stock_adjustment}/post', [StockAdjustmentController::class, 'post'])->middleware(['can:stock_adjustments.post', 'throttle:erp-write'])->name('stock-adjustments.post');
-        Route::post('stock-adjustments/{stock_adjustment}/void', [StockAdjustmentController::class, 'void'])->middleware(['can:stock_adjustments.void', 'throttle:erp-write'])->name('stock-adjustments.void');
+        Route::put('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'update'])->middleware('can:stock_adjustments.update')->name('stock-adjustments.update');
+        Route::post('stock-adjustments/{stock_adjustment}/post', [StockAdjustmentController::class, 'post'])->middleware('can:stock_adjustments.post')->name('stock-adjustments.post');
+        Route::post('stock-adjustments/{stock_adjustment}/void', [StockAdjustmentController::class, 'void'])->middleware('can:stock_adjustments.void')->name('stock-adjustments.void');
     });
 
     // Purchasing module routes
     Route::prefix('purchasing')->name('purchasing.')->group(function (): void {
         Route::get('purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('can:purchase_orders.view')->name('purchase-orders.index');
         Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->middleware('can:purchase_orders.create')->name('purchase-orders.create');
-        Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware(['can:purchase_orders.create', 'throttle:erp-write'])->name('purchase-orders.store');
+        Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('can:purchase_orders.create')->name('purchase-orders.store');
         Route::get('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'show'])->middleware('can:purchase_orders.view')->name('purchase-orders.show');
         Route::get('purchase-orders/{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->middleware('can:purchase_orders.update')->name('purchase-orders.edit');
-        Route::put('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'update'])->middleware(['can:purchase_orders.update', 'throttle:erp-write'])->name('purchase-orders.update');
-        Route::post('purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])->middleware(['can:purchase_orders.approve', 'throttle:erp-write'])->name('purchase-orders.approve');
-        Route::post('purchase-orders/{purchase_order}/void', [PurchaseOrderController::class, 'void'])->middleware(['can:purchase_orders.void', 'throttle:erp-write'])->name('purchase-orders.void');
-        Route::post('purchase-orders/{purchase_order}/close', [PurchaseOrderController::class, 'close'])->middleware(['can:purchase_orders.update', 'throttle:erp-write'])->name('purchase-orders.close');
+        Route::put('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'update'])->middleware('can:purchase_orders.update')->name('purchase-orders.update');
+        Route::post('purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])->middleware('can:purchase_orders.approve')->name('purchase-orders.approve');
+        Route::post('purchase-orders/{purchase_order}/void', [PurchaseOrderController::class, 'void'])->middleware('can:purchase_orders.void')->name('purchase-orders.void');
+        Route::post('purchase-orders/{purchase_order}/close', [PurchaseOrderController::class, 'close'])->middleware('can:purchase_orders.update')->name('purchase-orders.close');
 
         Route::get('goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('can:goods_receipts.view')->name('goods-receipts.index');
         Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('can:goods_receipts.create')->name('goods-receipts.create');
-        Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware(['can:goods_receipts.create', 'throttle:erp-write'])->name('goods-receipts.store');
+        Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('can:goods_receipts.create')->name('goods-receipts.store');
         Route::get('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'show'])->middleware('can:goods_receipts.view')->name('goods-receipts.show');
         Route::get('goods-receipts/{goods_receipt}/edit', [GoodsReceiptController::class, 'edit'])->middleware('can:goods_receipts.update')->name('goods-receipts.edit');
-        Route::put('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'update'])->middleware(['can:goods_receipts.update', 'throttle:erp-write'])->name('goods-receipts.update');
-        Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post'])->middleware(['can:goods_receipts.post', 'throttle:erp-write'])->name('goods-receipts.post');
-        Route::post('goods-receipts/{goods_receipt}/void', [GoodsReceiptController::class, 'void'])->middleware(['can:goods_receipts.void', 'throttle:erp-write'])->name('goods-receipts.void');
+        Route::put('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'update'])->middleware('can:goods_receipts.update')->name('goods-receipts.update');
+        Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post'])->middleware('can:goods_receipts.post')->name('goods-receipts.post');
+        Route::post('goods-receipts/{goods_receipt}/void', [GoodsReceiptController::class, 'void'])->middleware('can:goods_receipts.void')->name('goods-receipts.void');
     });
 });
 

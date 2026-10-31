@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import { useFocusFirstField } from '@/composables/useFocusFirstField';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import FormField from '@/Components/ui/FormField.vue';
 import TextInput from '@/Components/ui/TextInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
@@ -40,6 +41,7 @@ const form = useForm({
 });
 
 const { formRef } = useFocusFirstField(() => form.errors);
+const { busy, submit: submitWithLock } = useSubmitLock();
 
 const termOptions = computed(() => [
     { value: '', label: '-- Pilih Syarat Pembayaran (Opsional) --' },
@@ -50,15 +52,19 @@ const termOptions = computed(() => [
 ]);
 
 function submit() {
-    if (props.isEdit) {
-        form.put(`/master/customers/${props.customer.id}`, {
-            preserveScroll: true,
-        });
-    } else {
-        form.post('/master/customers', {
-            preserveScroll: true,
-        });
-    }
+    submitWithLock((options) => {
+        if (props.isEdit) {
+            form.put(`/master/customers/${props.customer.id}`, {
+                ...options,
+                preserveScroll: true,
+            });
+        } else {
+            form.post('/master/customers', {
+                ...options,
+                preserveScroll: true,
+            });
+        }
+    });
 }
 </script>
 
@@ -272,8 +278,9 @@ function submit() {
                 <Button
                     type="submit"
                     variant="primary"
-                    :loading="form.processing"
-                    :disabled="form.processing"
+                    :loading="form.processing || busy"
+                    :disabled="form.processing || busy"
+                    :aria-busy="form.processing || busy"
                 >
                     {{ isEdit ? 'Perbarui Pelanggan' : 'Simpan Pelanggan' }}
                 </Button>

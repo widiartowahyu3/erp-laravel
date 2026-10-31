@@ -13,6 +13,7 @@ import Badge from '@/Components/ui/Badge.vue';
 import Can from '@/Components/ui/Can.vue';
 import { useListQuery } from '@/composables/useListQuery';
 import { useConfirm } from '@/composables/useConfirm';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import { masterDataModules } from '@/config/master-data';
 
 const props = defineProps({
@@ -38,6 +39,7 @@ const columns = computed(() => [
 ]);
 
 const { confirm } = useConfirm();
+const { busy, submit } = useSubmitLock();
 
 async function handleDelete(item) {
     const ok = await confirm({
@@ -48,8 +50,11 @@ async function handleDelete(item) {
     });
 
     if (ok) {
-        router.delete(`/master/warehouses/${item.id}`, {
-            preserveScroll: true,
+        submit((options) => {
+            router.delete(`/master/warehouses/${item.id}`, {
+                ...options,
+                preserveScroll: true,
+            });
         });
     }
 }
@@ -114,6 +119,8 @@ async function handleDelete(item) {
                                     variant="ghost"
                                     size="sm"
                                     aria-label="Hapus Gudang"
+                                    :disabled="busy"
+                                    :aria-busy="busy"
                                     @click="handleDelete(row)"
                                 >
                                     <Trash2 class="w-4 h-4 text-rose-600 dark:text-rose-400" aria-hidden="true" />

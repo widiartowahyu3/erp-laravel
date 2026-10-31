@@ -1,6 +1,7 @@
 <script setup>
 import { useForm, Head, usePage } from '@inertiajs/vue3';
 import { KeyRound, Shield } from 'lucide-vue-next';
+import { useSubmitLock } from '@/composables/useSubmitLock';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import Card from '../../Components/ui/Card.vue';
 import FormField from '../../Components/ui/FormField.vue';
@@ -15,11 +16,18 @@ const form = useForm({
 });
 
 const page = usePage();
+const { busy, submit: submitWithLock } = useSubmitLock();
 
 function submit() {
-    form.put('/account/password', {
-        preserveScroll: true,
-        onSuccess: () => form.reset(),
+    submitWithLock((options) => {
+        form.put('/account/password', {
+            ...options,
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                options.onSuccess?.();
+            },
+        });
     });
 }
 </script>
@@ -154,7 +162,9 @@ function submit() {
                         <Button
                             type="submit"
                             variant="primary"
-                            :loading="form.processing"
+                            :loading="form.processing || busy"
+                            :disabled="form.processing || busy"
+                            :aria-busy="form.processing || busy"
                         >
                             <template #icon>
                                 <KeyRound class="w-4 h-4" aria-hidden="true" />
