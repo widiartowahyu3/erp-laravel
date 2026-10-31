@@ -10,6 +10,8 @@ use App\Exceptions\BusinessRuleException;
 use App\Exceptions\DocumentNotEditableException;
 use App\Exceptions\InvalidStateTransitionException;
 use App\Models\GoodsReceipt;
+use App\Models\StockBalance;
+use App\Models\StockMovement;
 use App\Services\Purchasing\PurchaseOrderService;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\TestDataFactory;
@@ -212,6 +214,10 @@ test('voiding purchase order fails if there is an active goods receipt', functio
         'status' => GoodsReceiptStatus::DRAFT,
     ]);
 
+    $poStatusBefore = $po->fresh()->status;
+    $stockQtyBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsCountBefore = StockMovement::count();
+
     try {
         $service->void($po, 'Mencoba batalkan');
         test()->fail('Expected BusinessRuleException was not thrown.');
@@ -220,6 +226,10 @@ test('voiding purchase order fails if there is an active goods receipt', functio
         expect($e->getField())->toBe('status');
         expect($e->getMessage())->toBe('Pesanan pembelian yang memiliki penerimaan barang aktif tidak dapat dibatalkan langsung.');
     }
+
+    expect($po->fresh()->status)->toBe($poStatusBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockQtyBefore);
+    expect(StockMovement::count())->toBe($movementsCountBefore);
 });
 
 test('closing purchase order is rejected with 409 if active draft goods receipt exists', function (): void {
@@ -252,6 +262,10 @@ test('closing purchase order is rejected with 409 if active draft goods receipt 
         'status' => GoodsReceiptStatus::DRAFT,
     ]);
 
+    $poStatusBefore = $po->fresh()->status;
+    $stockQtyBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsCountBefore = StockMovement::count();
+
     try {
         $service->close($po);
         test()->fail('Expected BusinessRuleException was not thrown.');
@@ -260,6 +274,10 @@ test('closing purchase order is rejected with 409 if active draft goods receipt 
         expect($e->getField())->toBe('status');
         expect($e->getMessage())->toBe('Masih ada penerimaan barang berstatus draf. Posting atau batalkan terlebih dahulu.');
     }
+
+    expect($po->fresh()->status)->toBe($poStatusBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockQtyBefore);
+    expect(StockMovement::count())->toBe($movementsCountBefore);
 });
 
 test('closes purchase order from partially received or received status', function (): void {
@@ -335,6 +353,11 @@ test('purchase order service create and update reject line discount exceeding li
     ]);
 
     // 3. Update with discount > gross on line index 1
+    $poStatusBefore = $po->fresh()->status;
+    $poTotalBefore = $po->fresh()->total;
+    $stockQtyBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsCountBefore = StockMovement::count();
+
     try {
         $service->update($po, [
             'supplier_id' => $supplierId,
@@ -361,6 +384,11 @@ test('purchase order service create and update reject line discount exceeding li
         expect($e->getField())->toBe('items.1.discount_amount');
         expect($e->getMessage())->toBe('Diskon tidak boleh melebihi nilai baris.');
     }
+
+    expect($po->fresh()->status)->toBe($poStatusBefore);
+    expect($po->fresh()->total)->toBe($poTotalBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockQtyBefore);
+    expect(StockMovement::count())->toBe($movementsCountBefore);
 });
 
 test('purchase order service update rejects closed purchase order with DocumentNotEditableException', function (): void {

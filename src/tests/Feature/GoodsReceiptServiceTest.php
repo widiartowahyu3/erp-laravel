@@ -515,6 +515,11 @@ test('goods receipt posting is rejected with 409 if purchase order is closed or 
     // Force PO1 to CLOSED
     $po1->update(['status' => PurchaseOrderStatus::CLOSED]);
 
+    $po1StatusBefore = $po1->fresh()->status;
+    $grDraft1StatusBefore = $grDraft1->fresh()->status;
+    $stockQty1Before = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsCount1Before = StockMovement::count();
+
     try {
         $grService->post($grDraft1);
         test()->fail('Expected BusinessRuleException was not thrown.');
@@ -522,6 +527,12 @@ test('goods receipt posting is rejected with 409 if purchase order is closed or 
         expect($e->getStatusCode())->toBe(409);
         expect($e->getField())->toBe('status');
     }
+
+    // Invariant assertions: state, stock, and movements must remain unchanged
+    expect($po1->fresh()->status)->toBe($po1StatusBefore);
+    expect($grDraft1->fresh()->status)->toBe($grDraft1StatusBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockQty1Before);
+    expect(StockMovement::count())->toBe($movementsCount1Before);
 
     // 2. PO Void
     $po2 = $poService->create([
@@ -547,6 +558,11 @@ test('goods receipt posting is rejected with 409 if purchase order is closed or 
 
     $po2->update(['status' => PurchaseOrderStatus::VOID]);
 
+    $po2StatusBefore = $po2->fresh()->status;
+    $grDraft2StatusBefore = $grDraft2->fresh()->status;
+    $stockQty2Before = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsCount2Before = StockMovement::count();
+
     try {
         $grService->post($grDraft2);
         test()->fail('Expected BusinessRuleException was not thrown.');
@@ -554,6 +570,11 @@ test('goods receipt posting is rejected with 409 if purchase order is closed or 
         expect($e->getStatusCode())->toBe(409);
         expect($e->getField())->toBe('status');
     }
+
+    expect($po2->fresh()->status)->toBe($po2StatusBefore);
+    expect($grDraft2->fresh()->status)->toBe($grDraft2StatusBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockQty2Before);
+    expect(StockMovement::count())->toBe($movementsCount2Before);
 });
 
 test('voiding posted goods receipt is rejected with 409 if purchase order is closed, but voiding draft is allowed', function (): void {
@@ -606,6 +627,10 @@ test('voiding posted goods receipt is rejected with 409 if purchase order is clo
     expect($voidedDraft->status)->toBe(GoodsReceiptStatus::VOID);
 
     // Void posted GR1 on closed PO must be rejected with 409
+    $gr1StatusBefore = $postedGr1->fresh()->status;
+    $stockQtyBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsCountBefore = StockMovement::count();
+
     try {
         $grService->void($postedGr1, 'Void posted on closed PO');
         test()->fail('Expected BusinessRuleException was not thrown.');
@@ -614,6 +639,68 @@ test('voiding posted goods receipt is rejected with 409 if purchase order is clo
         expect($e->getField())->toBe('status');
         expect($e->getMessage())->toBe('Penerimaan barang pada pesanan pembelian yang sudah ditutup tidak dapat dibatalkan.');
     }
+
+    expect($postedGr1->fresh()->status)->toBe($gr1StatusBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockQtyBefore);
+    expect(StockMovement::count())->toBe($movementsCountBefore);
+});
+
+test('updating draft goods receipt is rejected with 409 if purchase order is closed', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true]);
+
+    $poService = new PurchaseOrderService;
+    $stockService = new StockService;
+    $grService = new GoodsReceiptService($stockService);
+
+    $po = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-26',
+        'items' => [
+            ['product_id' => $productId, 'quantity' => '10.0000', 'unit_price' => '1000.00'],
+        ],
+    ]);
+    $poService->approve($po);
+    $poItem = $po->items()->firstOrFail();
+
+    $gr = $grService->create([
+        'purchase_order_id' => $po->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-26',
+        'items' => [
+            ['purchase_order_item_id' => $poItem->id, 'product_id' => $productId, 'quantity' => '5.0000'],
+        ],
+    ]);
+
+    // Force PO to closed
+    $po->update(['status' => PurchaseOrderStatus::CLOSED]);
+
+    $poStatusBefore = $po->fresh()->status;
+    $grStatusBefore = $gr->fresh()->status;
+    $stockBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000';
+    $movementsBefore = StockMovement::count();
+
+    try {
+        $grService->update($gr, [
+            'receipt_date' => '2026-10-26',
+            'items' => [
+                ['purchase_order_item_id' => $poItem->id, 'product_id' => $productId, 'quantity' => '6.0000'],
+            ],
+        ]);
+        test()->fail('Expected BusinessRuleException was not thrown on update with closed PO.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getStatusCode())->toBe(409);
+        expect($e->getField())->toBe('status');
+        expect($e->getMessage())->toBe('Penerimaan barang hanya dapat diubah untuk pesanan pembelian yang disetujui atau diterima sebagian.');
+    }
+
+    expect($po->fresh()->status)->toBe($poStatusBefore);
+    expect($gr->fresh()->status)->toBe($grStatusBefore);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity') ?? '0.0000')->toBe($stockBefore);
+    expect(StockMovement::count())->toBe($movementsBefore);
 });
 
 test('complete workflow: PO qty 10 -> GR1 posted 4 -> GR2 draft 3 -> close PO rejected -> void GR2 draft -> close PO succeeds -> void GR1 rejected -> stock stays 4 and PO closed', function (): void {
@@ -751,4 +838,54 @@ test('GoodsReceiptService post checks GR status before PO status when PO is clos
     // Attempting to post the already posted GR on closed PO must throw InvalidStateTransitionException
     expect(fn () => $grService->post($postedGr))
         ->toThrow(InvalidStateTransitionException::class);
+
+    // Expand 9b: posting GR draft on closed PO => 409 field status and no stock changes
+    // Create draft GR before forcing PO to closed
+    $poDraft = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-31',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '5.0000',
+                'unit_price' => '10000.0000',
+            ],
+        ],
+    ]);
+    $poService->approve($poDraft);
+    $poDraftItem = $poDraft->items->first();
+    assert($poDraftItem !== null);
+
+    $draftGrOnClosedPo = $grService->create([
+        'purchase_order_id' => $poDraft->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-31',
+        'items' => [
+            [
+                'purchase_order_item_id' => $poDraftItem->id,
+                'product_id' => $productId,
+                'quantity' => '1.0000',
+            ],
+        ],
+    ]);
+
+    // Force PO to closed
+    $poDraft->update(['status' => PurchaseOrderStatus::CLOSED]);
+
+    $stockBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity');
+    $movementsBefore = StockMovement::count();
+
+    try {
+        $grService->post($draftGrOnClosedPo);
+        test()->fail('Expected BusinessRuleException on posting draft GR on closed PO was not thrown.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getStatusCode())->toBe(409);
+        expect($e->getField())->toBe('status');
+    }
+
+    expect($draftGrOnClosedPo->fresh()->status)->toBe(GoodsReceiptStatus::DRAFT);
+    expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity'))->toBe($stockBefore);
+    expect(StockMovement::count())->toBe($movementsBefore);
 });
