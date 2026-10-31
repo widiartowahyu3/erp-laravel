@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Models\Concerns\HasAuditUsers;
 use App\Models\Concerns\RecordsAudit;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -34,19 +33,6 @@ class TaxRate extends Model
             'rate' => 'string',
             'is_active' => 'boolean',
         ];
-    }
-
-    /**
-     * Alias rate_percent to rate.
-     *
-     * @return Attribute<string, string>
-     */
-    protected function ratePercent(): Attribute
-    {
-        return Attribute::make(
-            get: fn (?string $value, array $attributes): string => (string) ($attributes['rate'] ?? '0.00'),
-            set: fn (string $value): array => ['rate' => $value],
-        );
     }
 
     /**

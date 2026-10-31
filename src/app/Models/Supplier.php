@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Models\Concerns\HasAuditUsers;
 use App\Models\Concerns\RecordsAudit;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -40,19 +39,6 @@ class Supplier extends Model
             'payment_term_id' => 'integer',
             'is_active' => 'boolean',
         ];
-    }
-
-    /**
-     * Alias contact_person to contact_name.
-     *
-     * @return Attribute<string|null, string|null>
-     */
-    protected function contactPerson(): Attribute
-    {
-        return Attribute::make(
-            get: fn (?string $value, array $attributes): ?string => $attributes['contact_name'] ?? null,
-            set: fn (?string $value): array => ['contact_name' => $value],
-        );
     }
 
     /**

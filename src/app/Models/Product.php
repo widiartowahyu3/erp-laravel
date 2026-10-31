@@ -7,7 +7,6 @@ namespace App\Models;
 use App\Models\Concerns\HasAuditUsers;
 use App\Models\Concerns\RecordsAudit;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -48,32 +47,6 @@ class Product extends Model
     }
 
     /**
-     * Alias code to sku.
-     *
-     * @return Attribute<string, string>
-     */
-    protected function code(): Attribute
-    {
-        return Attribute::make(
-            get: fn (?string $value, array $attributes): string => (string) ($attributes['sku'] ?? ''),
-            set: fn (string $value): array => ['sku' => $value],
-        );
-    }
-
-    /**
-     * Alias unit_id to base_unit_id.
-     *
-     * @return Attribute<int, int>
-     */
-    protected function unitId(): Attribute
-    {
-        return Attribute::make(
-            get: fn (?int $value, array $attributes): int => (int) ($attributes['base_unit_id'] ?? 0),
-            set: fn (int $value): array => ['base_unit_id' => $value],
-        );
-    }
-
-    /**
      * @return BelongsTo<ProductCategory, $this>
      */
     public function category(): BelongsTo
@@ -87,16 +60,6 @@ class Product extends Model
     public function baseUnit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'base_unit_id');
-    }
-
-    /**
-     * Alias for baseUnit relation.
-     *
-     * @return BelongsTo<Unit, $this>
-     */
-    public function unit(): BelongsTo
-    {
-        return $this->baseUnit();
     }
 
     /**

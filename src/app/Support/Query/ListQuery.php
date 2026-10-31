@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Support\Query;
 
-use App\Http\Requests\Support\ListRequest;
 use Closure;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -124,11 +123,12 @@ final class ListQuery
      *
      * @return Builder<TModel>
      */
-    public function apply(ListRequest|Request $request): Builder
+    public function apply(Request $request): Builder
     {
         $search = $request->input('search');
         if (is_string($search) && trim($search) !== '' && ! empty($this->searchableColumns)) {
-            $escaped = self::escapeLike(trim($search));
+            $cappedSearch = mb_substr(trim($search), 0, 100);
+            $escaped = self::escapeLike($cappedSearch);
 
             $this->builder->where(function (Builder $query) use ($escaped): void {
                 foreach ($this->searchableColumns as $i => $column) {
@@ -189,7 +189,7 @@ final class ListQuery
      *
      * @return LengthAwarePaginator<int, TModel>
      */
-    public function paginate(ListRequest|Request $request, int $defaultPerPage = 25): LengthAwarePaginator
+    public function paginate(Request $request, int $defaultPerPage = 25): LengthAwarePaginator
     {
         $this->apply($request);
 

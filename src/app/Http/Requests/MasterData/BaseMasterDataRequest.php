@@ -39,24 +39,12 @@ abstract class BaseMasterDataRequest extends FormRequest
             $input['email'] = strtolower(trim($input['email']));
         }
 
-        if (isset($input['contact_person']) && ! isset($input['contact_name'])) {
-            $input['contact_name'] = $input['contact_person'];
-        }
-
         if (isset($input['contact_name']) && is_string($input['contact_name'])) {
             $input['contact_name'] = (string) preg_replace('/\s+/', ' ', trim($input['contact_name']));
         }
 
         if (isset($input['barcode']) && is_string($input['barcode'])) {
             $input['barcode'] = trim($input['barcode']);
-        }
-
-        if (isset($input['rate_percent']) && ! isset($input['rate'])) {
-            $input['rate'] = $input['rate_percent'];
-        }
-
-        if (isset($input['unit_id']) && ! isset($input['base_unit_id'])) {
-            $input['base_unit_id'] = $input['unit_id'];
         }
 
         $this->replace($input);

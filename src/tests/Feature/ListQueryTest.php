@@ -2,41 +2,32 @@
 
 declare(strict_types=1);
 
-use App\Http\Requests\Support\ListRequest;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Tests\Support\Models\TestUnit;
 
 beforeEach(function () {
     DB::table('units')->delete();
 });
 
-test('ListRequest validates parameters and rejects per_page above 100', function () {
-    $validData = [
-        'search' => 'Box',
-        'sort' => 'name',
-        'direction' => 'asc',
-        'page' => 2,
-        'per_page' => 50,
-        'filter' => ['code' => 'BX'],
-    ];
+test('ListQuery caps search string to 100 characters to prevent query DoS', function () {
+    TestUnit::create(['code' => 'U1', 'name' => 'Alpha']);
 
-    $validator = Validator::make($validData, (new ListRequest)->rules());
-    expect($validator->passes())->toBeTrue();
+    $longSearch = str_repeat('A', 150);
+    $request = Request::create('/test-list', 'GET', [
+        'search' => $longSearch,
+    ]);
 
-    // per_page > 100 must fail validation
-    $invalidData = array_merge($validData, ['per_page' => 101]);
-    $invalidValidator = Validator::make($invalidData, (new ListRequest)->rules());
-    expect($invalidValidator->fails())->toBeTrue()
-        ->and($invalidValidator->errors()->has('per_page'))->toBeTrue();
+    $query = ListQuery::for(TestUnit::query())
+        ->searchable(['name'])
+        ->apply($request);
 
-    // search < 2 characters must fail validation
-    $shortSearchValidator = Validator::make(['search' => 'a'], (new ListRequest)->rules());
-    expect($shortSearchValidator->fails())->toBeTrue()
-        ->and($shortSearchValidator->errors()->has('search'))->toBeTrue();
+    $bindings = $query->getBindings();
+
+    expect($bindings)->toBeArray()
+        ->and($bindings[0])->toBe('%'.str_repeat('A', 100).'%');
 });
 
 test('sort and direction containing SQL injection are safely ignored without error', function () {
