@@ -86,3 +86,20 @@ test('clamps net amount to zero when discount exceeds gross', function (): void 
     expect($result['items'][0]['tax_amount'])->toBe('0.00');
     expect($result['items'][0]['line_total'])->toBe('0.00');
 });
+
+test('netUnitCost calculates net unit cost after discount to 4 decimal places with half-up rounding', function (): void {
+    // qty 4, price 2500.00, disc 1000.00 -> '2250.0000' (bersih 9000 / 4)
+    expect(PurchaseOrderCalculator::netUnitCost('4.0000', '2500.00', '1000.00'))->toBe('2250.0000');
+
+    // qty 8, price 1.00, disc 3.00 -> '0.6250' (bersih 5 / 8)
+    expect(PurchaseOrderCalculator::netUnitCost('8.0000', '1.00', '3.00'))->toBe('0.6250');
+
+    // qty 3, price 1000.00, disc 1.00 -> '999.6667' (bersih 2999 / 3, pembulatan half-up ke 4 desimal)
+    expect(PurchaseOrderCalculator::netUnitCost('3.0000', '1000.00', '1.00'))->toBe('999.6667');
+
+    // disc 0 -> sama dengan harga ('1000.0000')
+    expect(PurchaseOrderCalculator::netUnitCost('5.0000', '1000.00', '0.00'))->toBe('1000.0000');
+
+    // disc = gross -> '0.0000'
+    expect(PurchaseOrderCalculator::netUnitCost('2.0000', '500.00', '1000.00'))->toBe('0.0000');
+});

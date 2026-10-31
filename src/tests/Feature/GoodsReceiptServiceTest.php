@@ -377,3 +377,105 @@ test('voiding goods receipt records stock movement with type adjustment_out inst
         ->count();
     expect($deliveryMovementCount)->toBe(0);
 });
+
+test('goods receipt stock valuation uses net unit cost after purchase order discount with moving average calculation', function (): void {
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true]);
+
+    $poService = new PurchaseOrderService;
+    $stockService = new StockService;
+    $grService = new GoodsReceiptService($stockService);
+
+    // PO 1: Qty 10, Unit Price 2500.00, Discount 2500.00 (gross 25000 - 2500 = net 22500 / 10 = 2250.0000 per unit)
+    $po1 = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-26',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+                'unit_price' => '2500.00',
+                'discount_amount' => '2500.00',
+            ],
+        ],
+    ]);
+    $poService->approve($po1);
+    $po1Item = $po1->items()->firstOrFail();
+
+    // GR 1
+    $gr1 = $grService->create([
+        'purchase_order_id' => $po1->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-26',
+        'items' => [
+            [
+                'purchase_order_item_id' => $po1Item->id,
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+            ],
+        ],
+    ]);
+    $postedGr1 = $grService->post($gr1);
+
+    // Verify GR item unit cost is net: 2250.0000
+    expect($postedGr1->items->first()->unit_cost)->toBe('2250.0000');
+
+    // Verify Stock movement unit cost is net
+    $movement1 = StockMovement::query()
+        ->where('product_id', $productId)
+        ->where('source_type', StockService::SOURCE_GOODS_RECEIPT)
+        ->where('source_id', $postedGr1->id)
+        ->firstOrFail();
+    expect($movement1->unit_cost)->toBe('2250.0000');
+
+    // Verify Stock balance avg_cost: 2250.0000
+    $balance = StockBalance::query()
+        ->where('product_id', $productId)
+        ->where('warehouse_id', $warehouseId)
+        ->firstOrFail();
+    expect($balance->quantity)->toBe('10.0000');
+    expect($balance->avg_cost)->toBe('2250.0000');
+
+    // PO 2: Qty 10, Unit Price 3000.00, Discount 2500.00 (gross 30000 - 2500 = net 27500 / 10 = 2750.0000 per unit)
+    $po2 = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-26',
+        'items' => [
+            [
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+                'unit_price' => '3000.00',
+                'discount_amount' => '2500.00',
+            ],
+        ],
+    ]);
+    $poService->approve($po2);
+    $po2Item = $po2->items()->firstOrFail();
+
+    // GR 2
+    $gr2 = $grService->create([
+        'purchase_order_id' => $po2->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-26',
+        'items' => [
+            [
+                'purchase_order_item_id' => $po2Item->id,
+                'product_id' => $productId,
+                'quantity' => '10.0000',
+            ],
+        ],
+    ]);
+    $postedGr2 = $grService->post($gr2);
+
+    expect($postedGr2->items->first()->unit_cost)->toBe('2750.0000');
+
+    // Moving average: (10 * 2250.0000 + 10 * 2750.0000) / 20 = 50000.0000 / 20 = 2500.0000
+    $balance->refresh();
+    expect($balance->quantity)->toBe('20.0000');
+    expect($balance->avg_cost)->toBe('2500.0000');
+});

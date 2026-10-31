@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Support\Decimal;
+use App\Support\Purchasing\PurchaseOrderCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -87,5 +88,10 @@ class PurchaseOrderItem extends Model
     public function remainingQuantity(): string
     {
         return Decimal::sub($this->quantity, $this->received_quantity, Decimal::SCALE_QUANTITY);
+    }
+
+    public function netUnitCost(): string
+    {
+        return PurchaseOrderCalculator::netUnitCost($this->quantity, $this->unit_price, $this->discount_amount);
     }
 }

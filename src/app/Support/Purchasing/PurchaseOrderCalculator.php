@@ -96,4 +96,22 @@ final class PurchaseOrderCalculator
             ],
         ];
     }
+
+    /**
+     * Calculate net unit cost after discount excluding tax.
+     */
+    public static function netUnitCost(string $quantity, string $unitPrice, string $discountAmount): string
+    {
+        $lineGross = Decimal::mul($quantity, $unitPrice, Decimal::SCALE_MONEY);
+        $net = Decimal::round(
+            Decimal::sub($lineGross, Decimal::round($discountAmount, Decimal::SCALE_MONEY), Decimal::SCALE_MONEY),
+            Decimal::SCALE_MONEY
+        );
+
+        if (Decimal::isNegative($net)) {
+            $net = '0.00';
+        }
+
+        return Decimal::div($net, $quantity, Decimal::SCALE_COST);
+    }
 }

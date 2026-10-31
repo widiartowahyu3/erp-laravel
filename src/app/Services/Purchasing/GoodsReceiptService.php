@@ -150,7 +150,7 @@ class GoodsReceiptService
                     'purchase_order_item_id' => $poItem->id,
                     'product_id' => $poItem->product_id,
                     'quantity' => $qty,
-                    'unit_cost' => $poItem->unit_price,
+                    'unit_cost' => $poItem->netUnitCost(),
                 ]);
             }
 
@@ -260,7 +260,7 @@ class GoodsReceiptService
                     'purchase_order_item_id' => $poItem->id,
                     'product_id' => $poItem->product_id,
                     'quantity' => $qty,
-                    'unit_cost' => $poItem->unit_price,
+                    'unit_cost' => $poItem->netUnitCost(),
                 ]);
             }
 
@@ -328,6 +328,10 @@ class GoodsReceiptService
                 // Increase received_quantity on PO item
                 $poItem->received_quantity = Decimal::add($poItem->received_quantity, $grItem->quantity, Decimal::SCALE_QUANTITY);
                 $poItem->save();
+
+                // Re-evaluate net unit cost from PO item before posting to stock
+                $grItem->unit_cost = $poItem->netUnitCost();
+                $grItem->save();
 
                 // 5. Increase inventory stock balance and record movement
                 $this->stockService->increase(
