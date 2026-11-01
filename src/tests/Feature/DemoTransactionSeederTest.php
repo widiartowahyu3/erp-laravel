@@ -77,14 +77,6 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
     $doItemsTotal = DB::table('delivery_order_items')->count();
     $doPosted = DeliveryOrder::query()->where('status', 'posted')->count();
 
-    fwrite(STDOUT, sprintf(
-        "\n[SEEDER COUNTS]\nSELECT COUNT(*) FROM sales_orders = %d\nSELECT COUNT(*) FROM sales_order_items = %d\nSELECT COUNT(*) FROM delivery_orders = %d\nSELECT COUNT(*) FROM delivery_order_items = %d\n",
-        $soTotal,
-        $soItemsTotal,
-        $doTotal,
-        $doItemsTotal
-    ));
-
     expect($doTotal)->toBe(3)
         ->and($doItemsTotal)->toBe(4)
         ->and($doPosted)->toBe(3);
