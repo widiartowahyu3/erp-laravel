@@ -253,6 +253,34 @@ test('void sales order is blocked when active delivery order exists', function (
         ->toThrow(BusinessRuleException::class, 'Pesanan penjualan yang memiliki surat jalan aktif tidak dapat dibatalkan langsung.');
 });
 
+test('void sales order succeeds when all associated delivery orders are void', function (): void {
+    $service = new SalesOrderService;
+    $customerId = TestDataFactory::createCustomer();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true, 'is_active' => true]);
+
+    $so = $service->create([
+        'customer_id' => $customerId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'items' => [['product_id' => $productId, 'quantity' => '5.0000', 'unit_price' => '1000.0000']],
+    ]);
+    $service->approve($so);
+
+    DeliveryOrder::create([
+        'number' => 'DO/202611/00101',
+        'sales_order_id' => $so->id,
+        'customer_id' => $customerId,
+        'warehouse_id' => $warehouseId,
+        'delivery_date' => '2026-11-01',
+        'status' => DeliveryOrderStatus::VOID,
+    ]);
+
+    $voided = $service->void($so, 'Batal setelah DO dibatalkan');
+    expect($voided->status)->toBe(SalesOrderStatus::VOID)
+        ->and($voided->void_reason)->toBe('Batal setelah DO dibatalkan');
+});
+
 test('close sales order closes partially delivered or delivered SO and blocks if draft DO exists', function (): void {
     $service = new SalesOrderService;
     $customerId = TestDataFactory::createCustomer();

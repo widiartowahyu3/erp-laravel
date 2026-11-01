@@ -335,7 +335,18 @@ class DeliveryOrderService
 
             DocumentStateMachine::assertTransition($lockedDo->status, DeliveryOrderStatus::POSTED);
 
-            if ($lockedSo->status !== SalesOrderStatus::APPROVED && $lockedSo->status !== SalesOrderStatus::PARTIALLY_DELIVERED) {
+            if ($lockedSo->status === SalesOrderStatus::CLOSED) {
+                throw new BusinessRuleException(
+                    'Surat jalan tidak dapat diposting untuk pesanan penjualan yang sudah ditutup.',
+                    409,
+                    'status'
+                );
+            }
+
+            if ($lockedSo->status !== SalesOrderStatus::APPROVED
+                && $lockedSo->status !== SalesOrderStatus::PARTIALLY_DELIVERED
+                && $lockedSo->status !== SalesOrderStatus::DELIVERED
+            ) {
                 throw new BusinessRuleException(
                     'Pesanan penjualan harus berstatus disetujui atau terkirim sebagian untuk diposting pengirimannya.',
                     422,
