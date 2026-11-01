@@ -84,6 +84,11 @@ class DeliveryOrderService
                 throw new BusinessRuleException('Surat jalan harus memiliki minimal 1 baris barang.', 422, 'items');
             }
 
+            $soItemIds = array_map(fn (array $item): int => (int) $item['sales_order_item_id'], $data['items']);
+            if (count($soItemIds) !== count(array_unique($soItemIds))) {
+                throw new BusinessRuleException('Item pesanan penjualan tidak boleh duplikat pada baris surat jalan.', 422, 'items');
+            }
+
             // 2. Strict S7 lock order: Lock SO items ordered by id ASC
             $soItems = SalesOrderItem::query()
                 ->where('sales_order_id', $so->id)
@@ -92,6 +97,7 @@ class DeliveryOrderService
                 ->get()
                 ->keyBy('id');
 
+            $aggregatedQuantities = [];
             $lineNo = 1;
             foreach ($data['items'] as $itemData) {
                 $soItemId = (int) $itemData['sales_order_item_id'];
@@ -110,8 +116,11 @@ class DeliveryOrderService
                     throw new BusinessRuleException("Kuantitas pengiriman baris ke-{$lineNo} harus lebih besar dari 0.", 422, 'items');
                 }
 
+                $currentAggregated = $aggregatedQuantities[$soItemId] ?? '0.0000';
+                $aggregatedQuantities[$soItemId] = Decimal::add($currentAggregated, $qty, Decimal::SCALE_QUANTITY);
+
                 $remaining = $soItem->remainingQuantity();
-                if (Decimal::cmp($qty, $remaining) > 0) {
+                if (Decimal::cmp($aggregatedQuantities[$soItemId], $remaining) > 0) {
                     throw new BusinessRuleException("Kuantitas pengiriman baris ke-{$lineNo} melebihi sisa pesanan penjualan.", 422, 'items');
                 }
 
@@ -219,6 +228,11 @@ class DeliveryOrderService
                 throw new BusinessRuleException('Surat jalan harus memiliki minimal 1 baris barang.', 422, 'items');
             }
 
+            $soItemIds = array_map(fn (array $item): int => (int) $item['sales_order_item_id'], $data['items']);
+            if (count($soItemIds) !== count(array_unique($soItemIds))) {
+                throw new BusinessRuleException('Item pesanan penjualan tidak boleh duplikat pada baris surat jalan.', 422, 'items');
+            }
+
             // 3. Strict S7 lock order: Lock SO items ordered by id ASC
             $soItems = SalesOrderItem::query()
                 ->where('sales_order_id', $so->id)
@@ -227,6 +241,7 @@ class DeliveryOrderService
                 ->get()
                 ->keyBy('id');
 
+            $aggregatedQuantities = [];
             $lineNo = 1;
             foreach ($data['items'] as $itemData) {
                 $soItemId = (int) $itemData['sales_order_item_id'];
@@ -245,8 +260,11 @@ class DeliveryOrderService
                     throw new BusinessRuleException("Kuantitas pengiriman baris ke-{$lineNo} harus lebih besar dari 0.", 422, 'items');
                 }
 
+                $currentAggregated = $aggregatedQuantities[$soItemId] ?? '0.0000';
+                $aggregatedQuantities[$soItemId] = Decimal::add($currentAggregated, $qty, Decimal::SCALE_QUANTITY);
+
                 $remaining = $soItem->remainingQuantity();
-                if (Decimal::cmp($qty, $remaining) > 0) {
+                if (Decimal::cmp($aggregatedQuantities[$soItemId], $remaining) > 0) {
                     throw new BusinessRuleException("Kuantitas pengiriman baris ke-{$lineNo} melebihi sisa pesanan penjualan.", 422, 'items');
                 }
 
@@ -329,6 +347,12 @@ class DeliveryOrderService
                 throw new BusinessRuleException('Surat jalan harus memiliki minimal 1 baris barang.', 422, 'items');
             }
 
+            $doItems = $lockedDo->items;
+            $soItemIds = $doItems->map(fn (DeliveryOrderItem $item): int => (int) $item->sales_order_item_id)->all();
+            if (count($soItemIds) !== count(array_unique($soItemIds))) {
+                throw new BusinessRuleException('Item pesanan penjualan tidak boleh duplikat pada baris surat jalan.', 422, 'items');
+            }
+
             // 3. Strict S7 lock order: Lock SO items ordered by id ASC
             $soItems = SalesOrderItem::query()
                 ->where('sales_order_id', $lockedSo->id)
@@ -337,15 +361,20 @@ class DeliveryOrderService
                 ->get()
                 ->keyBy('id');
 
-            // 4. Verify remaining quantities under lock
-            foreach ($lockedDo->items as $doItem) {
-                $soItem = $soItems->get($doItem->sales_order_item_id);
+            // 4. Verify remaining quantities under lock with aggregation
+            $aggregatedQuantities = [];
+            foreach ($doItems as $doItem) {
+                $soItemId = (int) $doItem->sales_order_item_id;
+                $soItem = $soItems->get($soItemId);
                 if ($soItem === null) {
-                    throw new BusinessRuleException("Item pesanan penjualan #{$doItem->sales_order_item_id} tidak ditemukan.", 422, 'items');
+                    throw new BusinessRuleException("Item pesanan penjualan #{$soItemId} tidak ditemukan.", 422, 'items');
                 }
 
+                $currentAggregated = $aggregatedQuantities[$soItemId] ?? '0.0000';
+                $aggregatedQuantities[$soItemId] = Decimal::add($currentAggregated, (string) $doItem->quantity, Decimal::SCALE_QUANTITY);
+
                 $remaining = $soItem->remainingQuantity();
-                if (Decimal::cmp($doItem->quantity, $remaining) > 0) {
+                if (Decimal::cmp($aggregatedQuantities[$soItemId], $remaining) > 0) {
                     throw new BusinessRuleException(
                         "Kuantitas pengiriman baris ke-{$doItem->line_no} ({$doItem->quantity}) melebihi sisa pesanan ({$remaining}).",
                         422,
