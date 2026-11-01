@@ -163,11 +163,11 @@ class DeliveryOrderService
      * Update a draft Delivery Order and replace its items atomically.
      *
      * @param array{
-     *     customer_id: int|string,
-     *     warehouse_id: int|string,
      *     delivery_date: string,
      *     shipping_address?: string|null,
      *     notes?: string|null,
+     *     customer_id?: int|string,
+     *     warehouse_id?: int|string,
      *     items: list<array{
      *         sales_order_item_id: int|string,
      *         product_id: int|string,
@@ -207,11 +207,11 @@ class DeliveryOrderService
                 );
             }
 
-            if ((int) $data['customer_id'] !== $so->customer_id) {
+            if (isset($data['customer_id']) && (int) $data['customer_id'] !== $so->customer_id) {
                 throw new BusinessRuleException('Pelanggan pada surat jalan tidak cocok dengan pesanan penjualan.', 422, 'customer_id');
             }
 
-            if ((int) $data['warehouse_id'] !== $so->warehouse_id) {
+            if (isset($data['warehouse_id']) && (int) $data['warehouse_id'] !== $so->warehouse_id) {
                 throw new BusinessRuleException('Gudang pada surat jalan tidak cocok dengan pesanan penjualan.', 422, 'warehouse_id');
             }
 
@@ -253,9 +253,11 @@ class DeliveryOrderService
                 $lineNo++;
             }
 
-            $shippingAddress = isset($data['shipping_address']) && trim((string) $data['shipping_address']) !== ''
-                ? trim((string) $data['shipping_address'])
-                : null;
+            $shippingAddress = array_key_exists('shipping_address', $data)
+                ? (isset($data['shipping_address']) && trim((string) $data['shipping_address']) !== ''
+                    ? trim((string) $data['shipping_address'])
+                    : ($so->customer->address ?? null))
+                : $lockedDo->shipping_address;
 
             $notes = isset($data['notes']) && trim((string) $data['notes']) !== ''
                 ? trim((string) $data['notes'])

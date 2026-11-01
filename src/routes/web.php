@@ -19,6 +19,8 @@ use App\Http\Controllers\MasterData\UnitController;
 use App\Http\Controllers\MasterData\WarehouseController;
 use App\Http\Controllers\Purchasing\GoodsReceiptController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
+use App\Http\Controllers\Sales\DeliveryOrderController;
+use App\Http\Controllers\Sales\SalesOrderController;
 use App\Http\Middleware\EnforceSessionTimeouts;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Session\Middleware\AuthenticateSession;
@@ -150,6 +152,28 @@ Route::middleware([
         Route::put('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'update'])->middleware('can:goods_receipts.update')->name('goods-receipts.update');
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post'])->middleware('can:goods_receipts.post')->name('goods-receipts.post');
         Route::post('goods-receipts/{goods_receipt}/void', [GoodsReceiptController::class, 'void'])->middleware('can:goods_receipts.void')->name('goods-receipts.void');
+    });
+
+    // Sales module routes
+    Route::prefix('sales')->name('sales.')->group(function (): void {
+        Route::get('sales-orders', [SalesOrderController::class, 'index'])->middleware('can:sales_orders.view')->name('sales-orders.index');
+        Route::get('sales-orders/create', [SalesOrderController::class, 'create'])->middleware('can:sales_orders.create')->name('sales-orders.create');
+        Route::post('sales-orders', [SalesOrderController::class, 'store'])->middleware('can:sales_orders.create')->name('sales-orders.store');
+        Route::get('sales-orders/{sales_order}', [SalesOrderController::class, 'show'])->middleware('can:sales_orders.view')->name('sales-orders.show');
+        Route::get('sales-orders/{sales_order}/edit', [SalesOrderController::class, 'edit'])->middleware('can:sales_orders.update')->name('sales-orders.edit');
+        Route::put('sales-orders/{sales_order}', [SalesOrderController::class, 'update'])->middleware('can:sales_orders.update')->name('sales-orders.update');
+        Route::post('sales-orders/{sales_order}/approve', [SalesOrderController::class, 'approve'])->middleware('can:sales_orders.approve')->name('sales-orders.approve');
+        Route::post('sales-orders/{sales_order}/void', [SalesOrderController::class, 'void'])->middleware('can:sales_orders.void')->name('sales-orders.void');
+        Route::post('sales-orders/{sales_order}/close', [SalesOrderController::class, 'close'])->middleware('can:sales_orders.update')->name('sales-orders.close');
+
+        Route::get('delivery-orders', [DeliveryOrderController::class, 'index'])->middleware('can:delivery_orders.view')->name('delivery-orders.index');
+        Route::get('delivery-orders/create', [DeliveryOrderController::class, 'create'])->middleware('can:delivery_orders.create')->name('delivery-orders.create');
+        Route::post('delivery-orders', [DeliveryOrderController::class, 'store'])->middleware('can:delivery_orders.create')->name('delivery-orders.store');
+        Route::get('delivery-orders/{delivery_order}', [DeliveryOrderController::class, 'show'])->middleware('can:delivery_orders.view')->name('delivery-orders.show');
+        Route::get('delivery-orders/{delivery_order}/edit', [DeliveryOrderController::class, 'edit'])->middleware('can:delivery_orders.update')->name('delivery-orders.edit');
+        Route::put('delivery-orders/{delivery_order}', [DeliveryOrderController::class, 'update'])->middleware('can:delivery_orders.update')->name('delivery-orders.update');
+        Route::post('delivery-orders/{delivery_order}/post', [DeliveryOrderController::class, 'post'])->middleware('can:delivery_orders.post')->name('delivery-orders.post');
+        Route::post('delivery-orders/{delivery_order}/void', [DeliveryOrderController::class, 'void'])->middleware('can:delivery_orders.void')->name('delivery-orders.void');
     });
 });
 
