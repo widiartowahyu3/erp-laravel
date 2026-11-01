@@ -59,3 +59,7 @@ Thumbs.db
 
 # Keluaran mentah untuk review pengawas
 /review/
+
+# Database Backups
+/backups/
+
