@@ -198,3 +198,16 @@ $$\text{SalesOrder} \longrightarrow \text{DeliveryOrder} \longrightarrow \text{S
 2. **Pencegahan Flooding (Rate Limiting):** Seluruh mutasi data (POST, PUT) diproteksi middleware `throttle:erp-write`.
 3. **Audit Trail:** Header dokumen mencatat `created_by`, `updated_by`, serta aktor aksi status (`approved_by`, `posted_by`, `voided_by`) via trait `RecordsAudit`.
 4. **Penomoran Dokumen Gapless:** Dikelola oleh `DocumentNumberService` di dalam transaksi database serial dengan format `SO/YYYYMM/XXXXX` dan `DO/YYYYMM/XXXXX`.
+
+---
+
+## 7. Keputusan Desain Arsitektur
+
+Berikut adalah keputusan arsitektural dan batasan desain yang ditetapkan pada modul penjualan:
+
+1. **`movement_date` Mutasi Stok Adalah Waktu Posting (`now()`):**
+   - Tanggal pergerakan stok (`movement_date`) pada mutasi pengiriman DO dicatat menggunakan timestamp eksekusi posting aktual (`now()`), bukan `delivery_date` dokumen. Hal ini konsisten dengan pencatatan penerimaan barang (*Goods Receipt*) di Fase 7 guna memastikan kartu stok dan urutan kronologis buku besar inventori mencerminkan kejadian fisik secara riil.
+2. **Draf DO Tidak Memesan/Mengunci Stok:**
+   - Surat jalan berstatus `draft` tidak memesan (*reserve*) maupun memotong saldo fisik persediaan di gudang. Mekanisme ini selaras dengan modul pembelian (*purchasing*), di mana draf dokumen tidak mengunci persediaan. Pemotongan saldo fisik dan validasi kecukupan stok (`InsufficientStockException`) baru dieksekusi secara atomik saat posting.
+3. **Pengecekan Limit Kredit Pelanggan Ditunda ke Fase 8B:**
+   - Validasi batas kredit (*credit limit*) dan piutang jatuh tempo pelanggan sengaja ditunda ke Fase 8B saat faktur penjualan (*Sales Invoice*) dan buku besar piutang (*Accounts Receivable*) dibangun. Pada Fase 8A, alur difokuskan pada integritas operasional pemesanan (SO) dan pemenuhan pengiriman fisik (DO).
