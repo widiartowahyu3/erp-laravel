@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockBalanceController;
 use App\Http\Controllers\Inventory\StockCardController;
@@ -40,9 +41,7 @@ Route::middleware([
 ])->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/', DashboardController::class)->name('dashboard');
 
     Route::get('/account/password', [PasswordController::class, 'edit'])->name('password.edit');
     Route::put('/account/password', [PasswordController::class, 'update'])->name('password.update');
