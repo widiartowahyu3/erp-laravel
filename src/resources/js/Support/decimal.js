@@ -87,6 +87,8 @@ export function multiplyDecimals(a, b, scale = 2) {
     return roundScaled(product, scaleA + scaleB, scale);
 }
 
+export const mulDecimals = multiplyDecimals;
+
 export function calculatePurchaseOrderItem(quantity, unitPrice, discountAmount = '0', taxRatePercent = '0') {
     const qty = String(quantity || '0');
     const price = String(unitPrice || '0');

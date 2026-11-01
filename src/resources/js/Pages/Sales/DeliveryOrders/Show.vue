@@ -16,6 +16,7 @@ import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
 import { deliveryOrderStatusConfig } from '@/config/sales';
+import { mulDecimals, addDecimals } from '@/Support/decimal';
 
 const props = defineProps({
     item: {
@@ -50,6 +51,18 @@ const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
 
 const isPosted = computed(() => deliveryOrder.value.status === 'posted');
+
+function lineTotalCost(it) {
+    if (!it || !it.unit_cost || !it.quantity) return '0.00';
+    return mulDecimals(it.quantity, it.unit_cost, 2);
+}
+
+const grandTotalCost = computed(() => {
+    if (!deliveryOrder.value?.items?.length) return '0.00';
+    return deliveryOrder.value.items.reduce((acc, it) => {
+        return addDecimals(acc, lineTotalCost(it), 2);
+    }, '0.00');
+});
 
 async function handlePost() {
     if (busy.value) return;
@@ -309,10 +322,18 @@ async function handleVoid() {
                                     <Rupiah :amount="it.unit_cost" />
                                 </td>
                                 <td v-if="isPosted" class="py-2.5 px-3 text-right font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
-                                    <Rupiah :amount="it.total_cost" />
+                                    <Rupiah :amount="lineTotalCost(it)" />
                                 </td>
                             </tr>
                         </tbody>
+                        <tfoot v-if="isPosted" class="border-t-2 border-slate-200 dark:border-slate-800">
+                            <tr class="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                                <td colspan="4" class="py-2.5 px-3 text-right">Total HPP:</td>
+                                <td class="py-2.5 px-3 text-right font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                                    <Rupiah :amount="grandTotalCost" />
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </Card>

@@ -62,7 +62,6 @@ const defaultStubs = {
     StatusBadge: { template: '<span><slot /></span>' },
     DateDisplay: { template: '<span><slot /></span>' },
     Quantity: { template: '<span><slot /></span>' },
-    Rupiah: { template: '<span><slot /></span>' },
     Alert: { template: '<div><slot /></div>' },
     DataTable: {
         props: ['columns', 'items'],
@@ -212,9 +211,8 @@ describe('Delivery Order Pages (Butir 10)', () => {
                 {
                     id: 1,
                     product_id: 5,
-                    quantity: '5.0000',
-                    unit_cost: '25000.0000',
-                    total_cost: '125000.00',
+                    quantity: '4.0000',
+                    unit_cost: '10000.0000',
                     product: { id: 5, sku: 'SKU-05', name: 'Barang Alpha' },
                 },
             ],
@@ -244,6 +242,7 @@ describe('Delivery Order Pages (Butir 10)', () => {
         // On posted, HPP column headers MUST exist
         expect(wrapperPosted.text()).toContain('HPP Satuan');
         expect(wrapperPosted.text()).toContain('Total HPP');
+        expect(wrapperPosted.text()).toContain('Rp 40.000');
     });
 
     it('DeliveryOrders pages pass axe-core accessibility checks', async () => {

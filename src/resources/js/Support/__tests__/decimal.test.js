@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
     subtractDecimals,
     multiplyDecimals,
+    mulDecimals,
     addDecimals,
     compareDecimals,
     calculatePurchaseOrderItem,
+    calculateSalesOrderItem,
 } from '../decimal';
 
 describe('decimal support utilities', () => {
@@ -20,6 +22,15 @@ describe('decimal support utilities', () => {
         expect(multiplyDecimals('2.5000', '10.5000')).toBe('26.25');
         expect(multiplyDecimals('0.1000', '0.2000')).toBe('0.02');
         expect(multiplyDecimals('0', '1000.0000')).toBe('0.00');
+    });
+
+    it('mulDecimals acts as alias for multiplyDecimals with correct scale', () => {
+        expect(mulDecimals('4.0000', '10000.0000')).toBe('40000.00');
+        expect(mulDecimals('2.5', '10.55')).toBe('26.38');
+        expect(mulDecimals('0', '50000')).toBe('0.00');
+        expect(mulDecimals(null, '10000')).toBe('0.00');
+        expect(mulDecimals(undefined, '10000')).toBe('0.00');
+        expect(mulDecimals).toBe(multiplyDecimals);
     });
 
     it('adds decimals with correct scale and rounding', () => {
