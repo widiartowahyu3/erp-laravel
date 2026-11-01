@@ -117,7 +117,7 @@ const taxRateOptions = computed(() => [
 ]);
 
 const productOptions = computed(() => [
-    { value: '', label: '-- Pilih Produk Dagang --' },
+    { value: '', label: '-- Pilih Produk --' },
     ...props.products.map((p) => ({
         value: String(p.id),
         label: `${p.sku} - ${p.name}`,

@@ -135,7 +135,7 @@ function submit() {
             <!-- Nama Produk -->
             <FormField
                 id="product-name"
-                label="Nama Produk Dagang"
+                label="Nama Produk"
                 :error="form.errors.name"
                 help="Nama resmi produk komersial"
                 required

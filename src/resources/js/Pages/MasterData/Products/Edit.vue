@@ -27,7 +27,7 @@ defineProps({
         <div class="space-y-6">
             <PageHeader
                 title="Ubah Master Produk"
-                :description="`Perbarui informasi produk dagang ${item.name} (${item.sku}).`"
+                :description="`Perbarui informasi produk ${item.name} (${item.sku}).`"
             />
 
             <Form :product="item" :categories="categories" :units="units" :is-edit="true" />

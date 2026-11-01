@@ -181,6 +181,7 @@ describe('Frontend Static Compliance & Security Audits', () => {
             /fasilitas\s+gudang/i,
             /barang\s+dagang/i,
             /gudang\s+tujuan/i,
+            /produk\s+dagang/i,
         ];
 
         const violations = [];
