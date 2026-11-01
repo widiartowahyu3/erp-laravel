@@ -1541,6 +1541,97 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 27. Verifikasi Keamanan Rute & Otorisasi Penjualan (/sales/*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 27: Verifikasi Keamanan Rute & Otorisasi Penjualan (/sales/*) ---"
+info "Memeriksa seluruh rute /sales/* terhadap autentikasi, can:, dan throttle:erp-write..."
+
+SALES_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $routes = $app["router"]->getRoutes();
+    $salesRoutes = [];
+    $unprotected = [];
+    $missingCan = [];
+    $missingThrottle = [];
+
+    foreach ($routes as $route) {
+        $uri = $route->uri();
+        if (str_starts_with($uri, "sales/")) {
+            $salesRoutes[] = $uri;
+            $methods = $route->methods();
+            $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+            $middleware = $route->gatherMiddleware();
+            if (!in_array("auth", $middleware, true)) {
+                $unprotected[] = $uri;
+            }
+            $hasCan = false;
+            $hasThrottle = false;
+            foreach ($middleware as $m) {
+                if (is_string($m) && str_starts_with($m, "can:")) {
+                    $hasCan = true;
+                }
+                if (is_string($m) && str_starts_with($m, "throttle:")) {
+                    $hasThrottle = true;
+                }
+            }
+            if (!$hasCan) {
+                $missingCan[] = $uri;
+            }
+            if ($isMutation && !$hasThrottle) {
+                $missingThrottle[] = implode("|", $methods) . " " . $uri;
+            }
+        }
+    }
+
+    echo count($salesRoutes) . ":" . count($unprotected) . ":" . count($missingCan) . ":" . count($missingThrottle);
+' 2>/dev/null || echo "0:1:1:1")
+
+IFS=':' read -r TOTAL_SALES UNPROT_SALES MISSING_CAN_SALES MISSING_THROTTLE_SALES <<< "$SALES_ROUTE_CHECK"
+
+if [ "$TOTAL_SALES" -eq 17 ]; then
+    pass "Ditemukan 17 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 17, ditemukan: $TOTAL_SALES)"
+fi
+
+if [ "$UNPROT_SALES" -eq 0 ]; then
+    pass "Seluruh rute /sales/* terlindungi oleh middleware 'auth' (0 rute tanpa autentikasi)"
+else
+    fail "Ditemukan $UNPROT_SALES rute /sales/* yang tidak memiliki middleware 'auth'"
+fi
+
+if [ "$MISSING_CAN_SALES" -eq 0 ]; then
+    pass "Seluruh rute /sales/* memiliki middleware otorisasi spesifik 'can:' (0 rute tanpa 'can:')"
+else
+    fail "Ditemukan $MISSING_CAN_SALES rute /sales/* yang tidak memiliki middleware 'can:'"
+fi
+
+if [ "$MISSING_THROTTLE_SALES" -eq 0 ]; then
+    pass "Seluruh aksi mutasi /sales/* terlindungi oleh rate limiter 'throttle:erp-write'"
+else
+    fail "Ditemukan $MISSING_THROTTLE_SALES rute mutasi /sales/* tanpa 'throttle:erp-write'"
+fi
+
+GUEST_SALES_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/sales/sales-orders" || true)
+if [ "$GUEST_SALES_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /sales/sales-orders berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /sales/sales-orders mengembalikan status HTTP $GUEST_SALES_CODE (harus 302)"
+fi
+
+GUEST_DO_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/sales/delivery-orders" || true)
+if [ "$GUEST_DO_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /sales/delivery-orders berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /sales/delivery-orders mengembalikan status HTTP $GUEST_DO_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""

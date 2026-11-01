@@ -81,6 +81,19 @@ $$\text{avg\_cost}_{\text{baru}} = \frac{(\text{qty}_{\text{lama}} \times \text{
 - **Prosedur Koreksi:** Jika pihak manajemen/akuntansi membutuhkan penyesuaian HPP pasca pembatalan, tindakan koreksi wajib dilakukan secara eksplisit melalui modul **Penyesuaian Stok (*Stock Adjustment*)** bertipe penyesuaian opname/biaya.
 - **Jenis Mutasi Pembalik GR:** Pembalikan stok fisik akibat pembatalan GR dicatat menggunakan tipe mutasi **`adjustment_out`** dengan atribut audit `source_type = goods_receipt_void` (bukan `delivery`). Penggunaan `delivery` dilarang untuk pembalikan GR agar tidak mencemari metrik penjualan, kartu stok pengiriman, dan laporan *delivery order* pada fase berikutnya.
 
+### D. Mutasi Pengiriman Penjualan (`delivery`) dan Pembalikan (`delivery_order_void`)
+1. **Pengiriman Surat Jalan (`delivery_order`)**:
+   - Tipe mutasi: `StockMovementType::DELIVERY` (kuantitas negatif di buku besar).
+   - Atribut audit: `source_type = 'delivery_order'`, `source_id = delivery_orders.id`.
+   - Mengurangi kuantitas fisik di `stock_balances`.
+   - Biaya mutasi dinilai sebesar `avg_cost` saldo saat posting DO dan disimpan permanen sebagai snapshot di `delivery_order_items.unit_cost`.
+   - Nilai `avg_cost` pada saldo sisa tidak berubah.
+2. **Pembatalan Surat Jalan Terposting (`delivery_order_void`)**:
+   - Tipe mutasi: `StockMovementType::RECEIPT` (kuantitas positif di buku besar pemulihan).
+   - Atribut audit: `source_type = 'delivery_order_void'`, `source_id = delivery_orders.id`.
+   - Menambah kembali kuantitas fisik di `stock_balances`.
+   - Biaya masuk pemulihan dihitung menggunakan **snapshot biaya satuan** `delivery_order_items.unit_cost` dari pengiriman awal (bukan biaya rata-rata berjalan saat ini), sehingga mengembalikan nilai saldo fisik dan finansial secara akurat.
+
 ---
 
 ## 3. Protokol Penguncian Konkurensi (*Concurrency Locking Order*)

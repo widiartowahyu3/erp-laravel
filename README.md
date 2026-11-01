@@ -61,6 +61,17 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
   - Mendukung penyesuaian kuantitas fisik (`adjustment_in` untuk kelebihan fisik, `adjustment_out` untuk kehilangan/kerusakan fisik).
   - Mutasi pembalik otomatis saat dokumen penyesuaian dibatalkan.
 
+### E. Penjualan & Distribusi (Sales)
+- **Pesanan Penjualan / SO (`/sales/sales-orders`)**:
+  - Siklus dokumen: `draft` $\rightarrow$ `approved` $\rightarrow$ `partially_delivered` / `delivered` / `closed` / `void`.
+  - Kalkulator moneter: perhitungan subtotal bruto (*gross*), diskon baris hingga 100%, dasar pengenaan pajak (*net*), nilai PPN (*tax*), dan total akhir dengan akurasi 2 desimal berbasis `LineTotalsCalculator`.
+  - Alur persetujuan (*approval*) dan pembatalan (*void*) dengan validasi dependensi surat jalan aktif.
+- **Surat Jalan / DO (`/sales/delivery-orders`)**:
+  - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `void`.
+  - Diterbitkan dari Pesanan Penjualan yang telah disetujui (`approved` atau `partially_delivered`).
+  - Posting pengiriman memotong kuantitas fisik gudang via `StockService::decrease`, mencatat snapshot biaya satuan rata-rata bergerak di `delivery_order_items.unit_cost`, dan memperbarui status pesanan penjualan secara atomik.
+  - Pembatalan pengiriman terposting (`void`) memulihkan saldo fisik gudang via `StockService::increase` menggunakan snapshot biaya satuan pengiriman awal dan menghitung mundur kemajuan status pesanan penjualan secara akurat.
+
 ---
 
 ## 3. Arsitektur Monolitik & Standar Teknis
@@ -91,6 +102,9 @@ Arsitektur aplikasi memisahkan tanggung jawab secara tegas (*Separation of Conce
 
 Dokumentasi arsitektur lebih rinci dapat dipelajari pada:
 - [Arsitektur Monolith & Alur Sistem](docs/ARCHITECTURE.md)
+- [Arsitektur & Spesifikasi Modul Pembelian](docs/PURCHASING.md)
+- [Arsitektur & Spesifikasi Modul Penjualan](docs/SALES.md)
+- [Arsitektur & Spesifikasi Modul Inventori](docs/INVENTORY.md)
 - [Desain & Konvensi Database 37 Tabel](docs/DATABASE_DESIGN.md)
 - [Entity Relationship Diagram (ERD)](docs/ERD.md)
 - [Kebijakan Keamanan & Matriks Mitigasi](docs/SECURITY.md)
@@ -129,7 +143,7 @@ Proyek ini menerapkan standar mutu berkelanjutan yang dapat diverifikasi secara 
 - **Standardisasi Gaya Kode**: Diformat secara ketat menggunakan **Laravel Pint** sesuai PSR-12.
 - **Suite Pengujian Pest**: Suite pengujian mencakup Unit, Feature, dan Architecture Tests (termasuk verifikasi integritas trigger, pencegahan fungsi berbahaya, dan isolasi layer).
 - **Pengujian Frontend Vitest & Aksesibilitas**: Unit test komponen UI, composables, dan audit aksesibilitas otomatis **axe-core** (0 pelanggaran *critical* / *serious*).
-- **Skrip Verifikasi Hardening**: Skrip `scripts/verify-hardening.sh` menguji 24 butir hardening infrastruktur, database privileges, dan isolasi rahasia.
+- **Skrip Verifikasi Hardening**: Skrip `scripts/verify-hardening.sh` menguji 27 butir hardening infrastruktur, database privileges, dan isolasi rahasia.
 - **Pemindaian Rahasia Gitleaks**: Git hooks lokal dan CI workflow memeriksa seluruh commit dari potensi kebocoran token atau kunci rahasia.
 - **Audit Dependensi**: Pemindaian kerentanan berkala menggunakan `composer audit` dan `npm audit`.
 - **Continuous Integration (GitHub Actions)**: Workflow `.github/workflows/ci.yml` menjalankan seluruh gerbang kualitas secara otomatis pada pull request dan push ke cabang utama.
