@@ -317,7 +317,7 @@ test('summary calculates exact figures on controlled fixtures including boundary
     $queryLog = DB::getQueryLog();
     expect(count($queryLog))->toBeLessThanOrEqual(12);
 
-    // Verify DashboardSummary alone runs in exactly 6 bounded queries without N+1
+    // Verify DashboardSummary alone runs in at most 8 bounded queries without N+1
     DB::flushQueryLog();
     $summary = app(DashboardSummary::class);
     $summary->getPurchaseOrdersSummary();

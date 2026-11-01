@@ -155,6 +155,7 @@ Aturan Transisi Status DO:
 2. Memanggil `StockService::decrease` dengan tipe mutasi `StockMovementType::DELIVERY` dan sumber `delivery_order`.
 3. Mengambil nilai biaya perolehan rata-rata bergerak (*moving average unit cost*) dari entitas `StockMovement` yang dihasilkan, dan menyimpannya ke dalam kolom `delivery_order_items.unit_cost` sebagai **snapshot permanen**.
 4. Memperbarui `delivered_quantity` pada `sales_order_items` dan memperbarui status pesanan penjualan melalui `SalesOrderProgress::determineStatus`.
+5. Pemeriksaan status pesanan penjualan saat posting DO meloloskan status `approved`, `partially_delivered`, dan `delivered`, di mana pesanan yang telah terpenuhi penuh (`delivered`) akan ditolak secara deterministik oleh validasi sisa kuantitas (*remaining quantity check*) meskipun pesan galat status masih menyebut "disetujui atau terkirim sebagian".
 
 ### C. Pembatalan Surat Jalan Terposting (`void`)
 1. Memulihkan kuantitas stok gudang dengan memanggil `StockService::increase` dengan tipe mutasi `StockMovementType::RECEIPT` dan sumber `delivery_order_void`.

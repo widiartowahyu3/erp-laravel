@@ -57,6 +57,7 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
 
     // 6. Verifikasi jumlah Sales Order per status (5 dokumen)
     $soTotal = SalesOrder::query()->count();
+    $soItemsTotal = DB::table('sales_order_items')->count();
     $soDraft = SalesOrder::query()->where('status', 'draft')->count();
     $soApproved = SalesOrder::query()->where('status', 'approved')->count();
     $soPartiallyDelivered = SalesOrder::query()->where('status', 'partially_delivered')->count();
@@ -64,6 +65,7 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
     $soVoid = SalesOrder::query()->where('status', 'void')->count();
 
     expect($soTotal)->toBe(5)
+        ->and($soItemsTotal)->toBe(6)
         ->and($soDraft)->toBe(1)
         ->and($soApproved)->toBe(1)
         ->and($soPartiallyDelivered)->toBe(1)
@@ -72,9 +74,19 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
 
     // 7. Verifikasi jumlah Delivery Order (3 dokumen seluruhnya berstatus posted)
     $doTotal = DeliveryOrder::query()->count();
+    $doItemsTotal = DB::table('delivery_order_items')->count();
     $doPosted = DeliveryOrder::query()->where('status', 'posted')->count();
 
+    fwrite(STDOUT, sprintf(
+        "\n[SEEDER COUNTS]\nSELECT COUNT(*) FROM sales_orders = %d\nSELECT COUNT(*) FROM sales_order_items = %d\nSELECT COUNT(*) FROM delivery_orders = %d\nSELECT COUNT(*) FROM delivery_order_items = %d\n",
+        $soTotal,
+        $soItemsTotal,
+        $doTotal,
+        $doItemsTotal
+    ));
+
     expect($doTotal)->toBe(3)
+        ->and($doItemsTotal)->toBe(4)
         ->and($doPosted)->toBe(3);
 
     // 8. Verifikasi konsistensi Ledger: SUM(stock_movements.quantity) = stock_balances.quantity
