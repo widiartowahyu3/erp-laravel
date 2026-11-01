@@ -123,3 +123,6 @@ export function calculatePurchaseOrderItem(quantity, unitPrice, discountAmount =
         lineTotal,
     };
 }
+
+export const calculateSalesOrderItem = calculatePurchaseOrderItem;
+

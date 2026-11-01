@@ -6,6 +6,12 @@ import {
     goodsReceiptStatusConfig,
     goodsReceiptPermissions,
 } from '@/config/purchasing';
+import {
+    salesOrderStatusConfig,
+    salesOrderPermissions,
+    deliveryOrderStatusConfig,
+    deliveryOrderPermissions,
+} from '@/config/sales';
 
 export function useActionGuard(customCan = null) {
     const permissionHook = customCan ? { can: customCan } : usePermission();
@@ -52,6 +58,16 @@ export function useActionGuard(customCan = null) {
         return canPerform(action, docOrStatus, goodsReceiptStatusConfig, goodsReceiptPermissions);
     }
 
+    // Sales Orders
+    function canPerformSalesOrder(action, docOrStatus) {
+        return canPerform(action, docOrStatus, salesOrderStatusConfig, salesOrderPermissions);
+    }
+
+    // Delivery Orders
+    function canPerformDeliveryOrder(action, docOrStatus) {
+        return canPerform(action, docOrStatus, deliveryOrderStatusConfig, deliveryOrderPermissions);
+    }
+
     return {
         canPerform,
 
@@ -74,5 +90,19 @@ export function useActionGuard(customCan = null) {
         canEditGoodsReceipt: (docOrStatus) => canPerformGoodsReceipt('edit', docOrStatus),
         canPostGoodsReceipt: (docOrStatus) => canPerformGoodsReceipt('post', docOrStatus),
         canVoidGoodsReceipt: (docOrStatus) => canPerformGoodsReceipt('void', docOrStatus),
+
+        // Sales Orders
+        canPerformSalesOrder,
+        canEditSalesOrder: (docOrStatus) => canPerformSalesOrder('edit', docOrStatus),
+        canApproveSalesOrder: (docOrStatus) => canPerformSalesOrder('approve', docOrStatus),
+        canVoidSalesOrder: (docOrStatus) => canPerformSalesOrder('void', docOrStatus),
+        canCloseSalesOrder: (docOrStatus) => canPerformSalesOrder('close', docOrStatus),
+        canCreateDOFromSO: (docOrStatus) => canPerformSalesOrder('create_delivery', docOrStatus),
+
+        // Delivery Orders
+        canPerformDeliveryOrder,
+        canEditDeliveryOrder: (docOrStatus) => canPerformDeliveryOrder('edit', docOrStatus),
+        canPostDeliveryOrder: (docOrStatus) => canPerformDeliveryOrder('post', docOrStatus),
+        canVoidDeliveryOrder: (docOrStatus) => canPerformDeliveryOrder('void', docOrStatus),
     };
 }
