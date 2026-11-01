@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\DeliveryOrder;
 use App\Models\GoodsReceipt;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
+use App\Models\SalesOrder;
 use App\Models\StockAdjustment;
 use App\Support\Decimal;
 use Database\Seeders\DemoMasterDataSeeder;
@@ -53,7 +55,29 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
         ->and($saPosted)->toBe(2)
         ->and($saDraft)->toBe(1);
 
-    // 6. Verifikasi konsistensi Ledger: SUM(stock_movements.quantity) = stock_balances.quantity
+    // 6. Verifikasi jumlah Sales Order per status (5 dokumen)
+    $soTotal = SalesOrder::query()->count();
+    $soDraft = SalesOrder::query()->where('status', 'draft')->count();
+    $soApproved = SalesOrder::query()->where('status', 'approved')->count();
+    $soPartiallyDelivered = SalesOrder::query()->where('status', 'partially_delivered')->count();
+    $soDelivered = SalesOrder::query()->where('status', 'delivered')->count();
+    $soVoid = SalesOrder::query()->where('status', 'void')->count();
+
+    expect($soTotal)->toBe(5)
+        ->and($soDraft)->toBe(1)
+        ->and($soApproved)->toBe(1)
+        ->and($soPartiallyDelivered)->toBe(1)
+        ->and($soDelivered)->toBe(1)
+        ->and($soVoid)->toBe(1);
+
+    // 7. Verifikasi jumlah Delivery Order (3 dokumen seluruhnya berstatus posted)
+    $doTotal = DeliveryOrder::query()->count();
+    $doPosted = DeliveryOrder::query()->where('status', 'posted')->count();
+
+    expect($doTotal)->toBe(3)
+        ->and($doPosted)->toBe(3);
+
+    // 8. Verifikasi konsistensi Ledger: SUM(stock_movements.quantity) = stock_balances.quantity
     $balances = DB::table('stock_balances')->get();
     expect($balances->count())->toBeGreaterThan(0);
 
@@ -69,7 +93,7 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
         expect(Decimal::cmp($roundedMovementSum, $roundedBalance) === 0)->toBeTrue();
     }
 
-    // 7. Verifikasi sebagian produk berada di bawah min_stock
+    // 9. Verifikasi sebagian produk berada di bawah min_stock
     $lowStockProducts = Product::query()
         ->where('is_active', true)
         ->where('track_stock', true)
@@ -85,7 +109,7 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
 
     expect($lowStockProducts->count())->toBeGreaterThan(0);
 
-    // 8. Idempotensi: Eksekusi kedua tidak menambah baris baru
+    // 10. Idempotensi: Eksekusi kedua tidak menambah baris baru
     $movementsBefore = DB::table('stock_movements')->count();
     $balancesBefore = DB::table('stock_balances')->count();
 
@@ -94,6 +118,8 @@ test('demo transaction seeder populates documents matching fixed scenario and ma
     expect(PurchaseOrder::query()->count())->toBe($poTotal)
         ->and(GoodsReceipt::query()->count())->toBe($grTotal)
         ->and(StockAdjustment::query()->count())->toBe($saTotal)
+        ->and(SalesOrder::query()->count())->toBe($soTotal)
+        ->and(DeliveryOrder::query()->count())->toBe($doTotal)
         ->and(DB::table('stock_movements')->count())->toBe($movementsBefore)
         ->and(DB::table('stock_balances')->count())->toBe($balancesBefore);
 });
