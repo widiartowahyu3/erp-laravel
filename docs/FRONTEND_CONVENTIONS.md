@@ -111,10 +111,31 @@ resources/js/
 7. **`useActionGuard` (Pemeriksaan Hak Akses & Status Dokumen)**:
    - Digunakan untuk memeriksa **apa yang boleh dilakukan** (*what is allowed*): mengevaluasi apakah user memiliki permission yang sesuai DAN apakah status dokumen mengizinkan aksi tersebut berdasarkan matriks status (misal draf hanya boleh diedit/diposting/dibatalkan).
    - Peran `useActionGuard` murni deklaratif dan **TIDAK** menangani status sibuk (*busy*) atau klik ganda.
+   - Mendukung domain Persediaan (`canPerformAdjustment`), Pembelian (`canPerformPurchaseOrder`, `canPerformGoodsReceipt`), dan Penjualan (`canPerformSalesOrder`, `canPerformDeliveryOrder`).
+   - Helper Penjualan yang disediakan:
+     - SO: `canEditSalesOrder`, `canApproveSalesOrder`, `canVoidSalesOrder`, `canCloseSalesOrder`, `canCreateDOFromSO`.
+     - DO: `canEditDeliveryOrder`, `canPostDeliveryOrder`, `canVoidDeliveryOrder`.
 8. **`useSubmitLock` (Pengaman Klik Ganda & Status Sibuk)**:
    - Digunakan untuk mengatur **kapan tombol boleh diklik** (*when it can be clicked*): mencegah pengiriman ganda pada mutasi HTTP dokumen (`router.post/put/delete` dan `form.post/put`) akibat klik cepat berulang (*rapid double-click*).
    - Menyediakan ref `busy` dan fungsi pembungkus `submit(sendFn, options)` dengan throttle bawaan 1000ms serta penanganan otomatis pembersihan status pada `onFinish`, `onError`, dan `onCancel`.
    - Seluruh tombol aksi dokumen wajib mengikat atribut: `:loading="busy || form.processing"`, `:disabled="busy || form.processing"`, dan `:aria-busy="busy || form.processing"`.
+
+---
+
+## 4. Konvensi Modul Penjualan (Sales UI Conventions)
+
+1. **Konfigurasi Status & Hak Akses (`config/sales.js`)**:
+   - `salesOrderStatusConfig`: mendefinisikan label, varian status badge, dan array `allowedActions` untuk setiap status SO (`draft`, `approved`, `partially_delivered`, `delivered`, `closed`, `void`).
+   - `deliveryOrderStatusConfig`: mendefinisikan label, varian status badge, dan array `allowedActions` untuk setiap status DO (`draft`, `posted`, `void`).
+2. **Kalkulasi Desimal Interaktif (`calculateSalesOrderItem`)**:
+   - Perhitungan live totals baris dan ringkasan pesanan pada formulir SO mendelegasikan matematika desimal ke `src/resources/js/Support/decimal.js` berbasis BigInt.
+   - Mendukung diskon baris hingga 100% tanpa risiko pembulatan floating-point JavaScript IEEE-754.
+3. **Alur Navigasi & Tautan Dokumen (SO ke DO)**:
+   - Pembuatan surat jalan dari pesanan penjualan wajib mengarahkan ke rute `/sales/delivery-orders/create?sales_order_id={id}` (dilarang menggunakan parameter non-baku seperti `so_id`).
+   - Halaman daftar DO mengarahkan tombol "Kirim dari SO" ke `/sales/sales-orders?status=approved`.
+4. **Proteksi Informasi Biaya (HPP / `unit_cost`)**:
+   - Kolom dan nilai HPP (`unit_cost` dan `total_cost`) pada halaman rincian surat jalan (`DeliveryOrders/Show.vue`) **HANYA** ditampilkan jika status surat jalan sudah `posted`.
+   - Pada status `draft` dan `void`, kolom biaya disembunyikan guna menjaga integritas dan kerahasiaan informasi pembiayaan.
 
 ---
 

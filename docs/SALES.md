@@ -211,3 +211,27 @@ Berikut adalah keputusan arsitektural dan batasan desain yang ditetapkan pada mo
    - Surat jalan berstatus `draft` tidak memesan (*reserve*) maupun memotong saldo fisik persediaan di gudang. Mekanisme ini selaras dengan modul pembelian (*purchasing*), di mana draf dokumen tidak mengunci persediaan. Pemotongan saldo fisik dan validasi kecukupan stok (`InsufficientStockException`) baru dieksekusi secara atomik saat posting.
 3. **Pengecekan Limit Kredit Pelanggan Ditunda ke Fase 8B:**
    - Validasi batas kredit (*credit limit*) dan piutang jatuh tempo pelanggan sengaja ditunda ke Fase 8B saat faktur penjualan (*Sales Invoice*) dan buku besar piutang (*Accounts Receivable*) dibangun. Pada Fase 8A, alur difokuskan pada integritas operasional pemesanan (SO) dan pemenuhan pengiriman fisik (DO).
+
+---
+
+## 8. Antarmuka Pengguna & Integrasi Frontend (Fase 8A Bagian 2)
+
+### A. Halaman Modul Penjualan
+1. **Pesanan Penjualan (`Pages/Sales/SalesOrders/`)**:
+   - `Index.vue`: Tabel data pesanan penjualan dengan filter pencarian, pelanggan, gudang, status, rentang tanggal, pagination, dan status badge.
+   - `Form.vue`: Formulir pembuatan dan pengubahan pesanan penjualan dengan pengisian otomatis termin pembayaran saat pelanggan dipilih, pengisian harga jual standar produk, serta kalkulasi nilai kotor, diskon hingga 100%, PPN, dan grand total secara realtime berbasis BigInt tanpa floating point.
+   - `Create.vue` & `Edit.vue`: Pembungkus halaman formulir dengan breadcrumbs dan judul dinamis.
+   - `Show.vue`: Rincian lengkap pesanan penjualan yang menampilkan kolom kuantitas dipesan, kuantitas terkirim, dan sisa pesanan, riwayat dokumen surat jalan terkait, serta tombol aksi kontekstual (*Approve*, *Void*, *Close*, *Create DO*).
+2. **Surat Jalan / Pengiriman (`Pages/Sales/DeliveryOrders/`)**:
+   - `Index.vue`: Tabel data surat jalan dengan filter pencarian, pelanggan, gudang, status, rentang tanggal, dan tombol pembuatan yang mengarahkan ke daftar SO disetujui.
+   - `Create.vue`: Formulir pembuatan surat jalan dari pesanan penjualan via rute `/sales/delivery-orders/create?sales_order_id={id}` dengan pemuatan otomatis baris pesanan yang belum terkirim penuh (*eligible items*).
+   - `Edit.vue`: Formulir pengubahan draf surat jalan.
+   - `Show.vue`: Rincian surat jalan dengan penyembunyian informasi HPP (`unit_cost`) pada status draf/batal dan menampilkan HPP hanya saat dokumen berstatus `posted`. Dilengkapi tombol *Posting DO* (dengan peringatan pemotongan stok gudang) dan *Batalkan DO* (dengan modal alasan pembatalan).
+
+### B. Batasan Eksplisit Ruang Lingkup (Scope Boundaries)
+Fitur-fitur berikut **BUKAN** merupakan bagian dari Fase 8A dan secara eksplisit dialokasikan untuk Fase 8B dan fase berikutnya:
+1. **Faktur Penjualan (*Sales Invoice / SI*)**: Pembuatan faktur penagihan pelanggan dan penentuan termin jatuh tempo piutang.
+2. **Penerimaan Pembayaran Piutang (*Customer Payments*)**: Pencatatan pelunasan faktur, pembayaran di muka (*down payment*), dan alokasi bukti potong pajak.
+3. **Pencatatan Buku Besar & Jurnal Otomatis (*GL Journal Entries*)**: Pengakuan piutang dagang, pendapatan penjualan, PPN keluaran, dan beban HPP ke modul akuntansi.
+4. **Laporan Analitis Penjualan (*Sales Reports*)**: Laporan omzet penjualan per periode, per produk, per pelanggan, dan per salesman.
+5. **Pemeriksaan Plafon Kredit (*Credit Limit Check*)**: Pemblokiran penerbitan SO melebihi batas plafon piutang.
