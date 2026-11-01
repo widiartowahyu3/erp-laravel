@@ -38,10 +38,15 @@ final class StockMovementController extends Controller
                     'goods_receipt', 'goods_receipt_void' => Route::has('purchasing.goods-receipts.show')
                         ? route('purchasing.goods-receipts.show', $movement->source_id)
                         : null,
+                    'delivery_order', 'delivery_order_void' => Route::has('sales.delivery-orders.show')
+                        ? route('sales.delivery-orders.show', $movement->source_id)
+                        : null,
                     default => null,
                 };
 
                 $sourceLabel = match ($movement->source_type) {
+                    'delivery_order_void' => 'Pembatalan Surat Jalan',
+                    'delivery_order' => 'Surat Jalan',
                     'goods_receipt_void' => 'Pembatalan Penerimaan Barang',
                     'goods_receipt' => 'Penerimaan Barang',
                     'stock_adjustment' => 'Penyesuaian Stok',

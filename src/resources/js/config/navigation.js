@@ -115,18 +115,18 @@ export const navigationGroups = [
         items: [
             {
                 name: 'Pesanan Penjualan (SO)',
-                href: '#',
+                href: '/sales/sales-orders',
                 icon: 'ShoppingCart',
                 permission: 'sales_orders.view',
-                available: false,
+                available: true,
                 description: 'Dokumen pesanan penjualan dari pelanggan.',
             },
             {
                 name: 'Surat Jalan / Kirim (DO)',
-                href: '#',
+                href: '/sales/delivery-orders',
                 icon: 'Truck',
                 permission: 'delivery_orders.view',
-                available: false,
+                available: true,
                 description: 'Surat jalan dan pengiriman barang ke pelanggan.',
             },
             {
