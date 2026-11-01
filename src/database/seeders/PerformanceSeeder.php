@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -232,7 +233,7 @@ class PerformanceSeeder extends Seeder
     /**
      * Pastikan tabel master pendukung memiliki minimal entri.
      */
-    private function ensurePrerequisites(\Carbon\CarbonInterface $now): void
+    private function ensurePrerequisites(CarbonInterface $now): void
     {
         // 1. Units
         if (DB::table('units')->count() === 0) {

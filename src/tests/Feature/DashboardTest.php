@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Enums\PurchaseOrderStatus;
 use App\Models\GoodsReceipt;
 use App\Models\Permission;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\PurchaseOrder;
 use App\Models\StockBalance;
 use App\Models\StockMovement;
@@ -15,7 +15,7 @@ use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
-use App\Support\Decimal;
+use App\Services\Dashboard\DashboardSummary;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -70,7 +70,7 @@ test('summary calculates exact figures on controlled fixtures including boundary
     ]);
 
     $unit = Unit::firstOrCreate(['code' => 'PCS'], ['name' => 'Pieces']);
-    $cat = \App\Models\ProductCategory::firstOrCreate(['code' => 'CAT-DASH'], ['name' => 'Kategori Dashboard']);
+    $cat = ProductCategory::firstOrCreate(['code' => 'CAT-DASH'], ['name' => 'Kategori Dashboard']);
     $wh = Warehouse::firstOrCreate(['code' => 'WH-TEST-DASH'], ['name' => 'Gudang Uji Dashboard', 'is_active' => true]);
     $supp = Supplier::firstOrCreate(['code' => 'SUP-TEST-DASH'], ['name' => 'Pemasok Uji Dashboard', 'is_active' => true]);
 
@@ -241,7 +241,7 @@ test('summary calculates exact figures on controlled fixtures including boundary
 
     // Verify DashboardSummary alone runs in exactly 5 bounded queries without N+1
     DB::flushQueryLog();
-    $summary = app(\App\Services\Dashboard\DashboardSummary::class);
+    $summary = app(DashboardSummary::class);
     $summary->getPurchaseOrdersSummary();
     $summary->getGoodsReceiptsSummary();
     $summary->getStockBalancesSummary();

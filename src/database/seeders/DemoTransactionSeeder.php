@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\GoodsReceipt;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
-use App\Models\StockAdjustment;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\Inventory\StockAdjustmentService;
