@@ -155,6 +155,20 @@ final class Decimal
     }
 
     /**
+     * Trim trailing zeros from a decimal string.
+     * Retains integer part or negative sign, stripping redundant fractional zeros.
+     */
+    public static function trim(string $value): string
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '' || preg_match('/^[+-]?[0-9]+(\.[0-9]+)?$/', $trimmed) !== 1) {
+            return $trimmed;
+        }
+
+        return self::normalize($trimmed);
+    }
+
+    /**
      * Validate and sanitize input to a clean decimal string.
      * Strictly rejects floats and non-numeric strings.
      */

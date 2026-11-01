@@ -102,21 +102,20 @@ test('decrease exceeding available stock throws InsufficientStockException witho
     $warehouseId = TestDataFactory::createWarehouse(['code' => 'WH-OVER-01']);
 
     $service = new StockService;
-    $service->increase($productId, $warehouseId, '5.0000', '1000.0000', StockMovementType::RECEIPT, StockService::SOURCE_GOODS_RECEIPT, 1);
+    $service->increase($productId, $warehouseId, '3.0000', '1000.0000', StockMovementType::RECEIPT, StockService::SOURCE_GOODS_RECEIPT, 1);
 
     $movementsBefore = StockMovement::count();
     $balanceBefore = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->firstOrFail();
 
     $thrown = false;
     try {
-        $service->decrease($productId, $warehouseId, '6.0000', StockMovementType::DELIVERY, 'delivery_order', 2);
+        $service->decrease($productId, $warehouseId, '5.5000', StockMovementType::DELIVERY, 'delivery_order', 2);
     } catch (InsufficientStockException $e) {
         $thrown = true;
         expect($e->getField())->toBe('quantity')
             ->and($e->getMessage())->toContain('SKU-OVER-01')
             ->and($e->getMessage())->toContain('WH-OVER-01')
-            ->and($e->getMessage())->toContain('5.0000')
-            ->and($e->getMessage())->toContain('6.0000');
+            ->and($e->getMessage())->toContain('(tersedia: 3, diminta: 5.5)');
     }
 
     expect($thrown)->toBeTrue();
@@ -140,12 +139,13 @@ test('decrease when balance row does not exist throws InsufficientStockException
 
     $thrown = false;
     try {
-        $service->decrease($productId, $warehouseId, '1.0000', StockMovementType::DELIVERY, 'delivery_order', 1);
+        $service->decrease($productId, $warehouseId, '66.0000', StockMovementType::DELIVERY, 'delivery_order', 1);
     } catch (InsufficientStockException $e) {
         $thrown = true;
         expect($e->getField())->toBe('quantity')
             ->and($e->getMessage())->toContain('SKU-NO-BAL')
-            ->and($e->getMessage())->toContain('WH-NO-BAL');
+            ->and($e->getMessage())->toContain('WH-NO-BAL')
+            ->and($e->getMessage())->toContain('(tersedia: 0, diminta: 66)');
     }
 
     expect($thrown)->toBeTrue();

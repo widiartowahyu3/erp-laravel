@@ -288,7 +288,7 @@ test('posting second draft DO claiming remaining quantity fails with over-delive
 
     // Second DO post fails
     expect(fn () => $doService->post($do2))
-        ->toThrow(BusinessRuleException::class, 'melebihi sisa pesanan');
+        ->toThrow(BusinessRuleException::class, 'Kuantitas pengiriman baris ke-1 (10) melebihi sisa pesanan (0).');
 
     // DO2 remains draft, stock and delivered_quantity unchanged
     expect($do2->fresh()->status)->toBe(DeliveryOrderStatus::DRAFT)

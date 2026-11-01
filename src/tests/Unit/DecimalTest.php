@@ -133,3 +133,22 @@ test('strictly rejects non-numeric string inputs', function (string $invalid) {
     'scientific notation' => ['1e5'],
     'whitespace only' => ['   '],
 ]);
+
+test('trim removes trailing zeros from decimal string without float inaccuracies', function (string $input, string $expected) {
+    expect(Decimal::trim($input))->toBe($expected);
+})->with([
+    ['66.0000', '66'],
+    ['0.0000', '0'],
+    ['5000.00', '5000'],
+    ['12.5000', '12.5'],
+    ['0.2500', '0.25'],
+    ['100', '100'],
+    ['', ''],
+    ['-66.0000', '-66'],
+    ['-12.5000', '-12.5'],
+    ['-0.0000', '0'],
+    ['-0', '0'],
+    ['-100', '-100'],
+    ['-0.2500', '-0.25'],
+    ['10.50', '10.5'],
+]);

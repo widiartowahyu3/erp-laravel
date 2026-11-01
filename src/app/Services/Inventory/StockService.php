@@ -151,16 +151,19 @@ final class StockService
             ->first();
 
         if ($balance === null) {
+            $requestedTrimmed = Decimal::trim($quantity);
             throw new InsufficientStockException(
-                "Stok produk '{$product->sku}' di gudang '{$warehouse->code}' tidak mencukupi (tersedia: 0.0000, diminta: {$quantity}).",
+                "Stok produk '{$product->sku}' di gudang '{$warehouse->code}' tidak mencukupi (tersedia: 0, diminta: {$requestedTrimmed}).",
                 422,
                 'quantity'
             );
         }
 
         if (Decimal::cmp($balance->quantity, $quantity, Decimal::SCALE_QUANTITY) < 0) {
+            $availableTrimmed = Decimal::trim($balance->quantity);
+            $requestedTrimmed = Decimal::trim($quantity);
             throw new InsufficientStockException(
-                "Stok produk '{$product->sku}' di gudang '{$warehouse->code}' tidak mencukupi (tersedia: {$balance->quantity}, diminta: {$quantity}).",
+                "Stok produk '{$product->sku}' di gudang '{$warehouse->code}' tidak mencukupi (tersedia: {$availableTrimmed}, diminta: {$requestedTrimmed}).",
                 422,
                 'quantity'
             );

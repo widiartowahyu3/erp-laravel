@@ -386,8 +386,10 @@ class DeliveryOrderService
 
                 $remaining = $soItem->remainingQuantity();
                 if (Decimal::cmp($aggregatedQuantities[$soItemId], $remaining) > 0) {
+                    $qtyTrimmed = Decimal::trim((string) $doItem->quantity);
+                    $remainingTrimmed = Decimal::trim($remaining);
                     throw new BusinessRuleException(
-                        "Kuantitas pengiriman baris ke-{$doItem->line_no} ({$doItem->quantity}) melebihi sisa pesanan ({$remaining}).",
+                        "Kuantitas pengiriman baris ke-{$doItem->line_no} ({$qtyTrimmed}) melebihi sisa pesanan ({$remainingTrimmed}).",
                         422,
                         'items'
                     );
