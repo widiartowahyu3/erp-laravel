@@ -1,4 +1,4 @@
-# Baseline Kinerja Database & Analisis EXPLAIN (Fase 7.5 & Fase 7.6)
+# Baseline Kinerja Database & Analisis EXPLAIN (Fase 7.5, Fase 7.6, & Fase 8A)
 
 Dokumen ini menyajikan hasil pengujian performa query utama sistem ERP Distribusi / Trading pada dataset sintetis bervolume menengah/besar. Pengujian dilakukan menggunakan MariaDB 12.3 di dalam environment Docker terisolasi dengan perintah `EXPLAIN` dan `ANALYZE FORMAT=JSON`.
 
@@ -14,18 +14,18 @@ Dokumen ini menyajikan hasil pengujian performa query utama sistem ERP Distribus
 
 ## 1. Rangkuman Hasil Evaluasi Query Utama
 
-Seluruh angka waktu dan statistik pembacaan halaman dikutip langsung dari berkas log keluaran mentah di direktori `review/f75b-explain-*.txt` dan `review/f76-explain-dashboard-*.txt`.
+Seluruh angka waktu dan statistik pembacaan halaman dikutip langsung dari berkas log keluaran mentah di direktori `review/f75b-explain-*.txt`, `review/f76-explain-dashboard-*.txt`, dan `review/f8a1-explain-after-*.txt`.
 
 | No | Modul / Query | Access Type | Index yang Dipakai | Baris Discan (`r_rows`) | Filesort? | Waktu Eksekusi (`r_total_time_ms`) | Berkas Bukti Mentah |
 |---|---|---|---|---|---|---|---|
 | **1** | **Daftar Produk** (Cari `LIKE '%...%'`, filter kategori, urut nama) | `index` | `products_name_index` | 5.063 scan (73 match) | Tidak (manfaatkan index sort) | **2.65 ms** | `review/f75b-explain-products.txt` |
 | **2** | **Saldo Stok** (Filter gudang, di bawah minimum stok) | `range` + `eq_ref` | `stock_balances_warehouse_id_foreign` + `PRIMARY` | 1.667 baris | Ya (`updated_at DESC`) | **23.48 ms** | `review/f75b-explain-stock-balances.txt` |
-| **3** | **Mutasi Stok** (Listing default seluruh mutasi) | `ALL` | *(Tidak ada)* | 60.000 baris (Full Scan) | Ya (`movement_date DESC`) | **100.28 ms** | `review/f75b-explain-stock-movements.txt` |
+| **3** | **Mutasi Stok** (Listing default 25 mutasi) | `index` | `stock_movements_movement_date_id_index` | 25 baris | **Tidak** (0 filesort) | **0.16 ms** | `review/f8a1-explain-after-list.txt` |
 | **4A**| **Kartu Stok - Saldo Awal** (Mutasi terakhir sebelum tanggal) | `range` | `stock_movements_product_id_warehouse_id_movement_date_index` | 1 baris | **Tidak** (0 filesort) | **0.23 ms** | `review/f75b-explain-stock-card.txt` |
 | **4B**| **Kartu Stok - 50 Mutasi Periode** | `range` | `stock_movements_product_id_warehouse_id_movement_date_index` | 3 baris | **Tidak** (0 filesort) | **0.04 ms** | `review/f75b-explain-stock-card.txt` |
 | **5** | **Daftar Pesanan Pembelian** (Filter status + pemasok, urut tanggal) | `ref` | `purchase_orders_supplier_id_status_index` | 334 baris | Ya (priority queue limit 25) | **5.80 ms** | `review/f75b-explain-purchase-orders.txt` |
 | **6** | **Dashboard - Stok Minimum** (`getStockBalancesSummary`) | `ALL` + `ref` + `eq_ref` | `stock_balances_product_id_warehouse_id_unique` + `PRIMARY` | 5.000 produk + 5.000 saldo | Ya (temporary + filesort `shortage DESC`) | **122.61 ms** | `review/f76-explain-dashboard-stock-balances.txt` |
-| **7** | **Dashboard - 5 Mutasi Terakhir** (`getRecentStockMovements`) | `ALL` | *(Tidak ada)* | 60.000 baris (Full Scan) | Ya (priority queue limit 5) | **10.25 ms** | `review/f76-explain-dashboard-stock-movements.txt` |
+| **7** | **Dashboard - 5 Mutasi Terakhir** (`getRecentStockMovements`) | `index` | `stock_movements_movement_date_id_index` | 5 baris | **Tidak** (0 filesort) | **2.38 ms** | `review/f8a1-explain-after-dashboard.txt` |
 
 ---
 
@@ -41,10 +41,10 @@ Seluruh angka waktu dan statistik pembacaan halaman dikutip langsung dari berkas
 - **Hasil EXPLAIN**: Index `warehouse_id` digunakan untuk membatasi 1.667 baris (dari total 5.000 baris saldo). Namun pengurutan `updated_at DESC` membutuhkan buffer filesort sebesar 801 KiB.
 - **Temuan Kinerja**: Waktu eksekusi berada di **23.48 ms**. Meskipun masih di bawah batas toleransi, pemborosan I/O terjadi pada operasi filesort.
 
-### C. Query 3: Mutasi Stok Default (Titik Perhatian Utama)
-- **Pola Query**: Listing 25 mutasi terakhir dari seluruh gudang dan produk (`ORDER BY movement_date DESC, id ASC`).
-- **Hasil EXPLAIN**: `type: ALL` (Full Table Scan) memindai seluruh **60.000 baris** mutasi stok dan melakukan *priority queue filesort*.
-- **Temuan Kinerja**: Waktu eksekusi mencapai **100.28 ms**. Kolom `movement_date` belum memiliki index tunggal (hanya ada pada index komposit dengan prefix `product_id, warehouse_id`). Jika tabel mutasi bertumbuh hingga ratusan ribu baris, query ini akan menjadi bottleneck utama.
+### C. Query 3: Mutasi Stok Default (Optimal Pasca Indeks Fase 8A)
+- **Pola Query**: Listing 25 mutasi terakhir dari seluruh gudang dan produk (`ORDER BY movement_date DESC, id DESC LIMIT 25`).
+- **Hasil EXPLAIN**: Berkat migrasi indeks `stock_movements_movement_date_id_index` pada Fase 8A Butir 1, MariaDB memilih `access_type: index` menggunakan indeks komposit tersebut.
+- **Temuan Kinerja**: Pemindaian tabel penuh (Full Table Scan 60.000 baris) dan filesort yang sebelumnya memakan waktu ~100 ms berhasil dieliminasi sepenuhnya (`r_rows: 25`, tanpa filesort). Waktu eksekusi terpangkas menjadi **0.16 ms**.
 
 ### D. Query 4: Kartu Stok Buku Besar Persediaan
 - **Pola Query**: Mengambil saldo awal sebelum `date_from` dan mengambil pergerakan dalam rentang tanggal untuk produk dan gudang tertentu.
@@ -61,22 +61,30 @@ Seluruh angka waktu dan statistik pembacaan halaman dikutip langsung dari berkas
 - **Hasil EXPLAIN**: Pemindaian `products` menggunakan `access_type: ALL` (5.000 baris), join ke `stock_balances` via `ref` (`stock_balances_product_id_warehouse_id_unique`), join ke `units` via `eq_ref` (`PRIMARY`). Agregasi dan filter HAVING diselesaikan menggunakan tabel temporer di memori beserta filesort pada `shortage DESC`.
 - **Temuan Kinerja**: Waktu eksekusi mencapai **122.61 ms** dengan 20.018 halaman InnoDB diakses untuk pembacaan saldo produk.
 
-### G. Query 7: Dashboard - 5 Mutasi Stok Terakhir (`getRecentStockMovements`)
+### G. Query 7: Dashboard - 5 Mutasi Stok Terakhir (`getRecentStockMovements`) (Optimal Pasca Indeks Fase 8A)
 - **Pola Query**: Pengambilan 5 record mutasi stok terbaru di seluruh fasilitas: `SELECT * FROM stock_movements ORDER BY movement_date DESC, id DESC LIMIT 5`.
-- **Hasil EXPLAIN**: `type: ALL` (Full Table Scan) memindai seluruh **60.000 baris** (`r_rows: 60000`) mutasi stok dengan priority queue filesort (`r_used_priority_queue: true`, limit 5).
-- **Temuan Kinerja**: Waktu eksekusi berada pada **10.25 ms**. Query ini menegaskan bahwa urutan `movement_date DESC, id DESC` melakukan full table scan pada seluruh 60.000 baris mutasi stok. Usulan indeks #1 (`idx_stock_movements_date_id`) sudah ada di Bab 3 dan migrasi menunggu persetujuan pemilik.
+- **Hasil EXPLAIN**: Memanfaatkan indeks `stock_movements_movement_date_id_index` (`access_type: index`).
+- **Temuan Kinerja**: Pemindaian terpangkas dari 60.000 baris menjadi hanya 5 baris (`r_rows: 5`) tanpa filesort. Waktu eksekusi terpangkas menjadi **2.38 ms** (dibandingkan sebelum indeks yang mencapai ~10-126 ms dengan priority queue filesort).
 
 ---
 
-## 3. Usulan Indeks & Rekomendasi (Tanpa Perubahan Skema Fase Ini)
+## 3. Usulan Indeks & Rekomendasi
 
-> [!IMPORTANT] Kebijakan Proyek
-> Sesuai aturan Fase 7.5 Butir 13, **DILARANG** menambahkan migrasi atau mengubah skema database pada fase ini. Seluruh usulan di bawah ini murni sebagai catatan teknis dan rekomendasi untuk keputusan pemilik proyek di fase mendatang.
-
-### Usulan 1: Penambahan Index Tunggal / Komposit pada `stock_movements`
+### Usulan 1: Penambahan Index Komposit pada `stock_movements` (SELESAI - FASE 8A)
 - **Tabel**: `stock_movements`
-- **Rekomendasi Indeks**: `INDEX idx_stock_movements_date_id (movement_date DESC, id ASC)`
-- **Manfaat**: Mengubah access type dari `ALL` (full scan 60.000 baris) menjadi `index` (hanya membaca baris pertama dari index tree sesuai LIMIT), menurunkan waktu eksekusi dari ~10-100 ms menjadi < 1 ms baik untuk query listing mutasi maupun dashboard 5 mutasi terakhir.
+- **Status**: **Telah Diimplementasikan pada Fase 8A Butir 1** (`2026_11_01_000001_add_movement_date_id_index_to_stock_movements_table.php`).
+- **Indeks**: `INDEX stock_movements_movement_date_id_index (movement_date, id)`
+- **Manfaat**: Mengubah access type dari `ALL` (full scan 60.000 baris) menjadi `index` (hanya membaca baris pertama dari index tree sesuai LIMIT), menurunkan waktu eksekusi dari ~10-100 ms menjadi 0.16 - 2.38 ms baik untuk query listing mutasi maupun dashboard 5 mutasi terakhir.
+
+### Usulan 2: Penambahan Composite Index pada `stock_balances`
+- **Tabel**: `stock_balances`
+- **Rekomendasi Indeks**: `INDEX idx_stock_balances_wh_updated (warehouse_id, updated_at DESC, id ASC)`
+- **Manfaat**: Meniadakan filesort pada query saldo stok per fasilitas gudang, mengurangi konsumsi buffer memori (801 KiB per query).
+
+### Usulan 3: Full-Text Search pada Entitas Master Data (Skala Lanjut)
+- **Tabel**: `products`
+- **Rekomendasi Indeks**: `FULLTEXT INDEX idx_products_search (sku, name, barcode)`
+- **Manfaat**: Diperlukan apabila volume produk melampaui 50.000 SKU guna menggantikan klausa `LIKE '%...%'` dengan operator `MATCH(...) AGAINST(...)` dalam mode boolean.
 
 ### Usulan 2: Penambahan Composite Index pada `stock_balances`
 - **Tabel**: `stock_balances`

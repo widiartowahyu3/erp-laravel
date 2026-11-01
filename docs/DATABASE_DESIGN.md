@@ -142,7 +142,7 @@ Dokumen ini mendefinisikan standar teknis, konvensi arsitektur data, kamus data 
 22. **`stock_movements` (Append-Only)**
     - **Tujuan:** Buku besar kartu stok barang (*immutable inventory ledger*).
     - **Kolom Kunci:** `id`, `movement_date(datetime)`, `product_id` (FK), `warehouse_id` (FK), `movement_type(30)` (CHECK: `receipt`, `delivery`, `adjustment_in`, `adjustment_out`), `quantity(decimal 18,4, CHECK <> 0, + masuk, - keluar)`, `unit_cost(decimal 18,4)`, `balance_after(decimal 18,4)`, `avg_cost_after(decimal 18,4)`, `source_type(50)`, `source_id(unsigned bigint)`, `created_by` (FK nullable), `created_at`.
-    - **Indeks:** `(product_id, warehouse_id, movement_date)`, `(source_type, source_id)`.
+    - **Indeks:** `(product_id, warehouse_id, movement_date)`, `(source_type, source_id)`, `(movement_date, id)`.
     - **Trigger:** Dilindungi trigger database anti-mutasi (UPDATE & DELETE ditolak).
 23. **`stock_adjustments`**
     - **Tujuan:** Dokumen penyesuaian/opname stok fisik gudang.
