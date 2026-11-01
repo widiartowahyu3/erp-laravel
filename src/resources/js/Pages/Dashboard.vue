@@ -57,6 +57,14 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    salesOrders: {
+        type: Object,
+        default: null,
+    },
+    deliveryOrders: {
+        type: Object,
+        default: null,
+    },
     stockBalances: {
         type: Object,
         default: null,
@@ -75,6 +83,8 @@ const hasAnySummaryPermission = computed(() => {
     return (
         props.purchaseOrders !== null ||
         props.goodsReceipts !== null ||
+        props.salesOrders !== null ||
+        props.deliveryOrders !== null ||
         props.stockBalances !== null ||
         props.stockMovements !== null
     );
@@ -153,7 +163,7 @@ const movementTypeLabels = {
 
             <!-- Operational Metrics Summary Cards -->
             <div v-if="hasAnySummaryPermission" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     <!-- 1. Purchase Orders Metric Card -->
                     <Card v-if="purchaseOrders !== null" padding="md" class="border-indigo-100 dark:border-indigo-900/30">
                         <div class="flex items-start justify-between">
@@ -212,7 +222,65 @@ const movementTypeLabels = {
                         </div>
                     </Card>
 
-                    <!-- 3. Stock Below Minimum Metric Card -->
+                    <!-- 3. Sales Orders Metric Card -->
+                    <Card v-if="salesOrders !== null" padding="md" class="border-blue-100 dark:border-blue-900/30">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                    Pesanan Penjualan Berjalan
+                                </span>
+                                <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                                    {{ salesOrders.active_so_count }} <span class="text-xs font-medium text-slate-500">SO</span>
+                                </div>
+                                <div class="mt-1 text-sm text-blue-600 dark:text-blue-400 font-medium">
+                                    Total: <Rupiah :value="salesOrders.active_so_total" />
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <ShoppingCart class="w-5 h-5" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <Link
+                                href="/sales/sales-orders?status=approved"
+                                class="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded"
+                            >
+                                <span>Lihat daftar pesanan disetujui</span>
+                                <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+                            </Link>
+                        </div>
+                    </Card>
+
+                    <!-- 4. Delivery Orders Metric Card -->
+                    <Card v-if="deliveryOrders !== null" padding="md" class="border-teal-100 dark:border-teal-900/30">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                    Surat Jalan Menunggu
+                                </span>
+                                <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                                    {{ deliveryOrders.draft_do_count }} <span class="text-xs font-medium text-slate-500">Draf</span>
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Menunggu pengiriman fisik &amp; posting
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                                <Truck class="w-5 h-5" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <Link
+                                href="/sales/delivery-orders?status=draft"
+                                class="inline-flex items-center text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded"
+                            >
+                                <span>Periksa draf surat jalan</span>
+                                <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+                            </Link>
+                        </div>
+                    </Card>
+
+                    <!-- 5. Stock Below Minimum Metric Card -->
                     <Card v-if="stockBalances !== null" padding="md" class="border-rose-100 dark:border-rose-900/30">
                         <div class="flex items-start justify-between">
                             <div>

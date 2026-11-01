@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
+use App\Models\DeliveryOrder;
 use App\Models\GoodsReceipt;
 use App\Models\Permission;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\PurchaseOrder;
+use App\Models\SalesOrder;
 use App\Models\StockBalance;
 use App\Models\StockMovement;
 use App\Models\Supplier;
@@ -23,6 +26,8 @@ beforeEach(function (): void {
     // Ensure base permissions exist
     Permission::firstOrCreate(['name' => 'purchase_orders.view'], ['display_name' => 'Lihat PO']);
     Permission::firstOrCreate(['name' => 'goods_receipts.view'], ['display_name' => 'Lihat GR']);
+    Permission::firstOrCreate(['name' => 'sales_orders.view'], ['display_name' => 'Lihat SO']);
+    Permission::firstOrCreate(['name' => 'delivery_orders.view'], ['display_name' => 'Lihat DO']);
     Permission::firstOrCreate(['name' => 'stock_balances.view'], ['display_name' => 'Lihat Saldo']);
     Permission::firstOrCreate(['name' => 'stock_movements.view'], ['display_name' => 'Lihat Mutasi']);
 });
@@ -41,13 +46,15 @@ test('user without permissions receives null props for all summary sections', fu
             ->component('Dashboard')
             ->where('purchaseOrders', null)
             ->where('goodsReceipts', null)
+            ->where('salesOrders', null)
+            ->where('deliveryOrders', null)
             ->where('stockBalances', null)
             ->where('stockMovements', null)
         );
 });
 
 test('user with selective permissions receives only authorized section props', function (): void {
-    $user = userWithPermissions(['purchase_orders.view']);
+    $user = userWithPermissions(['purchase_orders.view', 'sales_orders.view']);
 
     $this->actingAs($user)
         ->get('/')
@@ -55,7 +62,9 @@ test('user with selective permissions receives only authorized section props', f
         ->assertInertia(fn (Assert $page) => $page
             ->component('Dashboard')
             ->has('purchaseOrders')
+            ->has('salesOrders')
             ->where('goodsReceipts', null)
+            ->where('deliveryOrders', null)
             ->where('stockBalances', null)
             ->where('stockMovements', null)
         );
@@ -65,6 +74,8 @@ test('summary calculates exact figures on controlled fixtures including boundary
     $user = userWithPermissions([
         'purchase_orders.view',
         'goods_receipts.view',
+        'sales_orders.view',
+        'delivery_orders.view',
         'stock_balances.view',
         'stock_movements.view',
     ]);
@@ -73,6 +84,7 @@ test('summary calculates exact figures on controlled fixtures including boundary
     $cat = ProductCategory::firstOrCreate(['code' => 'CAT-DASH'], ['name' => 'Kategori Dashboard']);
     $wh = Warehouse::firstOrCreate(['code' => 'WH-TEST-DASH'], ['name' => 'Gudang Uji Dashboard', 'is_active' => true]);
     $supp = Supplier::firstOrCreate(['code' => 'SUP-TEST-DASH'], ['name' => 'Pemasok Uji Dashboard', 'is_active' => true]);
+    $cust = Customer::firstOrCreate(['code' => 'CUST-TEST-DASH'], ['name' => 'Pelanggan Uji Dashboard', 'is_active' => true]);
 
     // 1. Fixture Products & Stock Balances
     // P1: min_stock 10.0000, current balance 9.0000 (Shortage = 1.0000)
@@ -196,7 +208,68 @@ test('summary calculates exact figures on controlled fixtures including boundary
         'status' => 'posted',
     ]);
 
-    // 4. Fixture Stock Movements (7 rows)
+    // 4. Fixture Sales Orders
+    SalesOrder::create([
+        'number' => 'SO/DASH/001',
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'order_date' => '2026-10-01',
+        'status' => 'approved',
+        'total' => '150000.00',
+    ]);
+    SalesOrder::create([
+        'number' => 'SO/DASH/002',
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'order_date' => '2026-10-02',
+        'status' => 'partially_delivered',
+        'total' => '50000.50',
+    ]);
+    SalesOrder::create([
+        'number' => 'SO/DASH/003',
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'order_date' => '2026-10-03',
+        'status' => 'draft',
+        'total' => '90000.00',
+    ]);
+    SalesOrder::create([
+        'number' => 'SO/DASH/004',
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'order_date' => '2026-10-04',
+        'status' => 'void',
+        'total' => '80000.00',
+    ]);
+
+    // 5. Fixture Delivery Orders
+    $soRef = SalesOrder::where('number', 'SO/DASH/001')->first();
+    DeliveryOrder::create([
+        'number' => 'DO/DASH/001',
+        'sales_order_id' => $soRef->id,
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'delivery_date' => '2026-10-05',
+        'status' => 'draft',
+    ]);
+    DeliveryOrder::create([
+        'number' => 'DO/DASH/002',
+        'sales_order_id' => $soRef->id,
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'delivery_date' => '2026-10-06',
+        'status' => 'draft',
+    ]);
+    DeliveryOrder::create([
+        'number' => 'DO/DASH/003',
+        'sales_order_id' => $soRef->id,
+        'customer_id' => $cust->id,
+        'warehouse_id' => $wh->id,
+        'delivery_date' => '2026-10-07',
+        'status' => 'posted',
+    ]);
+
+    // 6. Fixture Stock Movements (7 rows)
     for ($m = 1; $m <= 7; $m++) {
         StockMovement::create([
             'movement_date' => now()->subMinutes(10 - $m),
@@ -224,6 +297,11 @@ test('summary calculates exact figures on controlled fixtures including boundary
             ->where('purchaseOrders.active_po_total', '200000.75')
             // GR: 2 draft
             ->where('goodsReceipts.draft_gr_count', 2)
+            // SO: 2 active (approved + partially_delivered), total 150000.00 + 50000.50 = 200000.50
+            ->where('salesOrders.active_so_count', 2)
+            ->where('salesOrders.active_so_total', '200000.50')
+            // DO: 2 draft
+            ->where('deliveryOrders.draft_do_count', 2)
             // Stock Balances: 2 products low stock (P3 with shortage 15, P1 with shortage 1)
             ->where('stockBalances.low_stock_count', 2)
             ->has('stockBalances.deficient_products', 2)
@@ -235,16 +313,18 @@ test('summary calculates exact figures on controlled fixtures including boundary
             ->has('stockMovements', 5)
         );
 
-    // Verify bounded queries (no N+1): at most 10 queries total during full HTTP request
+    // Verify bounded queries (no N+1): at most 12 queries total during full HTTP request
     $queryLog = DB::getQueryLog();
-    expect(count($queryLog))->toBeLessThanOrEqual(10);
+    expect(count($queryLog))->toBeLessThanOrEqual(12);
 
-    // Verify DashboardSummary alone runs in exactly 5 bounded queries without N+1
+    // Verify DashboardSummary alone runs in exactly 6 bounded queries without N+1
     DB::flushQueryLog();
     $summary = app(DashboardSummary::class);
     $summary->getPurchaseOrdersSummary();
     $summary->getGoodsReceiptsSummary();
+    $summary->getSalesOrdersSummary();
+    $summary->getDeliveryOrdersSummary();
     $summary->getStockBalancesSummary();
     $summary->getRecentStockMovements();
-    expect(count(DB::getQueryLog()))->toBeLessThanOrEqual(6);
+    expect(count(DB::getQueryLog()))->toBeLessThanOrEqual(8);
 });

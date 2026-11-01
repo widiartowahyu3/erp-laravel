@@ -49,6 +49,8 @@ describe('Dashboard Component & Permissions', () => {
             props: {
                 purchaseOrders: null,
                 goodsReceipts: null,
+                salesOrders: null,
+                deliveryOrders: null,
                 stockBalances: null,
                 stockMovements: null,
             },
@@ -58,9 +60,60 @@ describe('Dashboard Component & Permissions', () => {
         // Summary metric cards must not exist
         expect(wrapper.text()).not.toContain('Pesanan Pembelian Berjalan');
         expect(wrapper.text()).not.toContain('Penerimaan Barang Menunggu');
+        expect(wrapper.text()).not.toContain('Pesanan Penjualan Berjalan');
+        expect(wrapper.text()).not.toContain('Surat Jalan Menunggu');
         expect(wrapper.text()).not.toContain('Peringatan Stok Minimum');
         expect(wrapper.text()).not.toContain('Produk Paling Kekurangan Stok');
         expect(wrapper.text()).not.toContain('Mutasi Persediaan Terkini');
+    });
+
+    it('renders only authorized metric card when only sales_orders prop is provided', () => {
+        setMockPageProps({
+            auth: {
+                user: { id: 1, name: 'Sales Staff', email: 'sales@example.com' },
+                permissions: ['sales_orders.view'],
+            },
+        });
+
+        const wrapper = mount(Dashboard, {
+            props: {
+                purchaseOrders: null,
+                goodsReceipts: null,
+                salesOrders: {
+                    active_so_count: 4,
+                    active_so_total: '4500000.00',
+                },
+                deliveryOrders: null,
+                stockBalances: null,
+                stockMovements: null,
+            },
+            global: { stubs: defaultStubs },
+        });
+
+        expect(wrapper.text()).toContain('Pesanan Penjualan Berjalan');
+        expect(wrapper.text()).toContain('4 SO');
+        expect(wrapper.text()).toContain('Rp 4.500.000');
+        expect(wrapper.text()).not.toContain('Pesanan Pembelian Berjalan');
+    });
+
+    it('renders only authorized metric card when only delivery_orders prop is provided', () => {
+        const wrapper = mount(Dashboard, {
+            props: {
+                purchaseOrders: null,
+                goodsReceipts: null,
+                salesOrders: null,
+                deliveryOrders: {
+                    draft_do_count: 5,
+                },
+                stockBalances: null,
+                stockMovements: null,
+            },
+            global: { stubs: defaultStubs },
+        });
+
+        expect(wrapper.text()).toContain('Surat Jalan Menunggu');
+        expect(wrapper.text()).toContain('5 Draf');
+        expect(wrapper.text()).not.toContain('Pesanan Penjualan Berjalan');
     });
 
     it('renders only authorized metric card when only purchase_orders prop is provided', () => {
@@ -152,6 +205,13 @@ describe('Dashboard Component & Permissions', () => {
                 goodsReceipts: {
                     draft_gr_count: 1,
                 },
+                salesOrders: {
+                    active_so_count: 3,
+                    active_so_total: '350000.00',
+                },
+                deliveryOrders: {
+                    draft_do_count: 2,
+                },
                 stockBalances: {
                     low_stock_count: 1,
                     deficient_products: [
@@ -185,6 +245,8 @@ describe('Dashboard Component & Permissions', () => {
 
         expect(wrapper.text()).toContain('Pesanan Pembelian Berjalan');
         expect(wrapper.text()).toContain('Penerimaan Barang Menunggu');
+        expect(wrapper.text()).toContain('Pesanan Penjualan Berjalan');
+        expect(wrapper.text()).toContain('Surat Jalan Menunggu');
         expect(wrapper.text()).toContain('Peringatan Stok Minimum');
         expect(wrapper.text()).toContain('Produk Paling Kekurangan Stok');
         expect(wrapper.text()).toContain('Mutasi Persediaan Terkini');
@@ -217,6 +279,13 @@ describe('Dashboard Component & Permissions', () => {
                 },
                 goodsReceipts: {
                     draft_gr_count: 1,
+                },
+                salesOrders: {
+                    active_so_count: 2,
+                    active_so_total: '300000.00',
+                },
+                deliveryOrders: {
+                    draft_do_count: 1,
                 },
                 stockBalances: {
                     low_stock_count: 1,

@@ -45,6 +45,40 @@ class DashboardSummary
     }
 
     /**
+     * Ringkasan Pesanan Penjualan berjalan (status approved + partially_delivered).
+     *
+     * @return array{active_so_count: int, active_so_total: string}
+     */
+    public function getSalesOrdersSummary(): array
+    {
+        $data = DB::table('sales_orders')
+            ->whereIn('status', ['approved', 'partially_delivered'])
+            ->selectRaw('COUNT(*) as total_count, COALESCE(SUM(total), 0) as total_amount')
+            ->first();
+
+        return [
+            'active_so_count' => (int) ($data->total_count ?? 0),
+            'active_so_total' => Decimal::round((string) ($data->total_amount ?? '0'), Decimal::SCALE_MONEY),
+        ];
+    }
+
+    /**
+     * Ringkasan Surat Jalan draf menunggu pengiriman / posting.
+     *
+     * @return array{draft_do_count: int}
+     */
+    public function getDeliveryOrdersSummary(): array
+    {
+        $count = DB::table('delivery_orders')
+            ->where('status', 'draft')
+            ->count();
+
+        return [
+            'draft_do_count' => $count,
+        ];
+    }
+
+    /**
      * Ringkasan stok minimum: jumlah produk di bawah min_stock & 5 produk paling kekurangan.
      *
      * @return array{low_stock_count: int, deficient_products: list<array{id: int, sku: string, name: string, unit_code: string, current_stock: string, min_stock: string, shortage: string}>}

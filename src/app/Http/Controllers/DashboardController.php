@@ -26,6 +26,14 @@ class DashboardController extends Controller
             ? $summary->getGoodsReceiptsSummary()
             : null;
 
+        $salesOrders = $user?->can('sales_orders.view')
+            ? $summary->getSalesOrdersSummary()
+            : null;
+
+        $deliveryOrders = $user?->can('delivery_orders.view')
+            ? $summary->getDeliveryOrdersSummary()
+            : null;
+
         $stockBalances = $user?->can('stock_balances.view')
             ? $summary->getStockBalancesSummary()
             : null;
@@ -37,6 +45,8 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'purchaseOrders' => $purchaseOrders,
             'goodsReceipts' => $goodsReceipts,
+            'salesOrders' => $salesOrders,
+            'deliveryOrders' => $deliveryOrders,
             'stockBalances' => $stockBalances,
             'stockMovements' => $stockMovements,
         ]);

@@ -6,6 +6,10 @@ const props = defineProps({
         type: [String, Number],
         default: null,
     },
+    amount: {
+        type: [String, Number],
+        default: null,
+    },
     showSymbol: {
         type: Boolean,
         default: true,
@@ -13,10 +17,11 @@ const props = defineProps({
 });
 
 const formatted = computed(() => {
-    if (props.value === null || props.value === undefined || props.value === '') {
+    const raw = props.value !== null && props.value !== undefined ? props.value : props.amount;
+    if (raw === null || raw === undefined || raw === '') {
         return '-';
     }
-    const s = String(props.value).trim();
+    const s = String(raw).trim();
     if (!/^[+-]?[0-9]+(\.[0-9]+)?$/.test(s)) {
         return '-';
     }
