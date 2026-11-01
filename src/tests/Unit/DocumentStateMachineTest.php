@@ -60,8 +60,11 @@ test('SalesOrderStatus transition matrix enforces valid transitions and rejects 
         [SalesOrderStatus::APPROVED, SalesOrderStatus::PARTIALLY_DELIVERED],
         [SalesOrderStatus::APPROVED, SalesOrderStatus::DELIVERED],
         [SalesOrderStatus::APPROVED, SalesOrderStatus::VOID],
+        [SalesOrderStatus::PARTIALLY_DELIVERED, SalesOrderStatus::APPROVED],
         [SalesOrderStatus::PARTIALLY_DELIVERED, SalesOrderStatus::DELIVERED],
         [SalesOrderStatus::PARTIALLY_DELIVERED, SalesOrderStatus::CLOSED],
+        [SalesOrderStatus::DELIVERED, SalesOrderStatus::APPROVED],
+        [SalesOrderStatus::DELIVERED, SalesOrderStatus::PARTIALLY_DELIVERED],
         [SalesOrderStatus::DELIVERED, SalesOrderStatus::CLOSED],
     ];
 
