@@ -125,10 +125,13 @@ $number = DB::transaction(function () use ($documentNumberService): string {
 
 ### A. Backed Enums (`App\Enums`)
 Seluruh status transaksi dan entitas diwakili oleh enum PHP *string-backed*:
-- `DocumentType`: Tipe dokumen transaksi (`purchase_order`, `goods_receipt`, dsb).
-- `PurchaseOrderStatus`: `draft`, `submitted`, `approved`, `partial`, `completed`, `cancelled`.
-- `SalesOrderStatus`: `draft`, `confirmed`, `processing`, `partial`, `shipped`, `delivered`, `completed`, `cancelled`.
-- `GoodsReceiptStatus`, `DeliveryOrderStatus`, `StockAdjustmentStatus`, `InvoiceStatus`, `PaymentStatus`, `JournalStatus`, dsb.
+- `DocumentType`: Tipe dokumen transaksi (`PO`, `GR`, `SO`, `DO`, `SA`, `SI`, `PI`, `PAY`, `JV`).
+- `PurchaseOrderStatus`: `draft`, `approved`, `partially_received`, `received`, `closed`, `void`.
+- `SalesOrderStatus`: `draft`, `approved`, `partially_delivered`, `delivered`, `closed`, `void`.
+- `GoodsReceiptStatus`: `draft`, `posted`, `void`.
+- `DeliveryOrderStatus`: `draft`, `posted`, `void`.
+- `StockAdjustmentStatus`: `draft`, `posted`, `void`.
+- `PaymentStatus`, `JournalStatus`, dsb.
 
 ### B. State Machine Dokumen (`App\Services\Documents\DocumentStateMachine`)
 Mengelola transisi status yang sah untuk dokumen bisnis:

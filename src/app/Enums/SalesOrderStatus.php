@@ -36,8 +36,8 @@ enum SalesOrderStatus: string implements HasStateTransitions
         return match ($this) {
             self::DRAFT => in_array($to, [self::APPROVED, self::VOID], true),
             self::APPROVED => in_array($to, [self::PARTIALLY_DELIVERED, self::DELIVERED, self::VOID], true),
-            self::PARTIALLY_DELIVERED => in_array($to, [self::DELIVERED, self::CLOSED], true),
-            self::DELIVERED => $to === self::CLOSED,
+            self::PARTIALLY_DELIVERED => in_array($to, [self::APPROVED, self::DELIVERED, self::CLOSED], true),
+            self::DELIVERED => in_array($to, [self::APPROVED, self::PARTIALLY_DELIVERED, self::CLOSED], true),
             self::CLOSED, self::VOID => false,
         };
     }
