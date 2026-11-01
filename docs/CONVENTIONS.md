@@ -250,3 +250,32 @@ Font Inter dimuat secara lokal melalui paket `@fontsource-variable/inter`. Dilar
    - **Proteksi Float & Aritmetika Desimal**: Parameter uang dan kuantitas divalidasi dengan rule `DecimalString` dan dikelola sebagai string di backend; dilarang menggunakan float.
    - **Data Demo Realistis**: Pengisian data uji master data dilakukan secara idempoten melalui command `make seed-demo` (`DemoMasterDataSeeder`). Seeder ini memiliki fail-safe dan otomatis diblokir pada lingkungan produksi.
 
+---
+
+## 10. Utang Teknis Analisis Statis (PHPStan / Larastan)
+
+Hasil evaluasi peningkatan level PHPStan pada Fase 7.5 Butir 11:
+- Level aktual proyek: **Level 6** (dikonfigurasi pada `phpstan.neon` dengan cakupan `app/`).
+- Evaluasi Level 7: **49 errors** (melebihi batas toleransi ≤ 40 galat).
+- Evaluasi Level 8: **49 errors** (melebihi batas toleransi ≤ 40 galat).
+- Sesuai instruksi Fase 7.5 Butir 11, konfigurasi PHPStan tetap dipertahankan pada **Level 6** tanpa penggunaan `@phpstan-ignore`, `ignoreErrors`, atau baseline palsu.
+
+### Rincian & Pola Dominan Galat (49 Errors pada Level 7 & 8):
+1. **Ketidakcocokan Tipe Array Input Service vs FormRequest Validated Data** (22 galat):
+   - FormRequest `$request->validated()` mengembalikan tipe `array<string, mixed>`.
+   - Method service transaksi/stok (seperti `PurchaseOrderService::create()`, `GoodsReceiptService::create()`, `StockAdjustmentService::create()`, dsb.) mendefinisikan array shape eksplisit (`array{warehouse_id: int, items: list<array{...}>, ...}`).
+   - PHPStan level 7+ menolak `array<string, mixed>` diberikan ke parameter dengan array shape eksplisit tanpa validasi tipe mendalam.
+   - *Rencana refactoring:* Implementasi DTO (*Data Transfer Object*) bervalidasi untuk payload service transaksi atau PHPDoc type-assertion pada level FormRequest.
+2. **Kebutuhan Tipe `numeric-string` pada Ekstensi BCMath** (10 galat):
+   - Fungsi `bcadd()`, `bcsub()`, `bcmul()`, `bcdiv()`, `bccomp()` pada PHPStan level 7+ mengharapkan tipe `numeric-string`, sedangkan variabel diteruskan sebagai `string` umum.
+   - *Rencana refactoring:* Menambahkan anotasi/guard `numeric-string` pada helper `Decimal` dan memastikan nilai yang diteruskan telah tersanitasi sebagai string numerik valid.
+3. **Literal Sort Direction pada Query Builder `orderBy()`** (8 galat):
+   - Method `orderBy($column, $direction)` pada Eloquent/Query Builder mengharapkan `'asc'|'desc'|SortDirection`, sedangkan variabel direction berupa `string` umum hasil sanitasi request.
+   - *Rencana refactoring:* Memberikan casting eksplisit atau assertion tipe `'asc'|'desc'` pada resolver direction di `ListQuery`.
+4. **Tipe User ID pada Trait Audit & Autentikasi** (5 galat):
+   - Kolom/properti audit `created_by` dan `updated_by` bertipe `int|null`, sedangkan `Auth::id()` atau helper autentikasi mengembalikan `int|string|null`.
+   - *Rencana refactoring:* Melakukan int casting eksplisit `(int) Auth::id()` pada saat pencatatan audit.
+5. **Akses Properti Dinamis Model Eloquent** (4 galat):
+   - Akses properti dinamis pada model atau relasi tertentu yang membutuhkan anotasi `@property` lebih spesifik pada PHPDoc model.
+
+
