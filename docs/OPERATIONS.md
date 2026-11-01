@@ -69,12 +69,20 @@ bash scripts/db-restore-check.sh
 
 ---
 
-## 3. Sasaran RPO dan RTO (Target Realistis)
+## 3. Sasaran RPO dan RTO (Target Realistis & Baseline Terukur)
+
+### A. Matriks Target Pemulihan
 
 | Metrik | Target | Keterangan & Asumsi |
 |---|---|---|
 | **RPO** (*Recovery Point Objective*) | **≤ 24 Jam** (Dump Harian) <br> *≤ 5 Menit* (dengan Binlog) | Dengan dump logis harian, data maksimal yang hilang adalah transaksi sejak backup terakhir. Jika point-in-time recovery diaktifkan via binary log MariaDB, RPO dapat ditekan hingga menit terakhir. |
-| **RTO** (*Recovery Time Objective*) | **≤ 15 Menit** | Waktu yang dibutuhkan untuk transfer berkas arsip lokal, pembuatan skema, dan eksekusi dekompresi/impor dump pada database seukuran hingga 5 GB. |
+| **RTO** (*Recovery Time Objective*) | **≤ 15 Menit** *(Target Teoretis - Belum Diuji pada Ukuran Tersebut)* | Target teoretis untuk transfer arsip lokal, pembuatan skema, serta dekompresi/impor dump pada volume data hingga 5 GB. **Catatan:** Belum diuji pada skala data 5 GB. |
+
+### B. Hasil Pengukuran Baseline Aktual (`make restore-check`)
+Hasil pengukuran riil pada lingkungan pengujian saat ini (diukur via `time make restore-check`, tercatat pada `review/f76-restore-time.txt`):
+- **Ukuran Berkas Dump**: ~60 KB (terkompresi `.sql.gz`) / ~430 KB (teks SQL mentah).
+- **Waktu Eksekusi Penuh**: **10,38 detik** (`real 0m10.388s`, `user 0m0.418s`, `sys 0m0.384s`).
+- **Cakupan Pengujian**: Penciptaan basis data sementara, pemulihan dump lengkap, verifikasi jumlah baris dan `CHECKSUM TABLE` pada 38 tabel non-volatile, validasi keberadaan 4 trigger append-only, dan pembersihan database sementara.
 
 ---
 
