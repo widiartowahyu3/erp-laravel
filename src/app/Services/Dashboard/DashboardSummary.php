@@ -97,16 +97,14 @@ class DashboardSummary
             ->limit(5)
             ->get()
             ->map(function (StockMovement $m): array {
-                $type = $m->movement_type instanceof \BackedEnum ? $m->movement_type->value : (string) $m->movement_type;
-
                 return [
                     'id' => (int) $m->id,
                     'movement_date' => $m->movement_date->toISOString(),
-                    'movement_type' => $type,
-                    'product_sku' => $m->product?->sku ?? '-',
-                    'product_name' => $m->product?->name ?? '-',
-                    'warehouse_code' => $m->warehouse?->code ?? '-',
-                    'warehouse_name' => $m->warehouse?->name ?? '-',
+                    'movement_type' => $m->movement_type->value,
+                    'product_sku' => $m->product->sku,
+                    'product_name' => $m->product->name,
+                    'warehouse_code' => $m->warehouse->code,
+                    'warehouse_name' => $m->warehouse->name,
                     'quantity' => Decimal::round((string) $m->quantity, Decimal::SCALE_QUANTITY),
                     'unit_cost' => Decimal::round((string) $m->unit_cost, Decimal::SCALE_COST),
                 ];
