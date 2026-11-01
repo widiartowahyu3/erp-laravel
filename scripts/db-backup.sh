@@ -11,13 +11,14 @@ BACKUP_DIR="backups"
 TIMESTAMP=$(date -u +%Y%m%d_%H%M%SZ)
 BACKUP_FILE="${BACKUP_DIR}/erp_trading_${TIMESTAMP}.sql.gz"
 
-# 1. Pastikan direktori backup memiliki hak akses ketat 700
+# 1. Pastikan direktori backup memiliki hak akses ketat 700 dan umask ketat
+umask 077
 mkdir -p "${BACKUP_DIR}"
 chmod 700 "${BACKUP_DIR}"
 
 echo "[INFO] Memulai backup database 'erp_trading' ke '${BACKUP_FILE}'..."
 
-# 2. Jalankan mariadb-dump via container db dengan flags aman dan kompresi gzip
+# 2. Jalankan mariadb-dump via container db dengan flags aman dan kompresi gzip (dibuat langsung dengan mode 600 via umask 077)
 timeout 120 docker compose exec -T db sh -c \
   'MYSQL_PWD="$(cat /run/secrets/db_root_password)" mariadb-dump -u root --single-transaction --routines --triggers --events erp_trading' < /dev/null | gzip -9 > "${BACKUP_FILE}"
 
