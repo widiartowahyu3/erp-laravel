@@ -31,6 +31,10 @@ final class StockService
 
     public const string SOURCE_GOODS_RECEIPT_VOID = 'goods_receipt_void';
 
+    public const string SOURCE_DELIVERY_ORDER = 'delivery_order';
+
+    public const string SOURCE_DELIVERY_ORDER_VOID = 'delivery_order_void';
+
     /**
      * Lock the stock balance row for update, creating a zero-balance row if it does not exist.
      */
