@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { reactive } from 'vue';
 import axe from 'axe-core';
@@ -7,25 +7,50 @@ import DeliveryOrderCreate from '../Pages/Sales/DeliveryOrders/Create.vue';
 import DeliveryOrderEdit from '../Pages/Sales/DeliveryOrders/Edit.vue';
 import DeliveryOrderShow from '../Pages/Sales/DeliveryOrders/Show.vue';
 
-vi.mock('@inertiajs/vue3', () => ({
-    usePage: () => ({
-        props: {
+const {
+    defaultPermissions,
+    mockPageProps,
+    mockConfirm,
+    mockRouterPost,
+    mockRouterPut,
+    mockRouterDelete,
+} = vi.hoisted(() => {
+    const defaultPermissions = [
+        'sales_orders.view',
+        'sales_orders.create',
+        'sales_orders.update',
+        'delivery_orders.view',
+        'delivery_orders.create',
+        'delivery_orders.update',
+        'delivery_orders.post',
+        'delivery_orders.void',
+    ];
+    return {
+        defaultPermissions,
+        mockPageProps: {
             auth: {
                 user: { id: 1, name: 'Admin', role: 'admin' },
-                permissions: [
-                    'sales_orders.view',
-                    'sales_orders.create',
-                    'sales_orders.update',
-                    'delivery_orders.view',
-                    'delivery_orders.create',
-                    'delivery_orders.update',
-                    'delivery_orders.post',
-                    'delivery_orders.void',
-                ],
+                permissions: [...defaultPermissions],
             },
             flash: {},
             errors: {},
         },
+        mockConfirm: vi.fn(),
+        mockRouterPost: vi.fn(),
+        mockRouterPut: vi.fn(),
+        mockRouterDelete: vi.fn(),
+    };
+});
+
+vi.mock('@/composables/useConfirm', () => ({
+    useConfirm: () => ({
+        confirm: mockConfirm,
+    }),
+}));
+
+vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({
+        props: mockPageProps,
     }),
     useForm: (initialData) => reactive({
         ...initialData,
@@ -42,9 +67,9 @@ vi.mock('@inertiajs/vue3', () => ({
     },
     Head: { name: 'Head', template: '<div style="display:none"><slot /></div>' },
     router: {
-        post: vi.fn(),
-        put: vi.fn(),
-        delete: vi.fn(),
+        post: mockRouterPost,
+        put: mockRouterPut,
+        delete: mockRouterDelete,
     },
 }));
 
@@ -57,12 +82,21 @@ const defaultStubs = {
     Breadcrumbs: { template: '<nav><slot /></nav>' },
     Can: { template: '<div><slot /></div>' },
     Card: { template: '<div><slot /><slot name="title" /><slot name="description" /></div>' },
-    Button: { template: '<button :disabled="$attrs.disabled"><slot /></button>' },
-    IconButton: { template: '<button :disabled="$attrs.disabled"><slot /></button>' },
+    Button: {
+        props: ['disabled', 'loading'],
+        template: '<button :disabled="disabled || loading" :aria-busy="$attrs[\'aria-busy\']"><slot /></button>',
+    },
+    IconButton: {
+        props: ['disabled', 'loading'],
+        template: '<button :disabled="disabled || loading" :aria-busy="$attrs[\'aria-busy\']"><slot /></button>',
+    },
     StatusBadge: { template: '<span><slot /></span>' },
     DateDisplay: { template: '<span><slot /></span>' },
     Quantity: { template: '<span><slot /></span>' },
-    Alert: { template: '<div><slot /></div>' },
+    Alert: {
+        props: ['variant'],
+        template: '<div role="alert" :data-variant="variant"><slot /></div>',
+    },
     DataTable: {
         props: ['columns', 'items'],
         template: `
@@ -118,6 +152,16 @@ async function expectNoViolations(element) {
 }
 
 describe('Delivery Order Pages (Butir 10)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockPageProps.auth = {
+            user: { id: 1, name: 'Admin', role: 'admin' },
+            permissions: [...defaultPermissions],
+        };
+        mockPageProps.flash = {};
+        mockPageProps.errors = {};
+    });
+
     afterEach(() => {
         document.body.innerHTML = '';
     });
@@ -243,6 +287,173 @@ describe('Delivery Order Pages (Butir 10)', () => {
         expect(wrapperPosted.text()).toContain('HPP Satuan');
         expect(wrapperPosted.text()).toContain('Total HPP');
         expect(wrapperPosted.text()).toContain('Rp 40.000');
+    });
+
+    it('DeliveryOrders/Show prevents double click on post and void actions', async () => {
+        const order = {
+            id: 1,
+            number: 'DO/202611/00001',
+            status: 'draft',
+            customer: { name: 'Customer A' },
+            warehouse: { name: 'Warehouse A' },
+            creator: { name: 'Admin' },
+            items: [],
+        };
+
+        mockConfirm.mockResolvedValue(true);
+        const wrapperPost = mount(DeliveryOrderShow, {
+            props: { item: order },
+            global: { stubs: defaultStubs },
+        });
+
+        const postBtn = wrapperPost.findAll('button').find((b) => b.text().includes('Posting DO'));
+        expect(postBtn).toBeDefined();
+
+        await postBtn.trigger('click');
+        await postBtn.trigger('click');
+
+        expect(mockRouterPost).toHaveBeenCalledTimes(1);
+        expect(mockRouterPost).toHaveBeenCalledWith(
+            '/sales/delivery-orders/1/post',
+            {},
+            expect.objectContaining({ preserveScroll: true })
+        );
+        expect(postBtn.attributes('disabled')).toBeDefined();
+        expect(postBtn.attributes('aria-busy')).toBe('true');
+
+        // Test void button with confirmation and reason
+        vi.clearAllMocks();
+        mockConfirm.mockResolvedValue({ confirmed: true, reason: 'Barang rusak saat pengiriman' });
+        const wrapperVoid = mount(DeliveryOrderShow, {
+            props: { item: order },
+            global: { stubs: defaultStubs },
+        });
+
+        const voidBtn = wrapperVoid.findAll('button').find((b) => b.text().includes('Batalkan DO'));
+        expect(voidBtn).toBeDefined();
+
+        await voidBtn.trigger('click');
+        await voidBtn.trigger('click');
+
+        expect(mockRouterPost).toHaveBeenCalledTimes(1);
+        expect(mockRouterPost).toHaveBeenCalledWith(
+            '/sales/delivery-orders/1/void',
+            { reason: 'Barang rusak saat pengiriman' },
+            expect.objectContaining({ preserveScroll: true })
+        );
+        expect(voidBtn.attributes('disabled')).toBeDefined();
+        expect(voidBtn.attributes('aria-busy')).toBe('true');
+    });
+
+    it('DeliveryOrders/Show displays action buttons strictly according to permission and status', () => {
+        const baseOrder = {
+            id: 1,
+            number: 'DO/202611/00001',
+            customer: { name: 'Customer A' },
+            warehouse: { name: 'Warehouse A' },
+            creator: { name: 'Admin' },
+            items: [],
+        };
+
+        // 1. Draft with delivery_orders.post & void: Posting DO & Batalkan DO visible
+        const draftWrapper = mount(DeliveryOrderShow, {
+            props: { item: { ...baseOrder, status: 'draft' } },
+            global: { stubs: defaultStubs },
+        });
+        expect(draftWrapper.findAll('button').some((b) => b.text().includes('Posting DO'))).toBe(true);
+        expect(draftWrapper.findAll('button').some((b) => b.text().includes('Batalkan DO'))).toBe(true);
+
+        // 2. Draft without delivery_orders.post permission: Posting DO NOT visible
+        mockPageProps.auth.permissions = ['delivery_orders.view', 'delivery_orders.void'];
+        const noPostWrapper = mount(DeliveryOrderShow, {
+            props: { item: { ...baseOrder, status: 'draft' } },
+            global: { stubs: defaultStubs },
+        });
+        expect(noPostWrapper.findAll('button').some((b) => b.text().includes('Posting DO'))).toBe(false);
+
+        // 3. Posted with delivery_orders.void: Posting DO NOT visible, Batalkan DO visible
+        mockPageProps.auth.permissions = [...defaultPermissions];
+        const postedWrapper = mount(DeliveryOrderShow, {
+            props: { item: { ...baseOrder, status: 'posted' } },
+            global: { stubs: defaultStubs },
+        });
+        expect(postedWrapper.findAll('button').some((b) => b.text().includes('Posting DO'))).toBe(false);
+        expect(postedWrapper.findAll('button').some((b) => b.text().includes('Batalkan DO'))).toBe(true);
+
+        // 4. Voided DO: neither Posting DO nor Batalkan DO visible
+        const voidWrapper = mount(DeliveryOrderShow, {
+            props: { item: { ...baseOrder, status: 'void' } },
+            global: { stubs: defaultStubs },
+        });
+        expect(voidWrapper.findAll('button').some((b) => b.text().includes('Posting DO'))).toBe(false);
+        expect(voidWrapper.findAll('button').some((b) => b.text().includes('Batalkan DO'))).toBe(false);
+
+        // 5. Posted without delivery_orders.void: Batalkan DO NOT visible
+        mockPageProps.auth.permissions = ['delivery_orders.view', 'delivery_orders.post'];
+        const noVoidWrapper = mount(DeliveryOrderShow, {
+            props: { item: { ...baseOrder, status: 'posted' } },
+            global: { stubs: defaultStubs },
+        });
+        expect(noVoidWrapper.findAll('button').some((b) => b.text().includes('Batalkan DO'))).toBe(false);
+    });
+
+    it('DeliveryOrders/Show renders server error alerts for quantity and status conflicts', () => {
+        mockPageProps.errors = {
+            quantity: 'Stok barang tidak mencukupi di gudang asal',
+            status: 'Status surat jalan tidak valid untuk aksi ini',
+        };
+
+        const wrapper = mount(DeliveryOrderShow, {
+            props: {
+                item: {
+                    id: 1,
+                    number: 'DO/202611/00001',
+                    status: 'draft',
+                    customer: { name: 'Customer A' },
+                    warehouse: { name: 'Warehouse A' },
+                    creator: { name: 'Admin' },
+                    items: [],
+                },
+            },
+            global: { stubs: defaultStubs },
+        });
+
+        expect(wrapper.text()).toContain('Stok barang tidak mencukupi di gudang asal');
+        expect(wrapper.text()).toContain('Status surat jalan tidak valid untuk aksi ini');
+    });
+
+    it('DeliveryOrders/Edit renders form with initial DO data populated', () => {
+        const existingDo = {
+            id: 12,
+            number: 'DO/202611/00012',
+            delivery_date: '2026-11-04',
+            shipping_address: 'Kawasan Industri Cikarang Blok B4',
+            notes: 'Harap dikirim sebelum jam 14:00',
+            sales_order: { id: 5, number: 'SO/202611/00005' },
+            customer: { code: 'CUST-01', name: 'PT Pembeli Cikarang' },
+            warehouse: { code: 'WH-01', name: 'Gudang Utama' },
+            items: [
+                {
+                    sales_order_item_id: 101,
+                    product_id: 1,
+                    quantity: '6.0000',
+                    product: { id: 1, sku: 'SKU-001', name: 'Baut Hex 10mm' },
+                    sales_order_item: { quantity: '10.0000' },
+                },
+            ],
+        };
+
+        const wrapper = mount(DeliveryOrderEdit, {
+            props: { item: existingDo },
+            global: { stubs: defaultStubs },
+        });
+
+        expect(wrapper.text()).toContain('Edit DO: DO/202611/00012');
+        expect(wrapper.vm.form.delivery_date).toBe('2026-11-04');
+        expect(wrapper.vm.form.shipping_address).toBe('Kawasan Industri Cikarang Blok B4');
+        expect(wrapper.vm.form.notes).toBe('Harap dikirim sebelum jam 14:00');
+        expect(wrapper.vm.form.items[0].quantity).toBe('6.0000');
+        expect(wrapper.vm.form.items[0].sales_order_item_id).toBe('101');
     });
 
     it('DeliveryOrders pages pass axe-core accessibility checks', async () => {
