@@ -35,10 +35,10 @@ class DashboardController extends Controller
             : null;
 
         return Inertia::render('Dashboard', [
-            'purchase_orders' => $purchaseOrders,
-            'goods_receipts' => $goodsReceipts,
-            'stock_balances' => $stockBalances,
-            'stock_movements' => $stockMovements,
+            'purchaseOrders' => $purchaseOrders,
+            'goodsReceipts' => $goodsReceipts,
+            'stockBalances' => $stockBalances,
+            'stockMovements' => $stockMovements,
         ]);
     }
 }

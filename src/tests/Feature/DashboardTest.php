@@ -39,10 +39,10 @@ test('user without permissions receives null props for all summary sections', fu
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Dashboard')
-            ->where('purchase_orders', null)
-            ->where('goods_receipts', null)
-            ->where('stock_balances', null)
-            ->where('stock_movements', null)
+            ->where('purchaseOrders', null)
+            ->where('goodsReceipts', null)
+            ->where('stockBalances', null)
+            ->where('stockMovements', null)
         );
 });
 
@@ -54,10 +54,10 @@ test('user with selective permissions receives only authorized section props', f
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Dashboard')
-            ->has('purchase_orders')
-            ->where('goods_receipts', null)
-            ->where('stock_balances', null)
-            ->where('stock_movements', null)
+            ->has('purchaseOrders')
+            ->where('goodsReceipts', null)
+            ->where('stockBalances', null)
+            ->where('stockMovements', null)
         );
 });
 
@@ -220,19 +220,19 @@ test('summary calculates exact figures on controlled fixtures including boundary
         ->assertInertia(fn (Assert $page) => $page
             ->component('Dashboard')
             // PO: 2 active (approved + partially_received), total 125000.50 + 75000.25 = 200000.75
-            ->where('purchase_orders.active_po_count', 2)
-            ->where('purchase_orders.active_po_total', '200000.75')
+            ->where('purchaseOrders.active_po_count', 2)
+            ->where('purchaseOrders.active_po_total', '200000.75')
             // GR: 2 draft
-            ->where('goods_receipts.draft_gr_count', 2)
+            ->where('goodsReceipts.draft_gr_count', 2)
             // Stock Balances: 2 products low stock (P3 with shortage 15, P1 with shortage 1)
-            ->where('stock_balances.low_stock_count', 2)
-            ->has('stock_balances.deficient_products', 2)
-            ->where('stock_balances.deficient_products.0.sku', 'DASH-P3')
-            ->where('stock_balances.deficient_products.0.shortage', '15.0000')
-            ->where('stock_balances.deficient_products.1.sku', 'DASH-P1')
-            ->where('stock_balances.deficient_products.1.shortage', '1.0000')
+            ->where('stockBalances.low_stock_count', 2)
+            ->has('stockBalances.deficient_products', 2)
+            ->where('stockBalances.deficient_products.0.sku', 'DASH-P3')
+            ->where('stockBalances.deficient_products.0.shortage', '15.0000')
+            ->where('stockBalances.deficient_products.1.sku', 'DASH-P1')
+            ->where('stockBalances.deficient_products.1.shortage', '1.0000')
             // Stock Movements: limited to exactly 5 rows
-            ->has('stock_movements', 5)
+            ->has('stockMovements', 5)
         );
 
     // Verify bounded queries (no N+1): at most 10 queries total during full HTTP request

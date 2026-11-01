@@ -49,23 +49,19 @@ const props = defineProps({
         type: String,
         default: 'ERP Distribusi',
     },
-    // eslint-disable-next-line vue/prop-name-casing
-    purchase_orders: {
+    purchaseOrders: {
         type: Object,
         default: null,
     },
-    // eslint-disable-next-line vue/prop-name-casing
-    goods_receipts: {
+    goodsReceipts: {
         type: Object,
         default: null,
     },
-    // eslint-disable-next-line vue/prop-name-casing
-    stock_balances: {
+    stockBalances: {
         type: Object,
         default: null,
     },
-    // eslint-disable-next-line vue/prop-name-casing
-    stock_movements: {
+    stockMovements: {
         type: Array,
         default: null,
     },
@@ -77,10 +73,10 @@ const userPermissions = computed(() => page.props.auth?.permissions || []);
 
 const hasAnySummaryPermission = computed(() => {
     return (
-        props.purchase_orders !== null ||
-        props.goods_receipts !== null ||
-        props.stock_balances !== null ||
-        props.stock_movements !== null
+        props.purchaseOrders !== null ||
+        props.goodsReceipts !== null ||
+        props.stockBalances !== null ||
+        props.stockMovements !== null
     );
 });
 
@@ -159,17 +155,17 @@ const movementTypeLabels = {
             <div v-if="hasAnySummaryPermission" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <!-- 1. Purchase Orders Metric Card -->
-                    <Card v-if="purchase_orders !== null" padding="md" class="border-indigo-100 dark:border-indigo-900/30">
+                    <Card v-if="purchaseOrders !== null" padding="md" class="border-indigo-100 dark:border-indigo-900/30">
                         <div class="flex items-start justify-between">
                             <div>
                                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                                     Pesanan Pembelian Berjalan
                                 </span>
                                 <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-                                    {{ purchase_orders.active_po_count }} <span class="text-xs font-medium text-slate-500">PO</span>
+                                    {{ purchaseOrders.active_po_count }} <span class="text-xs font-medium text-slate-500">PO</span>
                                 </div>
                                 <div class="mt-1 text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                                    Total: <Rupiah :value="purchase_orders.active_po_total" />
+                                    Total: <Rupiah :value="purchaseOrders.active_po_total" />
                                 </div>
                             </div>
                             <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
@@ -188,14 +184,14 @@ const movementTypeLabels = {
                     </Card>
 
                     <!-- 2. Goods Receipts Metric Card -->
-                    <Card v-if="goods_receipts !== null" padding="md" class="border-emerald-100 dark:border-emerald-900/30">
+                    <Card v-if="goodsReceipts !== null" padding="md" class="border-emerald-100 dark:border-emerald-900/30">
                         <div class="flex items-start justify-between">
                             <div>
                                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                                     Penerimaan Barang Menunggu
                                 </span>
                                 <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-                                    {{ goods_receipts.draft_gr_count }} <span class="text-xs font-medium text-slate-500">Draf</span>
+                                    {{ goodsReceipts.draft_gr_count }} <span class="text-xs font-medium text-slate-500">Draf</span>
                                 </div>
                                 <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                     Menunggu verifikasi fisik &amp; posting
@@ -217,14 +213,14 @@ const movementTypeLabels = {
                     </Card>
 
                     <!-- 3. Stock Below Minimum Metric Card -->
-                    <Card v-if="stock_balances !== null" padding="md" class="border-rose-100 dark:border-rose-900/30">
+                    <Card v-if="stockBalances !== null" padding="md" class="border-rose-100 dark:border-rose-900/30">
                         <div class="flex items-start justify-between">
                             <div>
                                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                                     Peringatan Stok Minimum
                                 </span>
                                 <div class="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">
-                                    {{ stock_balances.low_stock_count }} <span class="text-xs font-medium text-slate-500">Produk</span>
+                                    {{ stockBalances.low_stock_count }} <span class="text-xs font-medium text-slate-500">Produk</span>
                                 </div>
                                 <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                     Kuantitas di bawah batas aman
@@ -249,7 +245,7 @@ const movementTypeLabels = {
                 <!-- Deep Dive Tables (Deficient Products & Recent Movements) -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Low Stock Detail Table -->
-                    <Card v-if="stock_balances !== null" padding="md">
+                    <Card v-if="stockBalances !== null" padding="md">
                         <template #header>
                             <div class="flex items-center justify-between">
                                 <h2 class="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -265,7 +261,7 @@ const movementTypeLabels = {
                             </div>
                         </template>
 
-                        <div v-if="stock_balances.deficient_products.length > 0" class="overflow-x-auto">
+                        <div v-if="stockBalances.deficient_products.length > 0" class="overflow-x-auto">
                             <table class="w-full text-left text-xs divide-y divide-slate-200 dark:divide-slate-700">
                                 <caption class="sr-only">Daftar produk dengan kuantitas stok di bawah batas minimum</caption>
                                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold">
@@ -278,7 +274,7 @@ const movementTypeLabels = {
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     <tr
-                                        v-for="p in stock_balances.deficient_products"
+                                        v-for="p in stockBalances.deficient_products"
                                         :key="p.id"
                                         class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
                                     >
@@ -311,7 +307,7 @@ const movementTypeLabels = {
                     </Card>
 
                     <!-- Recent Stock Movements Table -->
-                    <Card v-if="stock_movements !== null" padding="md">
+                    <Card v-if="stockMovements !== null" padding="md">
                         <template #header>
                             <div class="flex items-center justify-between">
                                 <h2 class="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -327,7 +323,7 @@ const movementTypeLabels = {
                             </div>
                         </template>
 
-                        <div v-if="stock_movements.length > 0" class="overflow-x-auto">
+                        <div v-if="stockMovements.length > 0" class="overflow-x-auto">
                             <table class="w-full text-left text-xs divide-y divide-slate-200 dark:divide-slate-700">
                                 <caption class="sr-only">Daftar mutasi stok persediaan terbaru di seluruh gudang</caption>
                                 <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-semibold">
@@ -340,7 +336,7 @@ const movementTypeLabels = {
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     <tr
-                                        v-for="m in stock_movements"
+                                        v-for="m in stockMovements"
                                         :key="m.id"
                                         class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
                                     >

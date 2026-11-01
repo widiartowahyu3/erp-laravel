@@ -47,10 +47,10 @@ describe('Dashboard Component & Permissions', () => {
 
         const wrapper = mount(Dashboard, {
             props: {
-                purchase_orders: null,
-                goods_receipts: null,
-                stock_balances: null,
-                stock_movements: null,
+                purchaseOrders: null,
+                goodsReceipts: null,
+                stockBalances: null,
+                stockMovements: null,
             },
             global: { stubs: defaultStubs },
         });
@@ -73,13 +73,13 @@ describe('Dashboard Component & Permissions', () => {
 
         const wrapper = mount(Dashboard, {
             props: {
-                purchase_orders: {
+                purchaseOrders: {
                     active_po_count: 5,
                     active_po_total: '12500000.00',
                 },
-                goods_receipts: null,
-                stock_balances: null,
-                stock_movements: null,
+                goodsReceipts: null,
+                stockBalances: null,
+                stockMovements: null,
             },
             global: { stubs: defaultStubs },
         });
@@ -96,12 +96,12 @@ describe('Dashboard Component & Permissions', () => {
     it('renders only authorized metric card when only goods_receipts prop is provided', () => {
         const wrapper = mount(Dashboard, {
             props: {
-                purchase_orders: null,
-                goods_receipts: {
+                purchaseOrders: null,
+                goodsReceipts: {
                     draft_gr_count: 3,
                 },
-                stock_balances: null,
-                stock_movements: null,
+                stockBalances: null,
+                stockMovements: null,
             },
             global: { stubs: defaultStubs },
         });
@@ -114,9 +114,9 @@ describe('Dashboard Component & Permissions', () => {
     it('renders only stock balances summary and deficient products when only stock_balances prop is provided', () => {
         const wrapper = mount(Dashboard, {
             props: {
-                purchase_orders: null,
-                goods_receipts: null,
-                stock_balances: {
+                purchaseOrders: null,
+                goodsReceipts: null,
+                stockBalances: {
                     low_stock_count: 2,
                     deficient_products: [
                         {
@@ -130,7 +130,7 @@ describe('Dashboard Component & Permissions', () => {
                         },
                     ],
                 },
-                stock_movements: null,
+                stockMovements: null,
             },
             global: { stubs: defaultStubs },
         });
@@ -145,14 +145,14 @@ describe('Dashboard Component & Permissions', () => {
     it('renders full operational dashboard when all props are provided', () => {
         const wrapper = mount(Dashboard, {
             props: {
-                purchase_orders: {
+                purchaseOrders: {
                     active_po_count: 2,
                     active_po_total: '200000.75',
                 },
-                goods_receipts: {
+                goodsReceipts: {
                     draft_gr_count: 1,
                 },
-                stock_balances: {
+                stockBalances: {
                     low_stock_count: 1,
                     deficient_products: [
                         {
@@ -166,7 +166,7 @@ describe('Dashboard Component & Permissions', () => {
                         },
                     ],
                 },
-                stock_movements: [
+                stockMovements: [
                     {
                         id: 101,
                         movement_date: '2026-10-31T08:00:00.000Z',
@@ -195,10 +195,10 @@ describe('Dashboard Component & Permissions', () => {
     it('renders empty states gracefully inside tables when collections are empty', () => {
         const wrapper = mount(Dashboard, {
             props: {
-                purchase_orders: { active_po_count: 0, active_po_total: '0.00' },
-                goods_receipts: { draft_gr_count: 0 },
-                stock_balances: { low_stock_count: 0, deficient_products: [] },
-                stock_movements: [],
+                purchaseOrders: { active_po_count: 0, active_po_total: '0.00' },
+                goodsReceipts: { draft_gr_count: 0 },
+                stockBalances: { low_stock_count: 0, deficient_products: [] },
+                stockMovements: [],
             },
             global: { stubs: defaultStubs },
         });
@@ -211,14 +211,14 @@ describe('Dashboard Component & Permissions', () => {
         const wrapper = mount(Dashboard, {
             attachTo: document.body,
             props: {
-                purchase_orders: {
+                purchaseOrders: {
                     active_po_count: 2,
                     active_po_total: '200000.00',
                 },
-                goods_receipts: {
+                goodsReceipts: {
                     draft_gr_count: 1,
                 },
-                stock_balances: {
+                stockBalances: {
                     low_stock_count: 1,
                     deficient_products: [
                         {
@@ -232,7 +232,7 @@ describe('Dashboard Component & Permissions', () => {
                         },
                     ],
                 },
-                stock_movements: [
+                stockMovements: [
                     {
                         id: 101,
                         movement_date: '2026-10-31T08:00:00.000Z',
