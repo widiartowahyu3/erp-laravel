@@ -57,21 +57,21 @@ db:
 	docker compose exec db sh -c 'MYSQL_PWD="$$(cat /run/secrets/db_root_password)" mariadb -u root'
 
 composer:
-	docker compose run --rm php composer $(cmd)
+	docker compose run --rm -T php composer $(cmd) < /dev/null
 
 npm:
-	docker compose --profile tools run --rm node npm $(cmd)
+	docker compose --profile tools run --rm -T node npm $(cmd) < /dev/null
 
 artisan:
-	docker compose run --rm php php artisan $(cmd)
+	docker compose run --rm -T php php artisan $(cmd) < /dev/null
 
 migrate:
 	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
-	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php php artisan migrate --database=mariadb_migrator
+	docker compose run --rm -T -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php php artisan migrate --database=mariadb_migrator < /dev/null
 
 migrate-test:
 	@export $$(grep -v '^#' .env | grep -E '^(DB_MIGRATOR_USERNAME|DB_MIGRATOR_PASSWORD)=' | xargs) && \
-	docker compose run --rm -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD -e DB_DATABASE=erp_trading_test php php artisan migrate --database=mariadb_migrator
+	docker compose run --rm -T -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD -e DB_DATABASE=erp_trading_test php php artisan migrate --database=mariadb_migrator < /dev/null
 
 test-db-reset:
 	@TARGET_DB=$${TEST_DB_NAME:-erp_trading_test}; \
@@ -83,13 +83,13 @@ test-db-reset:
 	docker compose run --rm -T -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD -e DB_DATABASE="$$TARGET_DB" php php artisan migrate:fresh --database=mariadb_migrator --seed < /dev/null
 
 seed:
-	docker compose run --rm php php artisan db:seed --force
+	docker compose run --rm -T php php artisan db:seed --force < /dev/null
 
 seed-demo:
-	docker compose run --rm php php artisan db:seed --class=Database\\Seeders\\DemoMasterDataSeeder --force
+	docker compose run --rm -T php php artisan db:seed --class=Database\\Seeders\\DemoMasterDataSeeder --force < /dev/null
 
 seed-demo-tx:
-	docker compose run --rm php php artisan db:seed --class=Database\\Seeders\\DemoTransactionSeeder --force
+	docker compose run --rm -T php php artisan db:seed --class=Database\\Seeders\\DemoTransactionSeeder --force < /dev/null
 
 backup:
 	bash scripts/db-backup.sh
@@ -102,16 +102,16 @@ test: test-db-reset
 	docker compose run --rm -T -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD php sh -c './vendor/bin/pest --exclude-filter=ZGuardIntegrityTest && ./vendor/bin/pest tests/Feature/ZGuardIntegrityTest.php' < /dev/null
 
 test-js:
-	docker compose --profile tools run --rm node npm run test
+	docker compose --profile tools run --rm -T node npm run test < /dev/null
 
 lint:
-	docker compose run --rm php ./vendor/bin/pint --test
+	docker compose run --rm -T php ./vendor/bin/pint --test < /dev/null
 
 lint-js:
-	docker compose --profile tools run --rm node npm run lint
+	docker compose --profile tools run --rm -T node npm run lint < /dev/null
 
 analyse:
-	docker compose run --rm php ./vendor/bin/phpstan analyse
+	docker compose run --rm -T php ./vendor/bin/phpstan analyse < /dev/null
 
 check: lint analyse test test-js lint-js
 
