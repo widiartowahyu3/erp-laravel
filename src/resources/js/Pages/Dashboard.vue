@@ -49,18 +49,22 @@ const props = defineProps({
         type: String,
         default: 'ERP Distribusi',
     },
+    // eslint-disable-next-line vue/prop-name-casing
     purchase_orders: {
         type: Object,
         default: null,
     },
+    // eslint-disable-next-line vue/prop-name-casing
     goods_receipts: {
         type: Object,
         default: null,
     },
+    // eslint-disable-next-line vue/prop-name-casing
     stock_balances: {
         type: Object,
         default: null,
     },
+    // eslint-disable-next-line vue/prop-name-casing
     stock_movements: {
         type: Array,
         default: null,
