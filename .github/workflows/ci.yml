@@ -1,0 +1,101 @@
+name: CI
+
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Quality & Security Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup environment and ephemeral secrets
+        run: |
+          mkdir -p secrets
+          chmod 700 secrets
+
+          DB_ROOT_PW=$(openssl rand -hex 24)
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          MIGRATOR_PW=$(openssl rand -hex 24)
+          APP_PW=$(openssl rand -hex 24)
+
+          echo -n "$DB_ROOT_PW" > secrets/db_root_password.txt
+          chmod 600 secrets/db_root_password.txt
+
+          cp .env.example .env
+          sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
+          sed -i "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${DB_ROOT_PW}|" .env
+          sed -i "s|^DB_MIGRATOR_PASSWORD=.*|DB_MIGRATOR_PASSWORD=${MIGRATOR_PW}|" .env
+          sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${APP_PW}|" .env
+
+          cp src/.env.example src/.env
+          sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" src/.env
+          sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${APP_PW}|" src/.env
+
+      - name: Build Docker images
+        run: docker compose build
+
+      - name: Start Docker services
+        run: docker compose up -d
+
+      - name: Wait for database readiness
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose ps db | grep -q "healthy"; then
+              echo "Database is healthy and ready."
+              exit 0
+            fi
+            echo "Waiting for database healthy state ($i/30)..."
+            sleep 2
+          done
+          echo "Database failed to become healthy in time."
+          exit 1
+
+      - name: Reset & migrate test database
+        run: make test-db-reset
+
+      - name: Backend code style (Pint)
+        run: make lint
+
+      - name: Static analysis (PHPStan / Larastan)
+        run: make analyse
+
+      - name: Backend tests (Pest)
+        run: make test
+
+      - name: Frontend unit & component tests (Vitest)
+        run: make test-js
+
+      - name: Frontend code style (ESLint)
+        run: make lint-js
+
+      - name: Frontend build (Vite)
+        run: docker compose --profile tools run --rm node npm run build
+
+      - name: Composer security audit
+        run: docker compose run --rm php composer audit
+
+      - name: NPM security audit
+        run: docker compose --profile tools run --rm node npm audit --audit-level=high
+
+      - name: Secret scanning (Gitleaks)
+        run: |
+          docker run --rm --network none -v "${PWD}:/repo:ro" -w /repo \
+            zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --verbose --no-banner

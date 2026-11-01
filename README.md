@@ -1,5 +1,7 @@
 # ERP Distribusi / Trading (Laravel + Vue Monolith)
 
+[![CI](https://github.com/widiartowahyu3/erp-laravel/actions/workflows/ci.yml/badge.svg)](https://github.com/widiartowahyu3/erp-laravel/actions/workflows/ci.yml)
+
 Repositori sistem ERP untuk operasional distribusi dan trading berbasis monolitik (Laravel + Vue) dengan standar arsitektur dan hardening tingkat tinggi.
 
 ---
