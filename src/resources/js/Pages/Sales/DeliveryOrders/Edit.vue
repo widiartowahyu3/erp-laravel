@@ -15,6 +15,7 @@ import Alert from '@/Components/ui/Alert.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useFocusFirstField } from '@/composables/useFocusFirstField';
+import { trimDecimal } from '@/Support/decimal';
 
 const props = defineProps({
     item: {
@@ -32,7 +33,7 @@ const currentDo = computed(() => props.item || props.deliveryOrder || {});
 const preparedItems = (currentDo.value.items || []).map((it) => ({
     sales_order_item_id: String(it.sales_order_item_id),
     product_id: String(it.product_id),
-    quantity: String(it.quantity || '1.0000'),
+    quantity: trimDecimal(it.quantity || '1'),
     product: it.product,
     so_item: it.sales_order_item,
 }));
@@ -222,7 +223,7 @@ function submit() {
                                             type="text"
                                             size="sm"
                                             class="text-right font-mono font-semibold"
-                                            placeholder="1.0000"
+                                            placeholder="1"
                                             :disabled="form.processing"
                                             :aria-label="`Kuantitas kirim baris ke-${index + 1}`"
                                         />

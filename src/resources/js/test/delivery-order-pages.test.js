@@ -232,8 +232,8 @@ describe('Delivery Order Pages (Butir 10)', () => {
 
         // Remaining quantities: item 101 => 7.0000, item 102 => 5.0000
         expect(wrapper.vm.form.items.length).toBe(2);
-        expect(wrapper.vm.form.items[0].quantity).toBe('7.0000');
-        expect(wrapper.vm.form.items[1].quantity).toBe('5.0000');
+        expect(wrapper.vm.form.items[0].quantity).toBe('7');
+        expect(wrapper.vm.form.items[1].quantity).toBe('5');
         expect(wrapper.vm.form.shipping_address).toBe('Jl. Merdeka No. 1');
 
         // Remove item 1
@@ -451,7 +451,7 @@ describe('Delivery Order Pages (Butir 10)', () => {
         expect(wrapper.vm.form.delivery_date).toBe('2026-11-04');
         expect(wrapper.vm.form.shipping_address).toBe('Kawasan Industri Cikarang Blok B4');
         expect(wrapper.vm.form.notes).toBe('Harap dikirim sebelum jam 14:00');
-        expect(wrapper.vm.form.items[0].quantity).toBe('6.0000');
+        expect(wrapper.vm.form.items[0].quantity).toBe('6');
         expect(wrapper.vm.form.items[0].sales_order_item_id).toBe('101');
     });
 
@@ -588,5 +588,37 @@ describe('Delivery Order Pages (Butir 10)', () => {
             });
             expect(showWrapper.text()).toContain(item.label);
         }
+    });
+
+    it('DeliveryOrders/Edit trims trailing zeros from quantity input', () => {
+        const deliveryOrder = {
+            id: 1,
+            number: 'DO/202611/00001',
+            delivery_date: '2026-11-01',
+            status: 'draft',
+            customer: { id: 1, code: 'C01', name: 'Cust 1' },
+            warehouse: { id: 1, code: 'WH1', name: 'WH 1' },
+            sales_order: { id: 1, number: 'SO-001' },
+            items: [
+                {
+                    id: 1,
+                    sales_order_item_id: 1,
+                    product_id: 1,
+                    quantity: '4.0000',
+                    product: { id: 1, sku: 'P1', name: 'Product 1' },
+                    sales_order_item: { id: 1, quantity: '10.0000' },
+                },
+            ],
+        };
+
+        const wrapper = mount(DeliveryOrderEdit, {
+            props: {
+                item: deliveryOrder,
+            },
+            global: { stubs: defaultStubs },
+        });
+
+        const qtyInput = wrapper.find('input[placeholder="1.0000"], input[placeholder="1"]');
+        expect(qtyInput.element.value).toBe('4');
     });
 });

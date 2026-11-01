@@ -8,6 +8,7 @@ import Switch from '@/Components/ui/Switch.vue';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
+import { trimDecimal } from '@/Support/decimal';
 
 const props = defineProps({
     taxRate: {
@@ -23,7 +24,7 @@ const props = defineProps({
 const form = useForm({
     code: props.taxRate?.code || '',
     name: props.taxRate?.name || '',
-    rate: props.taxRate?.rate !== undefined ? String(props.taxRate.rate) : '0.00',
+    rate: props.taxRate?.rate !== undefined ? trimDecimal(props.taxRate.rate) : '0',
     is_active: props.taxRate ? Boolean(props.taxRate.is_active) : true,
 });
 
@@ -112,7 +113,7 @@ function submit() {
                         :id="id"
                         v-model="form.rate"
                         type="text"
-                        placeholder="11.00"
+                        placeholder="11"
                         :invalid="hasError"
                         :aria-describedby="describedBy"
                         required

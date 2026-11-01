@@ -350,6 +350,22 @@ test('products crud lifecycle and permission checks', function (): void {
     expect($product->selling_price)->toBe('135000.00')
         ->and($product->min_stock)->toBe('10.0000');
 
+    // Update with trimmed decimal form values (5000 and 5000)
+    $this->actingAs($full)->put("/master/products/{$product->id}", [
+        'sku' => 'SKU-TEST-001',
+        'name' => 'Produk Dagang Eksklusif Revisi',
+        'category_id' => $cat->id,
+        'base_unit_id' => $unit->id,
+        'selling_price' => '5000',
+        'min_stock' => '5000',
+        'track_stock' => true,
+        'is_active' => true,
+    ])->assertSessionHasNoErrors()->assertRedirect('/master/products');
+
+    $product->refresh();
+    expect($product->selling_price)->toBe('5000.00')
+        ->and($product->min_stock)->toBe('5000.0000');
+
     // Destroy
     $this->actingAs($full)->delete("/master/products/{$product->id}")->assertRedirect();
     expect(Product::find($product->id))->toBeNull();

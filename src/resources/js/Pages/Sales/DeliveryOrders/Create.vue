@@ -15,7 +15,7 @@ import Alert from '@/Components/ui/Alert.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useFocusFirstField } from '@/composables/useFocusFirstField';
-import { subtractDecimals, compareDecimals } from '@/Support/decimal';
+import { subtractDecimals, compareDecimals, trimDecimal } from '@/Support/decimal';
 
 const props = defineProps({
     salesOrder: {
@@ -35,7 +35,7 @@ const preparedItems = props.eligibleItems.map((it) => {
     return {
         sales_order_item_id: String(it.id),
         product_id: String(it.product_id),
-        quantity: String(remaining),
+        quantity: trimDecimal(remaining),
         max_allowed: remaining,
         product: it.product,
         so_item: it,
@@ -233,7 +233,7 @@ function submit() {
                                             type="text"
                                             size="sm"
                                             class="text-right font-mono font-semibold"
-                                            placeholder="1.0000"
+                                            placeholder="1"
                                             :disabled="form.processing"
                                             :aria-label="`Kuantitas kirim baris ke-${index + 1}`"
                                         />

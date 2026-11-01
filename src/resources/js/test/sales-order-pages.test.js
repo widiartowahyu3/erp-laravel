@@ -233,7 +233,7 @@ describe('Sales Order Pages (Butir 9)', () => {
         await productSelect.setValue('5');
         await nextTick();
 
-        expect(wrapper.vm.form.items[0].unit_price).toBe('50000.0000');
+        expect(wrapper.vm.form.items[0].unit_price).toBe('50000');
 
         // Set quantity to 2
         wrapper.vm.form.items[0].quantity = '2.0000';
@@ -510,8 +510,8 @@ describe('Sales Order Pages (Butir 9)', () => {
         expect(wrapper.text()).toContain('Edit SO: SO/202611/00077');
         const formComponent = wrapper.findComponent(SalesOrderForm);
         expect(formComponent.exists()).toBe(true);
-        expect(formComponent.vm.form.items[0].quantity).toBe('8.0000');
-        expect(formComponent.vm.form.items[0].unit_price).toBe('25000.0000');
+        expect(formComponent.vm.form.items[0].quantity).toBe('8');
+        expect(formComponent.vm.form.items[0].unit_price).toBe('25000');
     });
 
     it('SalesOrders pages pass axe-core accessibility checks', async () => {
@@ -621,5 +621,45 @@ describe('Sales Order Pages (Butir 9)', () => {
             });
             expect(showWrapper.text()).toContain(item.label);
         }
+    });
+
+    it('SalesOrders/Form trims trailing zeros from quantity and unit_price inputs', () => {
+        const order = {
+            id: 10,
+            customer_id: 1,
+            warehouse_id: 1,
+            order_date: '2026-11-01',
+            status: 'draft',
+            payment_term_id: 1,
+            items: [
+                {
+                    id: 101,
+                    product_id: 1,
+                    quantity: '66.0000',
+                    unit_price: '50000.0000',
+                    discount_amount: '0.00',
+                    tax_rate_id: '',
+                },
+            ],
+        };
+
+        const wrapper = mount(SalesOrderForm, {
+            props: {
+                order,
+                customers: [{ id: 1, code: 'C01', name: 'Cust 1', payment_term_id: 1 }],
+                warehouses: [{ id: 1, code: 'WH1', name: 'WH 1' }],
+                products: [{ id: 1, sku: 'P1', name: 'Product 1', selling_price: '50000.00' }],
+                taxRates: [],
+                paymentTerms: [{ id: 1, code: 'COD', name: 'Cash On Delivery' }],
+                isEdit: true,
+            },
+            global: { stubs: defaultStubs },
+        });
+
+        const qtyInput = wrapper.find('input[placeholder="1.0000"], input[placeholder="1"]');
+        const priceInput = wrapper.find('input[placeholder="0.0000"], input[placeholder="0"]');
+
+        expect(qtyInput.element.value).toBe('66');
+        expect(priceInput.element.value).toBe('50000');
     });
 });

@@ -11,6 +11,7 @@ import Switch from '@/Components/ui/Switch.vue';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
+import { trimDecimal } from '@/Support/decimal';
 
 const props = defineProps({
     product: {
@@ -39,8 +40,8 @@ const form = useForm({
     barcode: props.product?.barcode || '',
     description: props.product?.description || '',
     track_stock: props.product ? Boolean(props.product.track_stock) : true,
-    selling_price: props.product?.selling_price !== undefined ? String(props.product.selling_price) : '0.00',
-    min_stock: props.product?.min_stock !== undefined ? String(props.product.min_stock) : '0.0000',
+    selling_price: props.product?.selling_price !== undefined ? trimDecimal(props.product.selling_price) : '0',
+    min_stock: props.product?.min_stock !== undefined ? trimDecimal(props.product.min_stock) : '0',
     is_active: props.product ? Boolean(props.product.is_active) : true,
 });
 
@@ -208,7 +209,7 @@ function submit() {
                             :id="id"
                             v-model="form.selling_price"
                             type="text"
-                            placeholder="0.00"
+                            placeholder="0"
                             :invalid="hasError"
                             :aria-describedby="describedBy"
                             required
@@ -229,7 +230,7 @@ function submit() {
                             :id="id"
                             v-model="form.min_stock"
                             type="text"
-                            placeholder="0.0000"
+                            placeholder="0"
                             :invalid="hasError"
                             :aria-describedby="describedBy"
                             required

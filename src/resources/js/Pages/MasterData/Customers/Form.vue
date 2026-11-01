@@ -11,6 +11,7 @@ import Switch from '@/Components/ui/Switch.vue';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
+import { trimDecimal } from '@/Support/decimal';
 
 const props = defineProps({
     customer: {
@@ -35,7 +36,7 @@ const form = useForm({
     email: props.customer?.email || '',
     address: props.customer?.address || '',
     tax_id: props.customer?.tax_id || '',
-    credit_limit: props.customer?.credit_limit !== undefined ? String(props.customer.credit_limit) : '0.00',
+    credit_limit: props.customer?.credit_limit !== undefined ? trimDecimal(props.customer.credit_limit) : '0',
     payment_term_id: props.customer?.payment_term_id ? String(props.customer.payment_term_id) : '',
     is_active: props.customer ? Boolean(props.customer.is_active) : true,
 });
@@ -212,7 +213,7 @@ function submit() {
                             :id="id"
                             v-model="form.credit_limit"
                             type="text"
-                            placeholder="0.00"
+                            placeholder="0"
                             :invalid="hasError"
                             :aria-describedby="describedBy"
                         />

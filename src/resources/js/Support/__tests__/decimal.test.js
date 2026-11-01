@@ -7,6 +7,7 @@ import {
     compareDecimals,
     calculatePurchaseOrderItem,
     calculateSalesOrderItem,
+    trimDecimal,
 } from '../decimal';
 
 describe('decimal support utilities', () => {
@@ -57,5 +58,31 @@ describe('decimal support utilities', () => {
         expect(result.lineNet).toBe('95000.00');
         expect(result.taxAmount).toBe('10450.00');
         expect(result.lineTotal).toBe('105450.00');
+    });
+
+    it('trims trailing zeros from decimal string without float inaccuracies', () => {
+        expect(trimDecimal('66.0000')).toBe('66');
+        expect(trimDecimal('0.0000')).toBe('0');
+        expect(trimDecimal('5000.00')).toBe('5000');
+        expect(trimDecimal('12.5000')).toBe('12.5');
+        expect(trimDecimal('0.2500')).toBe('0.25');
+        expect(trimDecimal('100')).toBe('100');
+        expect(trimDecimal('')).toBe('');
+        expect(trimDecimal(null)).toBe('');
+        expect(trimDecimal(undefined)).toBe('');
+        expect(trimDecimal('10.50')).toBe('10.5');
+
+        // Negative values
+        expect(trimDecimal('-66.0000')).toBe('-66');
+        expect(trimDecimal('-12.5000')).toBe('-12.5');
+        expect(trimDecimal('-0.0000')).toBe('0');
+        expect(trimDecimal('-0')).toBe('0');
+        expect(trimDecimal('-100')).toBe('-100');
+        expect(trimDecimal('-0.2500')).toBe('-0.25');
+
+        // Strings without dot
+        expect(trimDecimal('0')).toBe('0');
+        expect(trimDecimal('5000')).toBe('5000');
+        expect(trimDecimal('-50')).toBe('-50');
     });
 });

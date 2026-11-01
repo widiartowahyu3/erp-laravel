@@ -13,7 +13,7 @@ import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
-import { subtractDecimals, compareDecimals } from '@/Support/decimal';
+import { subtractDecimals, compareDecimals, trimDecimal } from '@/Support/decimal';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
@@ -42,8 +42,8 @@ const initialItems = props.receipt?.items && props.receipt.items.length > 0
         line_no: it.line_no || idx + 1,
         purchase_order_item_id: String(it.purchase_order_item_id),
         product_id: String(it.product_id),
-        quantity: String(it.quantity || '1.0000'),
-        unit_cost: String(it.unit_cost || '0.0000'),
+        quantity: trimDecimal(it.quantity || '1'),
+        unit_cost: trimDecimal(it.unit_cost || '0'),
         product: it.product,
         purchase_order_item: it.purchase_order_item,
     }))
@@ -92,8 +92,8 @@ function loadItemsFromSelectedPo() {
                     line_no: newItems.length + 1,
                     purchase_order_item_id: String(it.id),
                     product_id: String(it.product_id),
-                    quantity: String(remaining),
-                    unit_cost: String(it.unit_price || '0.0000'),
+                    quantity: trimDecimal(remaining),
+                    unit_cost: trimDecimal(it.unit_price || '0'),
                     product: it.product,
                     purchase_order_item: it,
                     max_allowed: remaining,
@@ -273,7 +273,7 @@ function submit() {
                                     type="text"
                                     size="sm"
                                     class="text-right font-mono"
-                                    placeholder="1.0000"
+                                    placeholder="1"
                                     :disabled="form.processing"
                                     :aria-label="`Kuantitas penerimaan baris ke-${index + 1}`"
                                 />

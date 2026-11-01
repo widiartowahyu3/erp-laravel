@@ -89,6 +89,31 @@ export function multiplyDecimals(a, b, scale = 2) {
 
 export const mulDecimals = multiplyDecimals;
 
+export function trimDecimal(value) {
+    if (value === null || value === undefined) return '';
+    const s = String(value).trim();
+    if (s === '') return '';
+    if (!/^[+-]?[0-9]+(\.[0-9]+)?$/.test(s)) return s;
+
+    const isNegative = s.startsWith('-');
+    const clean = isNegative || s.startsWith('+') ? s.slice(1) : s;
+    const [intPart, decPart] = clean.split('.');
+
+    if (decPart === undefined) {
+        if (intPart === '0') return '0';
+        return isNegative ? `-${intPart}` : intPart;
+    }
+
+    const trimmedDec = decPart.replace(/0+$/, '');
+    if (trimmedDec === '') {
+        if (intPart === '0') return '0';
+        return isNegative ? `-${intPart}` : intPart;
+    }
+
+    const sign = isNegative ? '-' : '';
+    return `${sign}${intPart}.${trimmedDec}`;
+}
+
 export function calculatePurchaseOrderItem(quantity, unitPrice, discountAmount = '0', taxRatePercent = '0') {
     const qty = String(quantity || '0');
     const price = String(unitPrice || '0');

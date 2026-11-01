@@ -429,3 +429,51 @@ test('delivery order validation rejects future delivery date and invalid item qu
         ],
     ])->assertSessionHasErrors(['items.0.quantity']);
 });
+
+test('delivery order store accepts trimmed quantity without decimal places', function () {
+    $user = userWithPermissions(['delivery_orders.create']);
+    $customerId = TestDataFactory::createCustomer();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['selling_price' => '10000.00']);
+
+    $so = SalesOrder::create([
+        'number' => 'SO/202611/00098',
+        'customer_id' => $customerId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => SalesOrderStatus::APPROVED,
+        'subtotal' => '660000.00',
+        'tax_amount' => '0.00',
+        'discount_amount' => '0.00',
+        'total' => '660000.00',
+    ]);
+    $soItem = SalesOrderItem::create([
+        'sales_order_id' => $so->id,
+        'line_no' => 1,
+        'product_id' => $productId,
+        'quantity' => '100.0000',
+        'delivered_quantity' => '0.0000',
+        'unit_price' => '10000.0000',
+        'line_total' => '1000000.00',
+    ]);
+
+    $this->actingAs($user)
+        ->post('/sales/delivery-orders', [
+            'sales_order_id' => $so->id,
+            'customer_id' => $customerId,
+            'warehouse_id' => $warehouseId,
+            'delivery_date' => '2026-11-01',
+            'items' => [
+                [
+                    'sales_order_item_id' => $soItem->id,
+                    'product_id' => $productId,
+                    'quantity' => '66',
+                ],
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertStatus(302);
+
+    $do = DeliveryOrder::with('items')->latest('id')->firstOrFail();
+    expect($do->items->first()->quantity)->toBe('66.0000');
+});

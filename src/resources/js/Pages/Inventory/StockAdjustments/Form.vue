@@ -12,7 +12,7 @@ import IconButton from '@/Components/ui/IconButton.vue';
 import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
-import { subtractDecimals } from '@/Support/decimal';
+import { subtractDecimals, trimDecimal } from '@/Support/decimal';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
@@ -40,17 +40,17 @@ const initialItems = props.adjustment?.items && props.adjustment.items.length > 
     ? props.adjustment.items.map((it, idx) => ({
         line_no: it.line_no || idx + 1,
         product_id: String(it.product_id),
-        system_quantity: String(it.system_quantity || '0.0000'),
-        counted_quantity: String(it.counted_quantity || '0.0000'),
-        unit_cost: String(it.unit_cost || '0.0000'),
+        system_quantity: trimDecimal(it.system_quantity || '0'),
+        counted_quantity: trimDecimal(it.counted_quantity || '0'),
+        unit_cost: trimDecimal(it.unit_cost || '0'),
     }))
     : [
         {
             line_no: 1,
             product_id: '',
-            system_quantity: '0.0000',
-            counted_quantity: '0.0000',
-            unit_cost: '0.0000',
+            system_quantity: '0',
+            counted_quantity: '0',
+            unit_cost: '0',
         },
     ];
 
@@ -86,9 +86,9 @@ function addItem() {
     form.items.push({
         line_no: form.items.length + 1,
         product_id: '',
-        system_quantity: '0.0000',
-        counted_quantity: '0.0000',
-        unit_cost: '0.0000',
+        system_quantity: '0',
+        counted_quantity: '0',
+        unit_cost: '0',
     });
 }
 
@@ -346,7 +346,7 @@ function submit() {
                                         :aria-label="`Biaya satuan baris ${item.line_no}`"
                                         class="text-right font-mono text-xs"
                                         :invalid="Boolean(form.errors[`items.${idx}.unit_cost`])"
-                                        :placeholder="!calculateDifference(item).startsWith('-') && calculateDifference(item) !== '0.0000' ? 'Wajib (> 0)' : '0.0000'"
+                                        :placeholder="!calculateDifference(item).startsWith('-') && calculateDifference(item) !== '0.0000' && calculateDifference(item) !== '0' ? 'Wajib (> 0)' : '0'"
                                     />
                                     <p
                                         v-if="form.errors[`items.${idx}.unit_cost`]"

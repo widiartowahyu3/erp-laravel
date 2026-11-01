@@ -201,3 +201,30 @@ test('sales order edit and update rejects non-draft sales orders', function (): 
         ])
         ->assertStatus(409);
 });
+
+test('sales order store accepts trimmed quantity without decimal places', function () {
+    $user = userWithPermissions(['sales_orders.create']);
+    $customerId = TestDataFactory::createCustomer();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['selling_price' => '10000.00']);
+
+    $this->actingAs($user)
+        ->post('/sales/sales-orders', [
+            'customer_id' => $customerId,
+            'warehouse_id' => $warehouseId,
+            'order_date' => '2026-11-01',
+            'items' => [
+                [
+                    'product_id' => $productId,
+                    'quantity' => '66',
+                    'unit_price' => '50000',
+                ],
+            ],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertStatus(302);
+
+    $so = SalesOrder::with('items')->latest('id')->firstOrFail();
+    expect($so->items->first()->quantity)->toBe('66.0000')
+        ->and($so->items->first()->unit_price)->toBe('50000.0000');
+});

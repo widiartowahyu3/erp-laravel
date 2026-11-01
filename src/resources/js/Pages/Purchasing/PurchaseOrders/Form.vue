@@ -12,7 +12,7 @@ import IconButton from '@/Components/ui/IconButton.vue';
 import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
-import { addDecimals, calculatePurchaseOrderItem } from '@/Support/decimal';
+import { addDecimals, calculatePurchaseOrderItem, trimDecimal } from '@/Support/decimal';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
@@ -52,18 +52,18 @@ const initialItems = props.order?.items && props.order.items.length > 0
     ? props.order.items.map((it, idx) => ({
         line_no: it.line_no || idx + 1,
         product_id: String(it.product_id),
-        quantity: String(it.quantity || '1.0000'),
-        unit_price: String(it.unit_price || '0.0000'),
-        discount_amount: String(it.discount_amount || '0.00'),
+        quantity: trimDecimal(it.quantity || '1'),
+        unit_price: trimDecimal(it.unit_price || '0'),
+        discount_amount: trimDecimal(it.discount_amount || '0'),
         tax_rate_id: it.tax_rate_id ? String(it.tax_rate_id) : '',
     }))
     : [
         {
             line_no: 1,
             product_id: '',
-            quantity: '1.0000',
-            unit_price: '0.0000',
-            discount_amount: '0.00',
+            quantity: '1',
+            unit_price: '0',
+            discount_amount: '0',
             tax_rate_id: '',
         },
     ];
@@ -137,9 +137,9 @@ function addItem() {
     form.items.push({
         line_no: form.items.length + 1,
         product_id: '',
-        quantity: '1.0000',
-        unit_price: '0.0000',
-        discount_amount: '0.00',
+        quantity: '1',
+        unit_price: '0',
+        discount_amount: '0',
         tax_rate_id: '',
     });
 }
@@ -359,7 +359,7 @@ function submit() {
                                     type="text"
                                     size="sm"
                                     class="text-right font-mono"
-                                    placeholder="1.0000"
+                                    placeholder="1"
                                     :disabled="form.processing"
                                     :aria-label="`Kuantitas barang baris ke-${index + 1}`"
                                 />
@@ -373,7 +373,7 @@ function submit() {
                                     type="text"
                                     size="sm"
                                     class="text-right font-mono"
-                                    placeholder="0.0000"
+                                    placeholder="0"
                                     :disabled="form.processing"
                                     :aria-label="`Harga satuan barang baris ke-${index + 1}`"
                                 />
@@ -387,7 +387,7 @@ function submit() {
                                     type="text"
                                     size="sm"
                                     class="text-right font-mono"
-                                    placeholder="0.00"
+                                    placeholder="0"
                                     :disabled="form.processing"
                                     :aria-label="`Diskon baris ke-${index + 1}`"
                                 />
