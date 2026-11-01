@@ -1507,6 +1507,40 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 26. Verifikasi Aset Statis Nginx (Kompresi Gzip, Cache Immutable, Nosniff)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 26: Verifikasi Aset Statis Nginx (Gzip, Cache-Control, Nosniff) ---"
+
+# Cari berkas aset nyata di src/public/build/assets/*.js
+REAL_ASSET=$(find src/public/build/assets -name "*.js" -size +1k | head -n 1)
+
+if [ -n "$REAL_ASSET" ] && [ -f "$REAL_ASSET" ]; then
+    ASSET_NAME=$(basename "$REAL_ASSET")
+    ASSET_HEADER=$(curl -sI -H 'Accept-Encoding: gzip' "http://127.0.0.1:${APP_PORT:-8080}/build/assets/${ASSET_NAME}")
+
+    if echo "$ASSET_HEADER" | grep -qi "Content-Encoding: gzip"; then
+        pass "Aset statis /build/assets/$ASSET_NAME terkompresi dengan gzip (Content-Encoding: gzip)"
+    else
+        fail "Aset statis /build/assets/$ASSET_NAME TIDAK memiliki header Content-Encoding: gzip"
+    fi
+
+    if echo "$ASSET_HEADER" | grep -qi "Cache-Control:.*immutable"; then
+        pass "Aset statis /build/assets/$ASSET_NAME memiliki header Cache-Control immutable"
+    else
+        fail "Aset statis /build/assets/$ASSET_NAME TIDAK memiliki header Cache-Control immutable"
+    fi
+
+    if echo "$ASSET_HEADER" | grep -qi "X-Content-Type-Options: nosniff"; then
+        pass "Aset statis /build/assets/$ASSET_NAME memiliki header X-Content-Type-Options: nosniff"
+    else
+        fail "Aset statis /build/assets/$ASSET_NAME TIDAK memiliki header X-Content-Type-Options: nosniff"
+    fi
+else
+    fail "Tidak ditemukan berkas aset JS berukuran > 1KB di src/public/build/assets untuk pengujian"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""
