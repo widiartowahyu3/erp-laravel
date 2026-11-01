@@ -27,6 +27,7 @@ jobs:
 
       - name: Setup environment and ephemeral secrets
         run: |
+          set +x
           mkdir -p secrets
           chmod 700 secrets
 
@@ -36,23 +37,42 @@ jobs:
           APP_PW=$(openssl rand -hex 24)
 
           echo -n "$DB_ROOT_PW" > secrets/db_root_password.txt
-          chmod 600 secrets/db_root_password.txt
+          chmod 644 secrets/db_root_password.txt
 
           cp .env.example .env
-          sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
-          sed -i "s|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=${DB_ROOT_PW}|" .env
+          sed -i "s|^UID=.*|UID=$(id -u)|" .env
+          sed -i "s|^GID=.*|GID=$(id -g)|" .env
+          sed -i "s|^DB_APP_PASSWORD=.*|DB_APP_PASSWORD=${APP_PW}|" .env
           sed -i "s|^DB_MIGRATOR_PASSWORD=.*|DB_MIGRATOR_PASSWORD=${MIGRATOR_PW}|" .env
-          sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${APP_PW}|" .env
+          chmod 600 .env
 
           cp src/.env.example src/.env
           sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" src/.env
           sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${APP_PW}|" src/.env
+          sed -i "s|^APP_ENV=.*|APP_ENV=local|" src/.env
+          sed -i "s|^APP_DEBUG=.*|APP_DEBUG=true|" src/.env
+          sed -i "s|^APP_URL=.*|APP_URL=http://127.0.0.1:8080|" src/.env
+          sed -i "s|^SESSION_SECURE_COOKIE=.*|SESSION_SECURE_COOKIE=false|" src/.env
+          chmod 600 src/.env
+
+          # Verifikasi penggantian kunci tanpa membocorkan nilai rahasia
+          [ $(grep -c "^UID=$(id -u)$" .env) -eq 1 ] || { echo "Failed: UID replacement mismatch" >&2; exit 1; }
+          [ $(grep -c "^GID=$(id -g)$" .env) -eq 1 ] || { echo "Failed: GID replacement mismatch" >&2; exit 1; }
+          [ $(grep -c "^DB_APP_PASSWORD=change_this_" .env) -eq 0 ] || { echo "Failed: DB_APP_PASSWORD placeholder remains" >&2; exit 1; }
+          [ $(grep -c "^DB_MIGRATOR_PASSWORD=change_this_" .env) -eq 0 ] || { echo "Failed: DB_MIGRATOR_PASSWORD placeholder remains" >&2; exit 1; }
+          [ $(grep -c "^DB_APP_PASSWORD=" .env) -eq 1 ] || { echo "Failed: DB_APP_PASSWORD missing" >&2; exit 1; }
+          [ $(grep -c "^DB_MIGRATOR_PASSWORD=" .env) -eq 1 ] || { echo "Failed: DB_MIGRATOR_PASSWORD missing" >&2; exit 1; }
+
+          [ $(grep -c "^APP_KEY=base64:" src/.env) -eq 1 ] || { echo "Failed: APP_KEY missing" >&2; exit 1; }
+          [ $(grep -c "^DB_PASSWORD=change_this_" src/.env) -eq 0 ] || { echo "Failed: DB_PASSWORD placeholder remains" >&2; exit 1; }
+          [ $(grep -c "^DB_PASSWORD=" src/.env) -eq 1 ] || { echo "Failed: DB_PASSWORD missing" >&2; exit 1; }
+          [ $(grep -c "^APP_ENV=local$" src/.env) -eq 1 ] || { echo "Failed: APP_ENV mismatch" >&2; exit 1; }
 
       - name: Build Docker images
         run: docker compose build
 
       - name: Start Docker services
-        run: docker compose up -d
+        run: docker compose up -d --wait --wait-timeout 180
 
       - name: Wait for database readiness
         run: |
@@ -66,6 +86,16 @@ jobs:
           done
           echo "Database failed to become healthy in time."
           exit 1
+
+      - name: Diagnostic container logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker Compose ps ==="
+          docker compose ps -a
+          echo "=== Database logs ==="
+          docker compose logs --no-color --tail=150 db
+          echo "=== PHP & Web logs ==="
+          docker compose logs --no-color --tail=80 php web
 
       - name: Reset & migrate test database
         run: make test-db-reset
