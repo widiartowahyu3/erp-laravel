@@ -31,12 +31,3 @@ Whitelist ekstensi DAN MIME, nama file diacak, disk privat di luar `public`, und
 2. Dokumen, stok, dan keuangan: Service orkestrasi (urutan langkah, DB::transaction, penguncian, audit) + kelas aturan murni tanpa database (Decimal, state machine, kalkulator). Logika bisnis DILARANG di Controller dan Model.
 3. DILARANG Service yang hanya membungkus satu panggilan Model tanpa alasan (transaksi, audit, atau penjagaan aturan). Query baca kompleks: scope di Model atau kelas query khusus.
 
-## Pola Service (disepakati pemilik)
-1. Master data sederhana: Service tipis (satu method per aksi, tanpa abstraksi generik).
-2. Dokumen, stok, dan keuangan: Service orkestrasi (urutan langkah, DB::transaction, penguncian, audit) + kelas aturan murni tanpa database (Decimal, state machine, kalkulator). Logika bisnis DILARANG di Controller dan Model.
-3. DILARANG Service yang hanya membungkus satu panggilan Model tanpa alasan (transaksi, audit, atau penjagaan aturan). Query baca kompleks: scope di Model atau kelas query khusus.
-
-## Pola Service (disepakati pemilik)
-1. Master data sederhana: Service tipis (satu method per aksi, tanpa abstraksi generik).
-2. Dokumen, stok, dan keuangan: Service orkestrasi (urutan langkah, DB::transaction, penguncian, audit) + kelas aturan murni tanpa database (Decimal, state machine, kalkulator). Logika bisnis DILARANG di Controller dan Model.
-3. DILARANG Service yang hanya membungkus satu panggilan Model tanpa alasan (transaksi, audit, atau penjagaan aturan). Query baca kompleks: scope di Model atau kelas query khusus.

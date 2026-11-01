@@ -1,6 +1,6 @@
-# Kebijakan & Standar Hardening Keamanan (Fase 1 - Final)
+# Kebijakan & Standar Hardening Keamanan Sistem ERP
 
-Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) yang diterapkan pada proyek ERP Distribusi / Trading, mencakup infrastruktur Docker (Fase 0) dan baseline keamanan aplikasi Laravel 13 + Vue 3 (Fase 1).
+Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) yang diterapkan pada proyek ERP Distribusi / Trading, mencakup infrastruktur Docker, basis data MariaDB 12.3, baseline keamanan backend Laravel 13, proteksi frontend Vue 3, serta penanganan galat dan mitigasi kebocoran data.
 
 ---
 
@@ -316,8 +316,42 @@ Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
 ### C. Integritas Data & Proteksi Injeksi
 1. **Pencegahan Injeksi SQL pada Query Builder Listing (`ListQuery`)**:
    - Seluruh kolom pengurutan (`sort`) dan penyaringan (`filter`) divalidasi terhadap *whitelist* kolom model yang diizinkan. Parameter yang tidak terdaftar akan diabaikan tanpa memicu SQL error.
-   - Karakter wildcard SQL `LIKE` (`%`, `_`, `\`) disanitasi secara otomatis menggunakan *escaping* berbasis *escape character* eksplisit (`!`) sehingga input pencarian pengguna selalu dicocokkan secara literal.
+   - Karakter wildcard SQL `LIKE` (`%`, `_`, `\`) disanitasi secara otomatis menggunakan *escaping* berbasis *backslash* (`\`) melalui helper `ListQuery::escapeLike()` sehingga input pencarian pengguna selalu dicocokkan secara literal.
 2. **Presisi Aritmetika Moneter (`Decimal`)**:
    - Penggunaan tipe floating-point dilarang keras untuk mencegah kesalahan perhitungan nilai transaksi moneter. Seluruh perhitungan menggunakan `App\Support\Decimal` berbasis `bcmath` dengan representasi `string`.
+
+---
+
+## 4. Standar Integritas Lanjutan, Penanganan Galat & Batasan Sistem (Fase 7.5)
+
+### A. Integritas Relasi Peran & Hak Akses (K1)
+- Tabel pivot `role_user` dan `permission_role` menerapkan integritas ketat (composite key dan pengecekan redundansi) guna mencegah anomali eskalasi hak akses atau duplikasi relasi pada basis data.
+
+### B. Kebijakan Jejak Audit Fail-Closed (K2)
+- Seluruh mutasi model Eloquent yang mengimplementasikan trait `RecordsAudit` **WAJIB** berada di dalam blok `DB::transaction()`.
+- Jika operasi pencatatan log audit ke tabel `audit_logs` gagal, seluruh transaksi database otomatis dibatalkan (*rollback* secara fail-closed). Tidak ada mutasi transaksi yang dapat berjalan tanpa terekam jejak auditnya.
+
+### C. Penegakan Keselarasan Zona Waktu Asia/Jakarta (Butir 1)
+- **Runtime PHP & Konfigurasi Aplikasi**: Diatur pada `Asia/Jakarta` (WIB, UTC+7) melalui `config('app.timezone') = env('APP_TIMEZONE', 'Asia/Jakarta')` dan `date_default_timezone_set('Asia/Jakarta')`.
+- **Sesi Basis Data MariaDB**: Parameter sesi `timezone = '+07:00'` selaras dengan waktu aplikasi.
+- **Pencegahan Bug Validasi Tanggal**: Menyelaraskan runtime PHP dan database mencegah galat validasi transaksi di rentang jam 00:00–07:00 WIB (di mana evaluasi `today()` berbasis UTC masih menunjuk ke hari kemarin), sehingga dokumen operasional (PO, GR, SA) dengan tanggal hari ini tidak tertolak palsu oleh aturan `before_or_equal:today`. Frontend memformat tanggal menggunakan komponen `<DateDisplay>` dan `formatTanggal` dengan zona waktu `Asia/Jakarta` eksplisit.
+
+### D. Penanganan Galat Aman & Proteksi Session Flash (Butir 2-3 & B0.1)
+1. **Pencegahan Kebocoran Trace**: Error handler pada `bootstrap/app.php` menangkap seluruh uncaught exception di lingkungan produksi dan merender halaman kesalahan yang aman tanpa membocorkan environment, query, atau stack trace.
+2. **Pembersihan Kata Sandi pada Session Redirect**: Saat terjadi galat validasi formulir, metode redirect dengan input (`withInput()`) secara ketat menyaring field kredensial sensitif (`password`, `current_password`, `password_confirmation`, `_token`). Kata sandi **TIDAK PERNAH** disimpan kembali ke dalam session store flash.
+3. **Pencegahan Log Flooding**: Exception aturan bisnis (`BusinessRuleException`) didaftarkan ke dalam `$exceptions->dontReport(...)` agar log server produksi tidak dipenuhi galat yang merupakan bagian dari validasi operasional normal.
+
+### E. Rate Limiting Rute Tulis Global (*Write Throttling*)
+- Seluruh rute mutasi state (`POST`, `PUT`, `PATCH`, `DELETE`) dilindungi oleh middleware `throttle:erp-write` (kuota 60 request/menit).
+- Fitur auto-serving Laravel filesystem dinonaktifkan (`'serve' => false` pada `config/filesystems.php`) guna mencegah terbentuknya rute tulis storage tak terkontrol.
+
+### F. Batasan Sistem yang Disengaja (*Deliberate Architectural Boundaries*)
+Proyek ini secara sadar membatasi cakupan fungsional untuk menjaga kualitas dan fokus arsitektur:
+1. **Mata Uang Tunggal**: Transaksi moneter hanya menggunakan mata uang Rupiah (IDR).
+2. **Satuan Dasar Tunggal**: Inventori dikelola berdasarkan satuan dasar terkecil tanpa konversi bertingkat di level transaksi saat ini.
+3. **Tanpa Mutasi Antar-Gudang**: Perpindahan barang antar-gudang (transfer) belum didukung; pergerakan stok hanya bersumber dari Penerimaan Barang (GR) dan Penyesuaian Stok (SA).
+4. **Modul Hilir Terpisah**: Modul Penjualan (SO, DO, Faktur Penjualan), Piutang, Hutang, Pembayaran, Kas & Bank, Jurnal Akuntansi, dan Laporan Keuangan dialokasikan pada roadmap berikutnya.
+5. **Manajemen Pengguna & Log Viewer**: Saat ini dikelola melalui akun seeding dan database seeder; antarmuka GUI untuk audit log viewer dan role manager akan ditambahkan di fase lanjutan.
+
 
 

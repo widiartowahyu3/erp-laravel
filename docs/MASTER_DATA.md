@@ -129,16 +129,17 @@ Setiap entitas master data dilengkapi 4 komponen halaman Vue di bawah `resources
 3. `Edit.vue`: Halaman pengubahan rekaman dengan pre-fill data.
 4. `Form.vue`: Komponen formulir terisolasi dan reusable yang mengikat props form Inertia `useForm()`.
 
-### Desain Antarmuka:
+### Desain Antarmuka & Interaksi:
 - Memanfaatkan token CSS variables tema terang dan gelap.
 - Komponen UI sepenuhnya mandiri dari Design System (`Button`, `TextInput`, `Select`, `Switch`, `FormField`, `DataTable`, `Pagination`, `FilterBar`, `ConfirmDialog`, `Badge`, `StatusBadge`).
-- **Aksesibilitas Teruji**: Formulir dan tabel telah diaudit lolos otomatis menggunakan axe-core dengan 0 pelanggaran *critical* atau *serious*.
+- **Aksesibilitas Teruji (WCAG 2.1 AA)**: Formulir dan tabel telah diaudit lolos otomatis menggunakan axe-core dengan 0 pelanggaran *critical* atau *serious*.
+- **Pengaman Pengiriman Formulir**: Tombol simpan dan hapus dilindungi oleh composable `useSubmitLock` guna mencegah pengiriman ganda akibat klik cepat (*rapid double-click*), mengikat state `:loading`, `:disabled`, dan `:aria-busy`.
 
 ---
 
-## 7. Rute & Otorisasi RBAC
+## 7. Rute, Otorisasi RBAC & Pembatasan Laju
 
-Semua 48 rute master data didaftarkan di `routes/web.php` di bawah grup prefix `/master` dengan nama `master.*`. Setiap endpoint dilindungi dua lapis keamanan:
+Semua 48 rute master data didaftarkan di `routes/web.php` di bawah grup prefix `/master` dengan nama `master.*`. Setiap endpoint dilindungi tiga lapis pengamanan:
 1. Middleware `auth` (beserta `AuthenticateSession`, `EnforceSessionTimeouts`, dan `EnsureUserIsActive`).
 2. Middleware otorisasi granular `can:<module>.<action>` yang dipetakan langsung ke tabel `permissions`:
    - `units.view`, `units.create`, `units.update`, `units.delete`
@@ -149,6 +150,7 @@ Semua 48 rute master data didaftarkan di `routes/web.php` di bawah grup prefix `
    - `customers.view`, `customers.create`, `customers.update`, `customers.delete`
    - `tax_rates.view`, `tax_rates.create`, `tax_rates.update`, `tax_rates.delete`
    - `payment_terms.view`, `payment_terms.create`, `payment_terms.update`, `payment_terms.delete`
+3. Middleware `throttle:erp-write` (kuota 60 mutasi/menit) pada seluruh endpoint `POST`, `PUT`, `DELETE` untuk mencegah flooding mutasi data.
 
 ---
 

@@ -163,3 +163,18 @@ Untuk menjaga keseragaman antarmuka pengguna pada seluruh modul ERP, istilah UI 
 | **Gudang** | Fasilitas Gudang, Gudang Tujuan (umum) | Digunakan pada seluruh label, filter, tabel, dan formulir lokasi penyimpanan stok (`warehouses`). Frasa "Gudang Tujuan" hanya boleh digunakan jika secara semantik merujuk pada gudang tujuan mutasi persediaan antargudang. |
 | **Produk** | Barang Dagang | Digunakan pada seluruh label, katalog, tabel, rincian dokumen pengadaan, dan inventori (`products`). |
 
+---
+
+## 7. Standar Aksesibilitas Antarmuka (WCAG 2.1 AA)
+
+1. **Audit Otomatis axe-core**:
+   - Seluruh komponen primitif, komposit, halaman form, tabel, modal dialog, dan dashboard diuji secara otomatis menggunakan `@axe-core/playwright` / `axe-core`.
+   - **Toleransi Nol**: Dilarang memiliki pelanggaran aksesibilitas berstatus `critical` maupun `serious`.
+2. **Navigasi Keyboard & Manajemen Fokus**:
+   - Seluruh elemen interaktif (tombol, input, dropdown, baris tabel interaktif) wajib dapat diakses penuh via keyboard (`Tab`, `Shift+Tab`, `Enter`, `Space`, `Escape`).
+   - Modal dan konfirmasi dialog mengimplementasikan *focus trap* dan mengembalikan fokus ke elemen pemicu saat ditutup.
+3. **Kontras Warna & Indikator Status**:
+   - Rasio kontras teks terhadap latar belakang memenuhi batas minimum WCAG AA (minimal 4.5:1 untuk teks normal, 3:1 untuk teks besar dan elemen UI grafis) pada mode terang maupun gelap.
+   - Status badge dan indikator kesalahan tidak hanya bergantung pada warna (selalu menyertakan label teks atau ikon penjelas).
+
+

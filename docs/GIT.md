@@ -4,27 +4,39 @@ Dokumen ini mengatur standar pengelolaan kode, keamanan cabang (branching model)
 
 ---
 
-## 1. Alur Kerja Cabang (Branching Workflow)
+## 1. Alur Kerja Kontrol Versi & Cabang (Workflow & Tagging Model)
 
-1. **Cabang Utama (`main`)**:
-   - Cabang `main` merepresentasikan status lingkungan yang stabil, terverifikasi, dan siap rilis.
-   - Tidak diperkenankan melakukan push langsung tanpa verifikasi.
-   - Setiap penyelesaian fase wajib diberi Git Tag penanda rilis (mis. `fase-0`, `fase-1`).
+Praktik aktual pengembangan proyek ERP ini menerapkan model **Trunk-Based Development** terarah dengan penandaan versi lokal (*Local Git Tagging*) yang ketat:
 
-2. **Cabang Pengembangan Fase (`fase/xx-nama-fitur`)**:
-   - Setiap pengerjaan fase atau modul baru wajib dibuat dalam cabang terpisah:
-     ```bash
-     git checkout -b fase/00-environment-hardening
-     ```
-   - Merge ke `main` hanya boleh dilakukan setelah seluruh skrip verifikasi otomatis (mis. `make verify`) berstatus **PASS 100%**.
+1. **Cabang Tunggal (`main`)**:
+   - Seluruh pekerjaan fase dikembangkan dan diuji secara inkremental pada cabang `main`.
+   - **Satu butir = satu commit** menggunakan format Conventional Commits. Dilarang menggabungkan beberapa butir pekerjaan dalam satu commit.
+   - Dilarang keras melakukan `git push` oleh agen/pelaksana; proses push ke remote hanya dilakukan oleh pemilik (*owner*).
+   - Dilarang `--force`, `--no-verify`, menulis ulang riwayat git (*history rewriting*), atau mengubah konfigurasi agent/SSH.
+
+2. **Penandaan Rilis Fase (*Git Tagging*)**:
+   - Setiap penyelesaian gerbang verifikasi fase ditandai dengan Git Tag lokal permanen:
+     - `fase-0`: Fondasi infrastruktur container Docker & hardening dasar.
+     - `fase-1`: Lapisan keamanan web server & runtime PHP-FPM.
+     - `fase-2`: Desain database MariaDB 12.3 & trigger append-only.
+     - `fase-3`: Fondasi backend Laravel 13, strict mode, & Decimal math.
+     - `fase-4`: Fondasi autentikasi, sesi terisolasi, & audit logs.
+     - `fase-5`: Design system Vue 3 + Inertia + Tailwind 4 & WCAG 2.1 AA.
+     - `fase-6`: Modul Master Data (8 entitas) & Reference Guard.
+     - `fase-7`: Modul Pembelian & Inventori (PO, GR, Kartu Stok, Penyesuaian Stok).
+     - `fase-7.1`: Koreksi audit fungsional Fase 7.
+     - `fase-7.5a`: Penutupan celah kualitas & keamanan (Bagian A).
+     - `fase-7.5`: Kesiapan operasional, benchmark performa, dashboard, & CI (Bagian B).
+   - Tag lokal dibuat hanya setelah seluruh gerbang pengujian (`make check`, `make test`, `make verify`) berstatus PASS 100%.
 
 3. **Format Pesan Commit (Conventional Commits)**:
-   - Wajib mengikuti format:
+   - Wajib mengikuti format baku:
      ```text
      <type>(<scope>): <keterangan singkat dalam bahasa Inggris>
      ```
    - Tipe yang diperbolehkan: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `build`, `perf`, `style`.
    - Contoh: `chore(docker): add hardened php-fpm multi-stage image`.
+   - Penegakan format divalidasi secara otomatis oleh hook `.githooks/commit-msg`.
 
 ---
 

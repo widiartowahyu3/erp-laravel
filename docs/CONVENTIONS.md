@@ -278,4 +278,24 @@ Hasil evaluasi peningkatan level PHPStan pada Fase 7.5 Butir 11:
 5. **Akses Properti Dinamis Model Eloquent** (4 galat):
    - Akses properti dinamis pada model atau relasi tertentu yang membutuhkan anotasi `@property` lebih spesifik pada PHPDoc model.
 
+---
+
+## 11. Standar Operasional, Pengaman Transaksi & Batasan Deployment (Fase 7.5)
+
+### A. Pengaman Mutasi Transaksi & Throttling
+1. **Pengaman Frontend Dua Lapis**:
+   - `useActionGuard`: Mengontrol *apa yang boleh dilakukan* berdasarkan permission RBAC dan status siklus hidup dokumen.
+   - `useSubmitLock`: Mengontrol *kapan aksi boleh dikirim* dengan mencegah pengiriman ganda akibat klik cepat (*rapid double-click*) via status `busy`, binding `:loading/:disabled/:aria-busy`, dan throttle 1000ms.
+2. **Rate Limiting Backend Global**:
+   - Seluruh rute mutasi state (`POST`, `PUT`, `PATCH`, `DELETE`) dilindungi oleh middleware `throttle:erp-write` (kuota 60 request/menit per pengguna/IP).
+
+### B. Prosedur Pencadangan & Verifikasi Pemulihan Basis Data
+1. `make backup`: Menghasilkan arsip basis data terkompresi gzip di direktori `backups/` dengan hak akses ketat (`chmod 700` pada direktori, `600` pada berkas).
+2. `make restore-check`: Memulihkan cadangan terbaru ke database sementara (`erp_trading_restore_check`), memvalidasi jumlah baris dan `CHECKSUM TABLE` pada seluruh 38 tabel non-volatile, memverifikasi keberadaan 4 trigger integritas database, dan menghapus basis data sementara setelah verifikasi tuntas.
+
+### C. Catatan Target Multi-Stage Docker `prod`
+- Target `prod` pada `docker/php/Dockerfile` disiapkan sebagai fondasi masa depan dan saat ini **belum mengemas kode sumber aplikasi** (`src/`) ke dalam image, serta belum digunakan untuk proses deployment aktif.
+- Lingkungan kerja saat ini sepenuhnya beroperasi di atas target `dev` terisolasi dengan bind mount.
+
+
 
