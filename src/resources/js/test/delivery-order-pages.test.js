@@ -90,7 +90,6 @@ const defaultStubs = {
         props: ['disabled', 'loading'],
         template: '<button :disabled="disabled || loading" :aria-busy="$attrs[\'aria-busy\']"><slot /></button>',
     },
-    StatusBadge: { template: '<span><slot /></span>' },
     DateDisplay: { template: '<span><slot /></span>' },
     Quantity: { template: '<span><slot /></span>' },
     Alert: {
@@ -539,5 +538,55 @@ describe('Delivery Order Pages (Butir 10)', () => {
             global: { stubs: defaultStubs },
         });
         await expectNoViolations(doShow.element);
+    });
+
+    it('DeliveryOrders/Index and DeliveryOrders/Show render real StatusBadge with localized labels across states', () => {
+        const states = [
+            { status: 'draft', label: 'Draf' },
+            { status: 'posted', label: 'Diposting' },
+            { status: 'void', label: 'Dibatalkan' },
+        ];
+
+        for (const item of states) {
+            const indexWrapper = mount(DeliveryOrderIndex, {
+                props: {
+                    items: {
+                        data: [{
+                            id: 1,
+                            number: 'DO/202611/00001',
+                            delivery_date: '2026-11-01',
+                            customer: { code: 'CUST-001', name: 'PT Pembeli' },
+                            warehouse: { code: 'WH-01', name: 'Gudang' },
+                            sales_order: { number: 'SO-001' },
+                            status: item.status,
+                        }],
+                        meta: dummyMeta,
+                        query: {},
+                    },
+                    customers: [],
+                    warehouses: [],
+                    statuses: [item.status],
+                },
+                global: { stubs: defaultStubs },
+            });
+            expect(indexWrapper.text()).toContain(item.label);
+
+            const showWrapper = mount(DeliveryOrderShow, {
+                props: {
+                    deliveryOrder: {
+                        id: 1,
+                        number: 'DO/202611/00001',
+                        delivery_date: '2026-11-01',
+                        status: item.status,
+                        customer: { id: 1, code: 'CUST-001', name: 'PT Pembeli' },
+                        warehouse: { id: 1, code: 'WH-01', name: 'Gudang' },
+                        sales_order: { id: 1, number: 'SO-001' },
+                        items: [],
+                    },
+                },
+                global: { stubs: defaultStubs },
+            });
+            expect(showWrapper.text()).toContain(item.label);
+        }
     });
 });

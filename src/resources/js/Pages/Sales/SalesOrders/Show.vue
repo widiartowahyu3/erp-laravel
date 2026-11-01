@@ -15,7 +15,6 @@ import Alert from '@/Components/ui/Alert.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
-import { salesOrderStatusConfig, deliveryOrderStatusConfig } from '@/config/sales';
 import { subtractDecimals } from '@/Support/decimal';
 
 const props = defineProps({
@@ -264,10 +263,7 @@ async function handleVoid() {
                     <div class="space-y-3 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Status:</span>
-                            <StatusBadge
-                                :label="salesOrderStatusConfig[salesOrder.status]?.label || salesOrder.status"
-                                :variant="salesOrderStatusConfig[salesOrder.status]?.variant || 'neutral'"
-                            />
+                            <StatusBadge :status="salesOrder.status" />
                         </div>
 
                         <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
@@ -426,10 +422,7 @@ async function handleVoid() {
                                     <DateDisplay :value="delivery.delivery_date" />
                                 </td>
                                 <td class="py-2.5 px-3 text-center">
-                                    <StatusBadge
-                                        :label="deliveryOrderStatusConfig[delivery.status]?.label || delivery.status"
-                                        :variant="deliveryOrderStatusConfig[delivery.status]?.variant || 'neutral'"
-                                    />
+                                    <StatusBadge :status="delivery.status" />
                                 </td>
                                 <td class="py-2.5 px-3 text-right">
                                     <Link :href="`/sales/delivery-orders/${delivery.id}`">

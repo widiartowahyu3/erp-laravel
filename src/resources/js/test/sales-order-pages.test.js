@@ -89,7 +89,6 @@ const defaultStubs = {
         props: ['disabled', 'loading'],
         template: '<button :disabled="disabled || loading" :aria-busy="$attrs[\'aria-busy\']"><slot /></button>',
     },
-    StatusBadge: { template: '<span><slot /></span>' },
     DateDisplay: { template: '<span><slot /></span>' },
     Quantity: { template: '<span><slot /></span>' },
     Rupiah: { template: '<span><slot /></span>' },
@@ -566,5 +565,61 @@ describe('Sales Order Pages (Butir 9)', () => {
             global: { stubs: defaultStubs },
         });
         await expectNoViolations(soShow.element);
+    });
+
+    it('SalesOrders/Index and SalesOrders/Show render real StatusBadge with localized labels across states', () => {
+        const states = [
+            { status: 'draft', label: 'Draf' },
+            { status: 'approved', label: 'Disetujui' },
+            { status: 'partially_delivered', label: 'Terkirim Sebagian' },
+            { status: 'closed', label: 'Ditutup' },
+            { status: 'void', label: 'Dibatalkan' },
+        ];
+
+        for (const item of states) {
+            const indexWrapper = mount(SalesOrderIndex, {
+                props: {
+                    items: {
+                        data: [{
+                            id: 1,
+                            number: 'SO/202611/00001',
+                            order_date: '2026-11-01',
+                            customer: { code: 'CUST-001', name: 'PT Pembeli' },
+                            warehouse: { code: 'WH-01', name: 'Gudang' },
+                            status: item.status,
+                            total: '1000.00',
+                        }],
+                        meta: dummyMeta,
+                        query: {},
+                    },
+                    customers: [],
+                    warehouses: [],
+                    statuses: [item.status],
+                },
+                global: { stubs: defaultStubs },
+            });
+            expect(indexWrapper.text()).toContain(item.label);
+
+            const showWrapper = mount(SalesOrderShow, {
+                props: {
+                    order: {
+                        id: 1,
+                        number: 'SO/202611/00001',
+                        order_date: '2026-11-01',
+                        status: item.status,
+                        subtotal: '1000.00',
+                        discount_amount: '0.00',
+                        tax_amount: '0.00',
+                        total: '1000.00',
+                        customer: { id: 1, code: 'CUST-001', name: 'PT Pembeli' },
+                        warehouse: { id: 1, code: 'WH-01', name: 'Gudang' },
+                        items: [],
+                        delivery_orders: [],
+                    },
+                },
+                global: { stubs: defaultStubs },
+            });
+            expect(showWrapper.text()).toContain(item.label);
+        }
     });
 });

@@ -15,7 +15,6 @@ import Alert from '@/Components/ui/Alert.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
-import { deliveryOrderStatusConfig } from '@/config/sales';
 import { mulDecimals, addDecimals } from '@/Support/decimal';
 
 const props = defineProps({
@@ -245,10 +244,7 @@ async function handleVoid() {
                     <div class="space-y-3 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Status:</span>
-                            <StatusBadge
-                                :label="deliveryOrderStatusConfig[deliveryOrder.status]?.label || deliveryOrder.status"
-                                :variant="deliveryOrderStatusConfig[deliveryOrder.status]?.variant || 'neutral'"
-                            />
+                            <StatusBadge :status="deliveryOrder.status" />
                         </div>
 
                         <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-xs space-y-1.5 text-slate-600 dark:text-slate-400">

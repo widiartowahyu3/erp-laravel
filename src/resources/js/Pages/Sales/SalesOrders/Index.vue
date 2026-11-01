@@ -17,7 +17,7 @@ import Rupiah from '@/Components/ui/Rupiah.vue';
 import Can from '@/Components/ui/Can.vue';
 import { useListQuery } from '@/composables/useListQuery';
 import { useActionGuard } from '@/composables/useActionGuard';
-import { salesOrderStatusConfig } from '@/config/sales';
+import statusMap from '@/generated/enums.json';
 
 const props = defineProps({
     items: {
@@ -74,7 +74,7 @@ const statusOptions = computed(() => [
     { value: '', label: 'Semua Status' },
     ...props.statuses.map((s) => ({
         value: s,
-        label: salesOrderStatusConfig[s]?.label || s,
+        label: statusMap[s]?.label || s,
     })),
 ]);
 
@@ -214,10 +214,7 @@ const hasActiveFilters = computed(() => {
                 </template>
 
                 <template #cell(status)="{ item }">
-                    <StatusBadge
-                        :label="salesOrderStatusConfig[item.status]?.label || item.status"
-                        :variant="salesOrderStatusConfig[item.status]?.variant || 'neutral'"
-                    />
+                    <StatusBadge :status="item.status" />
                 </template>
 
                 <template #cell(total)="{ item }">

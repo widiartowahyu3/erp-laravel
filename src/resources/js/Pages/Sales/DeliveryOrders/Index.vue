@@ -16,7 +16,7 @@ import DateDisplay from '@/Components/ui/DateDisplay.vue';
 import Can from '@/Components/ui/Can.vue';
 import { useListQuery } from '@/composables/useListQuery';
 import { useActionGuard } from '@/composables/useActionGuard';
-import { deliveryOrderStatusConfig } from '@/config/sales';
+import statusMap from '@/generated/enums.json';
 
 const props = defineProps({
     items: {
@@ -73,7 +73,7 @@ const statusOptions = computed(() => [
     { value: '', label: 'Semua Status' },
     ...props.statuses.map((s) => ({
         value: s,
-        label: deliveryOrderStatusConfig[s]?.label || s,
+        label: statusMap[s]?.label || s,
     })),
 ]);
 
@@ -227,10 +227,7 @@ const hasActiveFilters = computed(() => {
                 </template>
 
                 <template #cell(status)="{ item }">
-                    <StatusBadge
-                        :label="deliveryOrderStatusConfig[item.status]?.label || item.status"
-                        :variant="deliveryOrderStatusConfig[item.status]?.variant || 'neutral'"
-                    />
+                    <StatusBadge :status="item.status" />
                 </template>
 
                 <template #cell(actions)="{ item }">
