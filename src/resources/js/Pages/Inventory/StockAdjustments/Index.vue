@@ -189,7 +189,7 @@ const hasActiveFilters = computed(() => {
 
                     <template #cell(created_by)="{ row }">
                         <span class="text-xs text-slate-600 dark:text-slate-400">
-                            {{ row.creator?.name || '-' }}
+                            {{ row.creator?.name || 'Sistem' }}
                         </span>
                     </template>
 

@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo backup restore-check test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo seed-demo-tx backup restore-check test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -18,6 +18,7 @@ help:
 	@echo "  make migrate-test  - Run DB migrations on erp_trading_test using mariadb_migrator"
 	@echo "  make seed          - Run DB seeders (--force)"
 	@echo "  make seed-demo     - Run demo master data seeder (non-production only)"
+	@echo "  make seed-demo-tx  - Run demo transactions seeder (non-production only)"
 	@echo "  make backup        - Backup erp_trading database to backups/ directory"
 	@echo "  make restore-check - Verify latest backup integrity against temporary database"
 	@echo "  make test          - Run PHP test suite (auto migrates test database)"
@@ -86,6 +87,9 @@ seed:
 
 seed-demo:
 	docker compose run --rm php php artisan db:seed --class=Database\\Seeders\\DemoMasterDataSeeder --force
+
+seed-demo-tx:
+	docker compose run --rm php php artisan db:seed --class=Database\\Seeders\\DemoTransactionSeeder --force
 
 backup:
 	bash scripts/db-backup.sh

@@ -209,7 +209,7 @@ async function handleVoid() {
                             Dibuat Oleh
                         </span>
                         <span class="text-slate-900 dark:text-slate-100">
-                            {{ item.creator?.name || '-' }}
+                            {{ item.creator?.name || 'Sistem' }}
                             <span v-if="item.created_at" class="text-xs text-slate-400 block">
                                 <DateDisplay :value="item.created_at" format="datetime" />
                             </span>
@@ -240,7 +240,7 @@ async function handleVoid() {
                             Informasi Posting
                         </span>
                         <p class="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-                            Diposting oleh <strong>{{ item.poster?.name || '-' }}</strong> pada <DateDisplay :value="item.posted_at" format="datetime" />.
+                            Diposting oleh <strong>{{ item.poster?.name || 'Sistem' }}</strong> pada <DateDisplay :value="item.posted_at" format="datetime" />.
                         </p>
                     </div>
 
@@ -250,7 +250,7 @@ async function handleVoid() {
                             Informasi Pembatalan (Void)
                         </span>
                         <p class="text-xs text-rose-700 dark:text-rose-400 mt-0.5">
-                            Dibatalkan oleh <strong>{{ item.voider?.name || '-' }}</strong> pada <DateDisplay :value="item.voided_at" format="datetime" />.
+                            Dibatalkan oleh <strong>{{ item.voider?.name || 'Sistem' }}</strong> pada <DateDisplay :value="item.voided_at" format="datetime" />.
                         </p>
                         <p class="text-xs text-rose-800 dark:text-rose-300 mt-1">
                             Alasan: <em>"{{ item.void_reason }}"</em>
@@ -397,7 +397,7 @@ async function handleVoid() {
                                     <Rupiah :value="m.avg_cost_after" />
                                 </td>
                                 <td class="py-3 px-4 whitespace-nowrap text-xs text-slate-600 dark:text-slate-400">
-                                    {{ m.creator?.name || '-' }}
+                                    {{ m.creator?.name || 'Sistem' }}
                                 </td>
                             </tr>
                         </tbody>
