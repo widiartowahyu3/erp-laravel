@@ -140,6 +140,8 @@ services:
       - ./src:/var/www/html
       - npm_cache:/home/node/.npm
     environment:
+      HOME: /home/node
+      npm_config_cache: /home/node/.npm
       VITE_PORT: ${VITE_PORT:-5174}
     ports:
       - "127.0.0.1:${VITE_PORT:-5174}:5173"
