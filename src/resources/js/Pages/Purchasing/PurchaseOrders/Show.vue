@@ -211,7 +211,11 @@ async function handleVoid() {
             <!-- Informasi Dokumen -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card class="md:col-span-2">
-                    <template #title>Informasi Pengadaan</template>
+                    <template #header>
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Informasi Pengadaan
+                        </h3>
+                    </template>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 block">Pemasok</span>
@@ -277,7 +281,11 @@ async function handleVoid() {
 
                 <!-- Ringkasan Finansial -->
                 <Card>
-                    <template #title>Ringkasan Biaya</template>
+                    <template #header>
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Ringkasan Biaya
+                        </h3>
+                    </template>
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between text-slate-600 dark:text-slate-300">
                             <span>Subtotal Kotor:</span>
@@ -301,8 +309,16 @@ async function handleVoid() {
 
             <!-- Tabel Baris Barang -->
             <Card>
-                <template #title>Daftar Barang Pesanan</template>
-                <template #description>Rincian kuantitas pesanan, pemenuhan barang yang sudah diterima, dan sisa pesanan.</template>
+                <template #header>
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Daftar Barang Pesanan
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Rincian kuantitas pesanan, pemenuhan barang yang sudah diterima, dan sisa pesanan.
+                        </p>
+                    </div>
+                </template>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm divide-y divide-slate-200 dark:divide-slate-700">
@@ -361,8 +377,16 @@ async function handleVoid() {
 
             <!-- Riwayat Penerimaan Barang (GR) -->
             <Card>
-                <template #title>Riwayat Penerimaan Barang (GR)</template>
-                <template #description>Daftar seluruh dokumen surat penerimaan barang yang bersumber dari pesanan pembelian ini.</template>
+                <template #header>
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Riwayat Penerimaan Barang (GR)
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Daftar seluruh dokumen surat penerimaan barang yang bersumber dari pesanan pembelian ini.
+                        </p>
+                    </div>
+                </template>
 
                 <div v-if="order.goods_receipts && order.goods_receipts.length > 0" class="overflow-x-auto">
                     <table class="w-full text-left text-sm divide-y divide-slate-200 dark:divide-slate-700">

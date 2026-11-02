@@ -217,8 +217,16 @@ function submit() {
 
         <!-- Informasi Utama PO -->
         <Card>
-            <template #title>Informasi Pesanan Pembelian</template>
-            <template #description>Identitas pemasok, lokasi penerimaan gudang, dan termin transaksi.</template>
+            <template #header>
+                <div class="space-y-0.5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Informasi Pesanan Pembelian
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Identitas pemasok, lokasi penerimaan gudang, dan termin transaksi.
+                    </p>
+                </div>
+            </template>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
@@ -303,19 +311,27 @@ function submit() {
 
         <!-- Daftar Baris Item PO -->
         <Card>
-            <template #title>Rincian Barang yang Dipesan</template>
-            <template #description>Pilih produk, kuantitas, harga penawaran satuan, diskon, dan tarif pajak.</template>
-            <template #actions>
-                <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    :disabled="form.processing"
-                    @click="addItem"
-                >
-                    <Plus class="w-4 h-4 mr-1.5" aria-hidden="true" />
-                    Tambah Baris Barang
-                </Button>
+            <template #header>
+                <div class="flex items-center justify-between">
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Rincian Barang yang Dipesan
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Pilih produk, kuantitas, harga penawaran satuan, diskon, dan tarif pajak.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        :disabled="form.processing"
+                        @click="addItem"
+                    >
+                        <Plus class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                        Tambah Baris Barang
+                    </Button>
+                </div>
             </template>
 
             <Alert v-if="form.errors.items" variant="danger">

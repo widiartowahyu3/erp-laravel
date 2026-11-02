@@ -161,7 +161,11 @@ async function handleVoid() {
 
             <!-- Informasi Dokumen -->
             <Card>
-                <template #title>Informasi Penerimaan</template>
+                <template #header>
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Informasi Penerimaan
+                    </h3>
+                </template>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                     <div>
                         <span class="text-xs text-slate-500 block">No. PO Terkait</span>
@@ -220,8 +224,16 @@ async function handleVoid() {
 
             <!-- Tabel Baris Barang -->
             <Card>
-                <template #title>Rincian Barang yang Diterima</template>
-                <template #description>Kuantitas fisik yang dicatat masuk ke persediaan gudang beserta nilai biaya perolehan.</template>
+                <template #header>
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Rincian Barang yang Diterima
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Kuantitas fisik yang dicatat masuk ke persediaan gudang beserta nilai biaya perolehan.
+                        </p>
+                    </div>
+                </template>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm divide-y divide-slate-200 dark:divide-slate-700">

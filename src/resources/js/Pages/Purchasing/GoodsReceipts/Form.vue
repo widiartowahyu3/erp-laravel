@@ -153,8 +153,16 @@ function submit() {
 
         <!-- Informasi Dokumen -->
         <Card>
-            <template #title>Informasi Penerimaan Barang</template>
-            <template #description>Pilih pesanan pembelian acuan dan tanggal fisik kedatangan barang di gudang.</template>
+            <template #header>
+                <div class="space-y-0.5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Informasi Penerimaan Barang
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Pilih pesanan pembelian acuan dan tanggal fisik kedatangan barang di gudang.
+                    </p>
+                </div>
+            </template>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div v-if="isEdit" class="space-y-1">
@@ -219,9 +227,15 @@ function submit() {
 
         <!-- Tabel Rincian Barang yang Diterima -->
         <Card>
-            <template #title>Rincian Barang yang Diterima</template>
-            <template #description>
-                Kuantitas yang diinput akan menambah saldo fisik gudang saat dokumen diposting.
+            <template #header>
+                <div class="space-y-0.5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Rincian Barang yang Diterima
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Kuantitas yang diinput akan menambah saldo fisik gudang saat dokumen diposting.
+                    </p>
+                </div>
             </template>
 
             <Alert v-if="form.errors.items" variant="danger">
