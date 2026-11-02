@@ -184,74 +184,75 @@ const hasActiveFilters = computed(() => {
 
             <DataTable
                 :columns="columns"
-                :items="items.data"
-                empty-text="Belum ada data surat jalan."
+                :data="items.data"
+                empty-title="Belum ada surat jalan"
+                empty-description="Belum ada data surat jalan untuk ditampilkan."
             >
-                <template #cell(number)="{ item }">
+                <template #cell(number)="{ row }">
                     <Link
-                        :href="`/sales/delivery-orders/${item.id}`"
+                        :href="`/sales/delivery-orders/${row.id}`"
                         class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
                     >
-                        {{ item.number }}
+                        {{ row.number }}
                     </Link>
                 </template>
 
-                <template #cell(delivery_date)="{ item }">
-                    <DateDisplay :value="item.delivery_date" />
+                <template #cell(delivery_date)="{ row }">
+                    <DateDisplay :value="row.delivery_date" />
                 </template>
 
-                <template #cell(so_number)="{ item }">
+                <template #cell(so_number)="{ row }">
                     <Link
-                        v-if="item.sales_order"
-                        :href="`/sales/sales-orders/${item.sales_order.id}`"
+                        v-if="row.sales_order"
+                        :href="`/sales/sales-orders/${row.sales_order.id}`"
                         class="text-slate-600 dark:text-slate-400 hover:underline"
                     >
-                        {{ item.sales_order.number }}
+                        {{ row.sales_order.number }}
                     </Link>
                     <span v-else class="text-slate-400">-</span>
                 </template>
 
-                <template #cell(customer)="{ item }">
+                <template #cell(customer)="{ row }">
                     <div class="font-medium text-slate-800 dark:text-slate-200">
-                        {{ item.customer?.name || '-' }}
+                        {{ row.customer?.name || '-' }}
                     </div>
                     <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        {{ item.customer?.code }}
+                        {{ row.customer?.code }}
                     </div>
                 </template>
 
-                <template #cell(warehouse)="{ item }">
+                <template #cell(warehouse)="{ row }">
                     <span class="text-xs text-slate-700 dark:text-slate-300">
-                        {{ item.warehouse?.name || '-' }}
+                        {{ row.warehouse?.name || '-' }}
                     </span>
                 </template>
 
-                <template #cell(status)="{ item }">
-                    <StatusBadge :status="item.status" />
+                <template #cell(status)="{ row }">
+                    <StatusBadge :status="row.status" />
                 </template>
 
-                <template #cell(actions)="{ item }">
+                <template #cell(actions)="{ row }">
                     <div class="flex items-center justify-end gap-1">
-                        <Link :href="`/sales/delivery-orders/${item.id}`">
+                        <Link :href="`/sales/delivery-orders/${row.id}`">
                             <IconButton
                                 variant="ghost"
                                 size="sm"
                                 title="Lihat Detail DO"
-                                :aria-label="`Lihat detail DO ${item.number}`"
+                                :aria-label="`Lihat detail DO ${row.number}`"
                             >
                                 <Eye class="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </IconButton>
                         </Link>
 
                         <Link
-                            v-if="canEditDeliveryOrder(item)"
-                            :href="`/sales/delivery-orders/${item.id}/edit`"
+                            v-if="canEditDeliveryOrder(row)"
+                            :href="`/sales/delivery-orders/${row.id}/edit`"
                         >
                             <IconButton
                                 variant="ghost"
                                 size="sm"
                                 title="Edit Draf DO"
-                                :aria-label="`Edit draf DO ${item.number}`"
+                                :aria-label="`Edit draf DO ${row.number}`"
                             >
                                 <Edit class="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </IconButton>

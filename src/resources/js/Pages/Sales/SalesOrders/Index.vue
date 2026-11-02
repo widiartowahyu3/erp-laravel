@@ -182,69 +182,70 @@ const hasActiveFilters = computed(() => {
 
             <DataTable
                 :columns="columns"
-                :items="items.data"
-                empty-text="Belum ada data pesanan penjualan."
+                :data="items.data"
+                empty-title="Belum ada pesanan penjualan"
+                empty-description="Belum ada data pesanan penjualan untuk ditampilkan."
             >
-                <template #cell(number)="{ item }">
+                <template #cell(number)="{ row }">
                     <Link
-                        :href="`/sales/sales-orders/${item.id}`"
+                        :href="`/sales/sales-orders/${row.id}`"
                         class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
                     >
-                        {{ item.number }}
+                        {{ row.number }}
                     </Link>
                 </template>
 
-                <template #cell(order_date)="{ item }">
-                    <DateDisplay :value="item.order_date" />
+                <template #cell(order_date)="{ row }">
+                    <DateDisplay :value="row.order_date" />
                 </template>
 
-                <template #cell(customer)="{ item }">
+                <template #cell(customer)="{ row }">
                     <div class="font-medium text-slate-800 dark:text-slate-200">
-                        {{ item.customer?.name || '-' }}
+                        {{ row.customer?.name || '-' }}
                     </div>
                     <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        {{ item.customer?.code }}
+                        {{ row.customer?.code }}
                     </div>
                 </template>
 
-                <template #cell(warehouse)="{ item }">
+                <template #cell(warehouse)="{ row }">
                     <span class="text-xs text-slate-700 dark:text-slate-300">
-                        {{ item.warehouse?.name || '-' }}
+                        {{ row.warehouse?.name || '-' }}
                     </span>
                 </template>
 
-                <template #cell(status)="{ item }">
-                    <StatusBadge :status="item.status" />
+                <template #cell(status)="{ row }">
+                    <StatusBadge :status="row.status" />
                 </template>
 
-                <template #cell(total)="{ item }">
+                <template #cell(total)="{ row }">
                     <span class="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        <Rupiah :amount="item.total" />
+                        <Rupiah :amount="row.total" />
                     </span>
                 </template>
 
-                <template #cell(actions)="{ item }">
+                <template #cell(actions)="{ row }">
                     <div class="flex items-center justify-end gap-1">
-                        <Link :href="`/sales/sales-orders/${item.id}`">
+                        <Link :href="`/sales/sales-orders/${row.id}`">
                             <IconButton
                                 variant="ghost"
                                 size="sm"
                                 title="Lihat Detail SO"
-                                :aria-label="`Lihat detail SO ${item.number}`"
+                                :aria-label="`Lihat detail SO ${row.number}`"
                             >
                                 <Eye class="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </IconButton>
                         </Link>
 
                         <Link
-                            v-if="canEditSalesOrder(item)"
-                            :href="`/sales/sales-orders/${item.id}/edit`"
+                            v-if="canEditSalesOrder(row)"
+                            :href="`/sales/sales-orders/${row.id}/edit`"
                         >
                             <IconButton
                                 variant="ghost"
                                 size="sm"
                                 title="Edit Draf SO"
-                                :aria-label="`Edit draf SO ${item.number}`"
+                                :aria-label="`Edit draf SO ${row.number}`"
                             >
                                 <Edit class="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </IconButton>
