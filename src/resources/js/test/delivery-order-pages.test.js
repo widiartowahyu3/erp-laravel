@@ -81,7 +81,6 @@ const defaultStubs = {
     },
     Breadcrumbs: { template: '<nav><slot /></nav>' },
     Can: { template: '<div><slot /></div>' },
-    Card: { template: '<div><slot /><slot name="title" /><slot name="description" /></div>' },
     Button: {
         props: ['disabled', 'loading'],
         template: '<button :disabled="disabled || loading" :aria-busy="$attrs[\'aria-busy\']"><slot /></button>',
@@ -97,7 +96,6 @@ const defaultStubs = {
         template: '<div role="alert" :data-variant="variant"><slot /></div>',
     },
 
-    FilterBar: { template: '<div><slot /><slot name="filters" /></div>' },
     Pagination: { template: '<div><slot /></div>' },
     Select: {
         props: ['modelValue', 'options', 'size'],
@@ -185,6 +183,7 @@ describe('Delivery Order Pages (Butir 10)', () => {
 
         const soLink = wrapper.find('a[href="/sales/sales-orders?status=approved"]');
         expect(soLink.exists()).toBe(true);
+        expect(wrapper.find('select[aria-label="Filter berdasarkan pelanggan"]').exists()).toBe(true);
     });
 
     it('DeliveryOrders/Index renders real DataTable rows, customer names, status badges, and no empty message for multiple items', () => {
@@ -320,6 +319,9 @@ describe('Delivery Order Pages (Butir 10)', () => {
         // On draft, HPP column header should NOT exist
         expect(wrapperDraft.text()).not.toContain('HPP Satuan');
         expect(wrapperDraft.text()).not.toContain('Total HPP');
+        expect(wrapperDraft.text()).toContain('Informasi Pengiriman');
+        expect(wrapperDraft.text()).toContain('Status & Jejak Dokumen');
+        expect(wrapperDraft.text()).toContain('Rincian Barang yang Dikirim');
 
         // Now test posted order
         const postedOrder = {

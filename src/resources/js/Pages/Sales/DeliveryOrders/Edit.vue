@@ -93,8 +93,16 @@ function submit() {
                 <!-- Informasi Header DO -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card class="md:col-span-2">
-                        <template #title>Informasi Pengiriman</template>
-                        <template #description>Tanggal pengiriman fisik dan alamat tujuan pengiriman.</template>
+                        <template #header>
+                            <div class="space-y-0.5">
+                                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                    Informasi Pengiriman
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">
+                                    Tanggal pengiriman fisik dan alamat tujuan pengiriman.
+                                </p>
+                            </div>
+                        </template>
 
                         <div class="space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -142,7 +150,11 @@ function submit() {
 
                     <!-- Info Referensi SO -->
                     <Card>
-                        <template #title>Referensi Pesanan (SO)</template>
+                        <template #header>
+                            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                Referensi Pesanan (SO)
+                            </h3>
+                        </template>
                         <div class="space-y-3 text-sm">
                             <div>
                                 <span class="text-xs text-slate-500 block">No. SO:</span>
@@ -175,8 +187,16 @@ function submit() {
 
                 <!-- Tabel Barang yang Dikirim -->
                 <Card>
-                    <template #title>Barang yang Akan Dikirim</template>
-                    <template #description>Perbarui kuantitas barang yang dikirim pada pengiriman ini.</template>
+                    <template #header>
+                        <div class="space-y-0.5">
+                            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                Barang yang Akan Dikirim
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">
+                                Perbarui kuantitas barang yang dikirim pada pengiriman ini.
+                            </p>
+                        </div>
+                    </template>
 
                     <Alert v-if="form.errors.items" variant="danger" class="mb-4">
                         {{ form.errors.items }}

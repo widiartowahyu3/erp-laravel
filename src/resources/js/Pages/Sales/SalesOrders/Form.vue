@@ -223,8 +223,16 @@ function submit() {
 
         <!-- Informasi Utama SO -->
         <Card>
-            <template #title>Informasi Pesanan Penjualan</template>
-            <template #description>Identitas pelanggan, lokasi gudang pengiriman, dan termin transaksi.</template>
+            <template #header>
+                <div class="space-y-0.5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Informasi Pesanan Penjualan
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Identitas pelanggan, lokasi gudang pengiriman, dan termin transaksi.
+                    </p>
+                </div>
+            </template>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <FormField
@@ -297,8 +305,16 @@ function submit() {
 
         <!-- Baris Rincian Barang -->
         <Card>
-            <template #title>Rincian Barang yang Dipesan</template>
-            <template #description>Tambahkan produk yang dipesan oleh pelanggan beserta kuantitas, harga, diskon, dan pajak.</template>
+            <template #header>
+                <div class="space-y-0.5">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Rincian Barang yang Dipesan
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Tambahkan produk yang dipesan oleh pelanggan beserta kuantitas, harga, diskon, dan pajak.
+                    </p>
+                </div>
+            </template>
 
             <Alert v-if="form.errors.items" variant="danger" class="mb-4">
                 {{ form.errors.items }}

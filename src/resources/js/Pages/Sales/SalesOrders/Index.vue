@@ -127,57 +127,55 @@ const hasActiveFilters = computed(() => {
                 @update:search="setSearch"
                 @reset="resetFilters"
             >
-                <template #filters>
-                    <div class="w-full sm:w-56">
-                        <Select
-                            :model-value="filters.customer_id"
-                            :options="customerOptions"
-                            size="sm"
-                            aria-label="Filter berdasarkan pelanggan"
-                            @update:model-value="setFilter('customer_id', $event)"
-                        />
-                    </div>
+                <div class="w-full sm:w-56">
+                    <Select
+                        :model-value="filters.customer_id"
+                        :options="customerOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan pelanggan"
+                        @update:model-value="setFilter('customer_id', $event)"
+                    />
+                </div>
 
-                    <div class="w-full sm:w-48">
-                        <Select
-                            :model-value="filters.warehouse_id"
-                            :options="warehouseOptions"
-                            size="sm"
-                            aria-label="Filter berdasarkan gudang"
-                            @update:model-value="setFilter('warehouse_id', $event)"
-                        />
-                    </div>
+                <div class="w-full sm:w-48">
+                    <Select
+                        :model-value="filters.warehouse_id"
+                        :options="warehouseOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan gudang"
+                        @update:model-value="setFilter('warehouse_id', $event)"
+                    />
+                </div>
 
-                    <div class="w-full sm:w-44">
-                        <Select
-                            :model-value="filters.status"
-                            :options="statusOptions"
-                            size="sm"
-                            aria-label="Filter berdasarkan status"
-                            @update:model-value="setFilter('status', $event)"
-                        />
-                    </div>
+                <div class="w-full sm:w-44">
+                    <Select
+                        :model-value="filters.status"
+                        :options="statusOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan status"
+                        @update:model-value="setFilter('status', $event)"
+                    />
+                </div>
 
-                    <div class="w-full sm:w-36">
-                        <TextInput
-                            :model-value="filters.date_from"
-                            type="date"
-                            size="sm"
-                            aria-label="Filter tanggal mulai"
-                            @update:model-value="setFilter('date_from', $event)"
-                        />
-                    </div>
+                <div class="w-full sm:w-36">
+                    <TextInput
+                        :model-value="filters.date_from"
+                        type="date"
+                        size="sm"
+                        aria-label="Filter tanggal mulai"
+                        @update:model-value="setFilter('date_from', $event)"
+                    />
+                </div>
 
-                    <div class="w-full sm:w-36">
-                        <TextInput
-                            :model-value="filters.date_to"
-                            type="date"
-                            size="sm"
-                            aria-label="Filter tanggal akhir"
-                            @update:model-value="setFilter('date_to', $event)"
-                        />
-                    </div>
-                </template>
+                <div class="w-full sm:w-36">
+                    <TextInput
+                        :model-value="filters.date_to"
+                        type="date"
+                        size="sm"
+                        aria-label="Filter tanggal akhir"
+                        @update:model-value="setFilter('date_to', $event)"
+                    />
+                </div>
             </FilterBar>
 
             <DataTable
@@ -256,8 +254,8 @@ const hasActiveFilters = computed(() => {
 
             <Pagination
                 :meta="items.meta"
-                @page-change="setPage"
-                @per-page-change="setPerPage"
+                @change-page="setPage"
+                @change-per-page="setPerPage"
             />
         </div>
     </AppLayout>

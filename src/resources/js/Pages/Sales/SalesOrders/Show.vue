@@ -216,7 +216,11 @@ async function handleVoid() {
             <!-- Informasi Utama -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card class="md:col-span-2">
-                    <template #title>Informasi Pesanan</template>
+                    <template #header>
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Informasi Pesanan
+                        </h3>
+                    </template>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block">Pelanggan:</span>
@@ -259,7 +263,11 @@ async function handleVoid() {
                 </Card>
 
                 <Card>
-                    <template #title>Status & Jejak Dokumen</template>
+                    <template #header>
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Status & Jejak Dokumen
+                        </h3>
+                    </template>
                     <div class="space-y-3 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Status:</span>
@@ -297,7 +305,11 @@ async function handleVoid() {
 
             <!-- Tabel Barang -->
             <Card>
-                <template #title>Daftar Barang yang Dipesan</template>
+                <template #header>
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Daftar Barang yang Dipesan
+                    </h3>
+                </template>
 
                 <div class="overflow-x-auto -mx-4 sm:mx-0">
                     <table class="w-full text-left text-sm border-collapse">
@@ -391,8 +403,16 @@ async function handleVoid() {
 
             <!-- Riwayat Pengiriman (Delivery Orders) -->
             <Card>
-                <template #title>Surat Jalan Terkait</template>
-                <template #description>Daftar surat jalan / bukti pengiriman yang dibuat berdasarkan pesanan ini.</template>
+                <template #header>
+                    <div class="space-y-0.5">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Surat Jalan Terkait
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Daftar surat jalan / bukti pengiriman yang dibuat berdasarkan pesanan ini.
+                        </p>
+                    </div>
+                </template>
 
                 <div v-if="salesOrder.delivery_orders && salesOrder.delivery_orders.length > 0" class="overflow-x-auto -mx-4 sm:mx-0">
                     <table class="w-full text-left text-sm border-collapse">

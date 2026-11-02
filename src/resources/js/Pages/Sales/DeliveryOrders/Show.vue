@@ -188,7 +188,11 @@ async function handleVoid() {
             <!-- Informasi Utama -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card class="md:col-span-2">
-                    <template #title>Informasi Pengiriman</template>
+                    <template #header>
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Informasi Pengiriman
+                        </h3>
+                    </template>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block">No. Pesanan Penjualan (SO):</span>
@@ -240,7 +244,11 @@ async function handleVoid() {
                 </Card>
 
                 <Card>
-                    <template #title>Status & Jejak Dokumen</template>
+                    <template #header>
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Status & Jejak Dokumen
+                        </h3>
+                    </template>
                     <div class="space-y-3 text-sm">
                         <div>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Status:</span>
@@ -278,7 +286,11 @@ async function handleVoid() {
 
             <!-- Tabel Barang yang Dikirim -->
             <Card>
-                <template #title>Rincian Barang yang Dikirim</template>
+                <template #header>
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        Rincian Barang yang Dikirim
+                    </h3>
+                </template>
 
                 <div class="overflow-x-auto -mx-4 sm:mx-0">
                     <table class="w-full text-left text-sm border-collapse">

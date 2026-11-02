@@ -80,7 +80,6 @@ const defaultStubs = {
     },
     Breadcrumbs: { template: '<nav><slot /></nav>' },
     Can: { template: '<div><slot /></div>' },
-    Card: { template: '<div><slot /><slot name="title" /><slot name="description" /></div>' },
     Button: {
         props: ['disabled', 'loading'],
         template: '<button :disabled="disabled || loading" :aria-busy="$attrs[\'aria-busy\']"><slot /></button>',
@@ -97,7 +96,6 @@ const defaultStubs = {
         template: '<div role="alert" :data-variant="variant"><slot /></div>',
     },
 
-    FilterBar: { template: '<div><slot /><slot name="filters" /></div>' },
     Pagination: { template: '<div><slot /></div>' },
     Select: {
         props: ['modelValue', 'options', 'size'],
@@ -185,6 +183,7 @@ describe('Sales Order Pages (Butir 9)', () => {
 
         const createLink = wrapper.find('a[href="/sales/sales-orders/create"]');
         expect(createLink.exists()).toBe(true);
+        expect(wrapper.find('select[aria-label="Filter berdasarkan pelanggan"]').exists()).toBe(true);
     });
 
     it('SalesOrders/Index renders real DataTable rows, customer names, status badges, and no empty message for multiple items', () => {
@@ -333,6 +332,10 @@ describe('Sales Order Pages (Butir 9)', () => {
         // Remaining quantity should be displayed (10 - 4 = 6)
         expect(wrapper.text()).toContain('SO/202611/00088');
         expect(wrapper.text()).toContain('PT Pelanggan');
+        expect(wrapper.text()).toContain('Informasi Pesanan');
+        expect(wrapper.text()).toContain('Status & Jejak Dokumen');
+        expect(wrapper.text()).toContain('Daftar Barang yang Dipesan');
+        expect(wrapper.text()).toContain('Surat Jalan Terkait');
     });
 
     it('SalesOrders/Show prevents double click on approve and void actions', async () => {
