@@ -181,7 +181,7 @@ describe('Delivery Order Pages (Butir 10)', () => {
         expect(wrapper.text()).toContain('DO/202611/00001');
         expect(wrapper.text()).toContain('SO/202611/00010');
 
-        const soLink = wrapper.find('a[href="/sales/sales-orders?status=approved"]');
+        const soLink = wrapper.find('a[href="/sales/sales-orders?filter[status]=approved"]');
         expect(soLink.exists()).toBe(true);
         expect(wrapper.find('select[aria-label="Filter berdasarkan pelanggan"]').exists()).toBe(true);
     });

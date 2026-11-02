@@ -110,7 +110,7 @@ const hasActiveFilters = computed(() => {
                 <template #actions>
                     <Can permission="delivery_orders.create">
                         <Link
-                            href="/sales/sales-orders?status=approved"
+                            href="/sales/sales-orders?filter[status]=approved"
                             title="Surat jalan dibuat dari pesanan penjualan (SO) yang telah disetujui"
                         >
                             <Button variant="primary">

@@ -228,3 +228,40 @@ test('sales order store accepts trimmed quantity without decimal places', functi
     expect($so->items->first()->quantity)->toBe('66.0000')
         ->and($so->items->first()->unit_price)->toBe('50000.0000');
 });
+
+test('sales order index filters by status using filter[status] query parameter', function (): void {
+    $user = userWithPermissions(['sales_orders.view']);
+    $customerId = TestDataFactory::createCustomer();
+    $warehouseId = TestDataFactory::createWarehouse();
+
+    $draftSo = SalesOrder::create([
+        'number' => 'SO/202611/00091',
+        'customer_id' => $customerId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => SalesOrderStatus::DRAFT,
+        'subtotal' => '10000.00',
+        'total' => '10000.00',
+    ]);
+
+    $approvedSo = SalesOrder::create([
+        'number' => 'SO/202611/00092',
+        'customer_id' => $customerId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-11-01',
+        'status' => SalesOrderStatus::APPROVED,
+        'subtotal' => '20000.00',
+        'total' => '20000.00',
+    ]);
+
+    $this->actingAs($user)
+        ->get('/sales/sales-orders?filter[status]=approved')
+        ->assertStatus(200)
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Sales/SalesOrders/Index')
+            ->has('items.data', 1)
+            ->where('items.data.0.id', $approvedSo->id)
+            ->where('items.data.0.status', 'approved')
+        );
+});
+

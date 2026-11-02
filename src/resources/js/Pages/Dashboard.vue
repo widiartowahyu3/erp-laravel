@@ -184,7 +184,7 @@ const movementTypeLabels = {
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <Link
-                                href="/purchasing/purchase-orders?status=approved"
+                                href="/purchasing/purchase-orders?filter[status]=approved"
                                 class="inline-flex items-center text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded"
                             >
                                 <span>Lihat daftar pesanan disetujui</span>
@@ -213,7 +213,7 @@ const movementTypeLabels = {
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <Link
-                                href="/purchasing/goods-receipts?status=draft"
+                                href="/purchasing/goods-receipts?filter[status]=draft"
                                 class="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 rounded"
                             >
                                 <span>Periksa draf penerimaan</span>
@@ -242,7 +242,7 @@ const movementTypeLabels = {
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <Link
-                                href="/sales/sales-orders?status=approved"
+                                href="/sales/sales-orders?filter[status]=approved"
                                 class="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded"
                             >
                                 <span>Lihat daftar pesanan disetujui</span>
@@ -271,7 +271,7 @@ const movementTypeLabels = {
                         </div>
                         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <Link
-                                href="/sales/delivery-orders?status=draft"
+                                href="/sales/delivery-orders?filter[status]=draft"
                                 class="inline-flex items-center text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 rounded"
                             >
                                 <span>Periksa draf surat jalan</span>
