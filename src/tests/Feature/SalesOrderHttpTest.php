@@ -264,4 +264,3 @@ test('sales order index filters by status using filter[status] query parameter',
             ->where('items.data.0.status', 'approved')
         );
 });
-
