@@ -15,7 +15,6 @@ import Alert from '@/Components/ui/Alert.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
-import { goodsReceiptStatusConfig } from '@/config/purchasing';
 
 const props = defineProps({
     receipt: {
@@ -196,11 +195,7 @@ async function handleVoid() {
                     <div>
                         <span class="text-xs text-slate-500 block">Status Penerimaan</span>
                         <div class="mt-1">
-                            <StatusBadge
-                                :status="receipt.status"
-                                :label="goodsReceiptStatusConfig[receipt.status]?.label || receipt.status"
-                                :variant="goodsReceiptStatusConfig[receipt.status]?.variant || 'neutral'"
-                            />
+                            <StatusBadge :status="receipt.status" />
                         </div>
                     </div>
 

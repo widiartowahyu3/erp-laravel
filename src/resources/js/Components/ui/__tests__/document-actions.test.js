@@ -339,4 +339,42 @@ describe('Document Action Double-Click Protection', () => {
 
         expect(wrapper.text()).toContain('Diskon baris tidak boleh melebihi nilai barang.');
     });
+
+    it('GoodsReceipts/Show renders real StatusBadge with localized label from enums.json across states', () => {
+        setMockPageProps({
+            auth: {
+                user: { id: 1, name: 'Admin' },
+                permissions: ['goods_receipts.view'],
+                roles: ['super_admin'],
+            },
+        });
+
+        const states = [
+            { status: 'draft', expectedLabel: 'Draf' },
+            { status: 'posted', expectedLabel: 'Diposting' },
+            { status: 'void', expectedLabel: 'Dibatalkan' },
+        ];
+
+        for (const state of states) {
+            const wrapper = mount(GoodsReceiptShow, {
+                props: {
+                    receipt: {
+                        id: 30,
+                        number: 'GR/202610/00001',
+                        status: state.status,
+                        warehouse: { name: 'Gudang Utama' },
+                        purchase_order: { number: 'PO/202610/00001' },
+                        items: [],
+                    },
+                },
+                global: {
+                    stubs: {
+                        AppLayout: { template: '<div><slot /></div>' },
+                    },
+                },
+            });
+
+            expect(wrapper.text()).toContain(state.expectedLabel);
+        }
+    });
 });
