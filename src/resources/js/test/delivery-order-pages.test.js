@@ -11,6 +11,7 @@ const {
     defaultPermissions,
     mockPageProps,
     mockConfirm,
+    mockRouterGet,
     mockRouterPost,
     mockRouterPut,
     mockRouterDelete,
@@ -36,6 +37,7 @@ const {
             errors: {},
         },
         mockConfirm: vi.fn(),
+        mockRouterGet: vi.fn(),
         mockRouterPost: vi.fn(),
         mockRouterPut: vi.fn(),
         mockRouterDelete: vi.fn(),
@@ -67,6 +69,7 @@ vi.mock('@inertiajs/vue3', () => ({
     },
     Head: { name: 'Head', template: '<div style="display:none"><slot /></div>' },
     router: {
+        get: mockRouterGet,
         post: mockRouterPost,
         put: mockRouterPut,
         delete: mockRouterDelete,
@@ -96,7 +99,6 @@ const defaultStubs = {
         template: '<div role="alert" :data-variant="variant"><slot /></div>',
     },
 
-    Pagination: { template: '<div><slot /></div>' },
     Select: {
         props: ['modelValue', 'options', 'size'],
         emits: ['update:modelValue'],
@@ -246,6 +248,87 @@ describe('Delivery Order Pages (Butir 10)', () => {
         expect(wrapper.text()).toContain('Diposting');
         expect(wrapper.text()).toContain('Terkirim');
         expect(wrapper.text()).not.toContain('Tidak ada data');
+    });
+
+    it('DeliveryOrders/Index real Pagination, FilterBar search and filter wiring trigger router.get', async () => {
+        const metaMultiPage = {
+            current_page: 1,
+            last_page: 3,
+            per_page: 15,
+            total: 45,
+            from: 1,
+            to: 15,
+        };
+
+        const wrapper = mount(DeliveryOrderIndex, {
+            props: {
+                items: {
+                    data: [
+                        {
+                            id: 1,
+                            number: 'DO/202611/00001',
+                            delivery_date: '2026-11-01',
+                            customer: { code: 'CUST-001', name: 'PT Pembeli Satu' },
+                            warehouse: { code: 'WH-01', name: 'Gudang Pusat' },
+                            sales_order: { number: 'SO-001' },
+                            status: 'draft',
+                        },
+                    ],
+                    meta: metaMultiPage,
+                    query: {},
+                },
+                customers: [{ id: 1, code: 'CUST-001', name: 'PT Pembeli Satu' }],
+                warehouses: [{ id: 1, code: 'WH-01', name: 'Gudang Pusat' }],
+                statuses: ['draft', 'posted'],
+            },
+            global: { stubs: defaultStubs },
+        });
+
+        // (a) Klik halaman 2 memanggil router.get dengan page=2
+        const page2Button = wrapper.find('button[aria-label="Ke halaman 2"]');
+        expect(page2Button.exists()).toBe(true);
+        await page2Button.trigger('click');
+        expect(mockRouterGet).toHaveBeenCalledWith(
+            '/sales/delivery-orders',
+            expect.objectContaining({ page: 2 }),
+            expect.any(Object)
+        );
+
+        // (b) Mengganti jumlah per halaman memanggil router.get dengan per_page
+        mockRouterGet.mockClear();
+        const perPageSelect = wrapper.find('select[aria-label="Jumlah data per halaman"]');
+        expect(perPageSelect.exists()).toBe(true);
+        await perPageSelect.setValue(50);
+        expect(mockRouterGet).toHaveBeenCalledWith(
+            '/sales/delivery-orders',
+            expect.objectContaining({ per_page: 50 }),
+            expect.any(Object)
+        );
+
+        // (c) Mengisi kotak pencarian dengan fake timer memanggil router.get dengan search
+        mockRouterGet.mockClear();
+        vi.useFakeTimers();
+        const searchInput = wrapper.find('input[aria-label="Cari data"]');
+        expect(searchInput.exists()).toBe(true);
+        await searchInput.setValue('DO/202611');
+        vi.advanceTimersByTime(350);
+        expect(mockRouterGet).toHaveBeenCalledWith(
+            '/sales/delivery-orders',
+            expect.objectContaining({ search: 'DO/202611' }),
+            expect.any(Object)
+        );
+        vi.useRealTimers();
+
+        // (d) Memilih filter status memanggil router.get dengan filter[status]
+        mockRouterGet.mockClear();
+        const statusSelect = wrapper.find('select[aria-label="Filter berdasarkan status"]');
+        expect(statusSelect.exists()).toBe(true);
+        await statusSelect.setValue('posted');
+        expect(mockRouterGet).toHaveBeenCalledWith(
+            '/sales/delivery-orders',
+            expect.objectContaining({ 'filter[status]': 'posted' }),
+            expect.any(Object)
+        );
     });
 
     it('DeliveryOrders/Create pre-fills items and allows removing line', () => {
