@@ -162,3 +162,15 @@ make seed-demo
 ```
 - Mengisi data realistis untuk 8 entitas master data (satuan barang perdagangan, struktur kategori bertingkat, gudang utama/transit, syarat pembayaran termin komersial, pemasok, pelanggan, dan katalog produk makanan/minuman).
 - **Fail-safe Production**: Memiliki proteksi `app()->isProduction()` yang langsung melempar `RuntimeException` jika dijalankan di lingkungan produksi.
+
+### Katalog Barang Indonesia (`DemoCatalogSeeder`)
+
+Katalog lebih besar untuk uji PO, GR, SO, dan DO secara manual:
+```bash
+make seed-demo-catalog
+```
+- Mengisi barang yang umum beredar di Indonesia (sembako, makanan, minuman, kebutuhan rumah tangga, perawatan diri, kesehatan, ibu dan bayi, ATK, elektronik, bahan bangunan), beserta kategori, satuan, gudang, pemasok, dan pelanggan.
+- **Tidak membuat transaksi maupun saldo stok**: stok baru terisi setelah penerimaan barang diposting.
+- **Idempoten tanpa menimpa**: baris yang sudah ada dilewati, sehingga perubahan manual tetap utuh saat seeder dijalankan ulang.
+- **Data fiktif**: harga jual hanya perkiraan untuk demo, barcode memakai rentang internal `299`, sedangkan pemasok dan pelanggan bukan perusahaan nyata (email memakai domain `.test`).
+- **Fail-safe Production**: melempar `RuntimeException` jika dijalankan di lingkungan produksi.

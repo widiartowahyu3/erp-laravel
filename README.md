@@ -221,6 +221,9 @@ docker compose --profile tools run --rm node npm run build
 # Isi data demo master data (8 entitas katalog produk dan rekanan bisnis)
 make seed-demo
 
+# Isi katalog barang umum Indonesia, pemasok, pelanggan, dan gudang tanpa transaksi (untuk uji PO, GR, SO, DO manual)
+make seed-demo-catalog
+
 # Isi data demo transaksi operasional berantai (PO, GR, Saldo Stok, dan SA via domain services)
 make seed-demo-tx
 ```
