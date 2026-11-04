@@ -172,6 +172,7 @@ Dokumen ini mendefinisikan standar teknis, konvensi arsitektur data, kamus data 
 ### F. Modul Keuangan & Akuntansi (Finance & General Ledger)
 29. **`chart_of_accounts`**
     - **Tujuan:** Bagan Akun Standar (COA) pembukuan akuntansi berpasangan (*double-entry*).
+    - **Seeder:** `ChartOfAccountSeeder` berisi 21 akun (6 header, 15 detail), termasuk `2103` Barang Diterima Belum Ditagih (GR/IR).
     - **Kolom Kunci:** `id`, `code(20)` (UNIQUE), `name(150)`, `type(20)` (CHECK: `asset`, `liability`, `equity`, `revenue`, `expense`), `normal_balance(6)` (CHECK: `debit`, `credit`), `parent_id` (self FK nullable), `is_postable(bool)`, `is_active(bool)`, timestamps, `deleted_at`, audit.
 30. **`journals`**
     - **Tujuan:** Header entri jurnal umum dan otomatisasi transaksi.

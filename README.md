@@ -72,6 +72,12 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
   - Posting pengiriman memotong kuantitas fisik gudang via `StockService::decrease`, mencatat snapshot biaya satuan rata-rata bergerak di `delivery_order_items.unit_cost`, dan memperbarui status pesanan penjualan secara atomik.
   - Pembatalan pengiriman terposting (`void`) memulihkan saldo fisik gudang via `StockService::increase` menggunakan snapshot biaya satuan pengiriman awal dan menghitung mundur kemajuan status pesanan penjualan secara akurat.
 
+### F. Akuntansi (Accounting)
+- **Jurnal otomatis**: posting penerimaan barang, surat jalan, dan penyesuaian stok otomatis membuat jurnal dalam transaksi yang sama, dan pembatalannya membuat jurnal pembalik.
+- **Jurnal manual (`/accounting/journals`)**: siklus draf, posting, pembatalan draf, dan pembalik.
+- **Bagan akun (`/accounting/accounts`)**: hierarki akun dengan perlindungan akun yang sudah dipakai atau dipetakan.
+- Rincian ada di [`docs/ACCOUNTING.md`](docs/ACCOUNTING.md).
+
 ---
 
 ## 3. Arsitektur Monolitik & Standar Teknis
@@ -306,6 +312,6 @@ Secara transparan dan jujur, implementasi saat ini memiliki batasan arsitektural
 1. **Mata Uang Tunggal (Single Currency - IDR)**: Seluruh transaksi beroperasi eksklusif dalam Rupiah Indonesia tanpa konversi valuta asing.
 2. **Satuan Dasar Tunggal per Produk**: Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Konversi multi-satuan dinamis bertingkat (*UOM conversion*) belum diimplementasikan di tingkat transaksi.
 3. **Tanpa Dokumen Mutasi Antar-Gudang Langsung**: Fitur transfer persediaan antar-gudang saat ini ditangani secara manual melalui kombinasi dokumen Penyesuaian Keluar (`adjustment_out`) pada gudang asal dan Penyesuaian Masuk (`adjustment_in`) pada gudang tujuan.
-4. **Modul Hilir Belum Tersedia**: Faktur Penjualan dan Pembelian, Piutang Usaha, Hutang Usaha, Pembayaran Kas/Bank, Buku Kas/Bank, Jurnal Akuntansi Umum, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
+4. **Modul Hilir Belum Tersedia**: Faktur Penjualan dan Pembelian, Piutang Usaha, Hutang Usaha, Pembayaran Kas/Bank, Buku Kas/Bank, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
 5. **Antarmuka Pengguna Administrasi Terbatas**: Manajemen akun pengguna, pengaturan peran RBAC, dan penampil log audit (`audit_logs`) saat ini dikelola melalui database seeder dan perintah Artisan konsol, belum memiliki antarmuka visual (GUI).
 6. **Deploy Otomatis ke Server**: Image production sudah dibangun, diuji, dan dirilis ke GHCR, tetapi deploy ke server masih dijalankan manual lewat `scripts/deploy.sh` karena belum ada server tetap.

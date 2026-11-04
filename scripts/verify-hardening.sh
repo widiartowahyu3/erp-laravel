@@ -1631,6 +1631,93 @@ else
     fail "Akses guest tanpa sesi ke /sales/delivery-orders mengembalikan status HTTP $GUEST_DO_CODE (harus 302)"
 fi
 
+echo "--- Butir 28: Verifikasi Keamanan Rute & Otorisasi Akuntansi (/accounting/*) ---"
+info "Memeriksa seluruh rute /accounting/* terhadap autentikasi, can:, dan throttle:erp-write..."
+
+ACCOUNTING_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $routes = $app["router"]->getRoutes();
+    $accountingRoutes = [];
+    $unprotected = [];
+    $missingCan = [];
+    $missingThrottle = [];
+
+    foreach ($routes as $route) {
+        $uri = $route->uri();
+        if (str_starts_with($uri, "accounting/")) {
+            $accountingRoutes[] = $uri;
+            $methods = $route->methods();
+            $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+            $middleware = $route->gatherMiddleware();
+            if (!in_array("auth", $middleware, true)) {
+                $unprotected[] = $uri;
+            }
+            $hasCan = false;
+            $hasThrottle = false;
+            foreach ($middleware as $m) {
+                if (is_string($m) && str_starts_with($m, "can:")) {
+                    $hasCan = true;
+                }
+                if (is_string($m) && str_starts_with($m, "throttle:")) {
+                    $hasThrottle = true;
+                }
+            }
+            if (!$hasCan) {
+                $missingCan[] = $uri;
+            }
+            if ($isMutation && !$hasThrottle) {
+                $missingThrottle[] = implode("|", $methods) . " " . $uri;
+            }
+        }
+    }
+
+    echo count($accountingRoutes) . ":" . count($unprotected) . ":" . count($missingCan) . ":" . count($missingThrottle);
+' 2>/dev/null || echo "0:1:1:1")
+
+IFS=':' read -r TOTAL_ACCOUNTING UNPROT_ACCOUNTING MISSING_CAN_ACCOUNTING MISSING_THROTTLE_ACCOUNTING <<< "$ACCOUNTING_ROUTE_CHECK"
+
+if [ "$TOTAL_ACCOUNTING" -eq 16 ]; then
+    pass "Ditemukan 16 rute modul akuntansi (/accounting/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute modul akuntansi tidak sesuai ekspektasi (harus 16, ditemukan: $TOTAL_ACCOUNTING)"
+fi
+
+if [ "$UNPROT_ACCOUNTING" -eq 0 ]; then
+    pass "Seluruh rute /accounting/* terlindungi oleh middleware 'auth' (0 rute tanpa autentikasi)"
+else
+    fail "Ditemukan $UNPROT_ACCOUNTING rute /accounting/* yang tidak memiliki middleware 'auth'"
+fi
+
+if [ "$MISSING_CAN_ACCOUNTING" -eq 0 ]; then
+    pass "Seluruh rute /accounting/* memiliki middleware otorisasi spesifik 'can:' (0 rute tanpa 'can:')"
+else
+    fail "Ditemukan $MISSING_CAN_ACCOUNTING rute /accounting/* yang tidak memiliki middleware 'can:'"
+fi
+
+if [ "$MISSING_THROTTLE_ACCOUNTING" -eq 0 ]; then
+    pass "Seluruh aksi mutasi /accounting/* terlindungi oleh rate limiter 'throttle:erp-write'"
+else
+    fail "Ditemukan $MISSING_THROTTLE_ACCOUNTING rute mutasi /accounting/* tanpa 'throttle:erp-write'"
+fi
+
+GUEST_JOURNALS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/accounting/journals" || true)
+if [ "$GUEST_JOURNALS_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /accounting/journals berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /accounting/journals mengembalikan status HTTP $GUEST_JOURNALS_CODE (harus 302)"
+fi
+
+GUEST_ACCOUNTS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/accounting/accounts" || true)
+if [ "$GUEST_ACCOUNTS_CODE" = "302" ]; then
+    pass "Akses guest tanpa sesi ke /accounting/accounts berhasil dialihkan (HTTP 302 ke halaman login)"
+else
+    fail "Akses guest tanpa sesi ke /accounting/accounts mengembalikan status HTTP $GUEST_ACCOUNTS_CODE (harus 302)"
+fi
+
 # ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
