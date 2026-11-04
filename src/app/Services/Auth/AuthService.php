@@ -68,15 +68,16 @@ final class AuthService
             );
         }
 
-        // 2. Query user (including soft deleted to differentiate audit without exposing info to user)
+        // 2. Count the attempt before the slow hash check so parallel requests cannot outrun the limiter
+        RateLimiter::hit($emailIpKey, 60);
+        RateLimiter::hit($ipKey, 60);
+
+        // 3. Query user (including soft deleted to differentiate audit without exposing info to user)
         $user = User::withTrashed()->where('email', $normalizedEmail)->first();
 
-        // 3. Timing-attack mitigation: if user not found, or inactive, or soft-deleted
+        // 4. Timing-attack mitigation: if user not found, or inactive, or soft-deleted
         if ($user === null || ! $user->is_active || $user->trashed()) {
             Hash::check($password, self::DUMMY_ARGON2ID_HASH);
-
-            RateLimiter::hit($emailIpKey, 60);
-            RateLimiter::hit($ipKey, 60);
 
             AuditLogger::record(
                 event: 'login.failed',
@@ -90,11 +91,8 @@ final class AuthService
             ]);
         }
 
-        // 4. Verify password
+        // 5. Verify password
         if (! Hash::check($password, (string) $user->password)) {
-            RateLimiter::hit($emailIpKey, 60);
-            RateLimiter::hit($ipKey, 60);
-
             AuditLogger::record(
                 event: 'login.failed',
                 auditableType: 'auth',
@@ -107,8 +105,9 @@ final class AuthService
             ]);
         }
 
-        // 5. Successful login
+        // 6. Successful login: only failed attempts stay counted against the IP budget
         RateLimiter::clear($emailIpKey);
+        RateLimiter::decrement($ipKey, 60);
 
         Auth::login($user, false);
         $request->session()->regenerate();

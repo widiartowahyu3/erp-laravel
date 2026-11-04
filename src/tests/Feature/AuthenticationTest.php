@@ -574,3 +574,34 @@ test('throttled login requests do not write error or stack trace to application 
 
     Log::shouldNotHaveReceived('error');
 });
+
+test('login attempt is counted before the password hash is checked', function () {
+    $email = fake()->unique()->safeEmail();
+    $key = AuthService::loginThrottleKey($email, '127.0.0.1');
+    RateLimiter::clear($key);
+
+    User::factory()->create(['email' => $email, 'password' => 'Valid#Password123']);
+
+    $attemptsDuringCheck = null;
+    Hash::shouldReceive('check')->once()->andReturnUsing(function () use ($key, &$attemptsDuringCheck): bool {
+        $attemptsDuringCheck = RateLimiter::attempts($key);
+
+        return false;
+    });
+
+    $this->from('/login')->post('/login', ['email' => $email, 'password' => 'WrongPassword123']);
+
+    expect($attemptsDuringCheck)->toBe(1);
+});
+
+test('successful login does not consume the per-ip attempt budget', function () {
+    $email = fake()->unique()->safeEmail();
+    RateLimiter::clear(AuthService::loginThrottleKey($email, '127.0.0.1'));
+
+    User::factory()->create(['email' => $email, 'password' => 'Valid#Password123']);
+
+    $this->post('/login', ['email' => $email, 'password' => 'Valid#Password123'])->assertRedirect('/');
+
+    expect((int) RateLimiter::attempts('login_ip|127.0.0.1'))->toBe(0)
+        ->and((int) RateLimiter::attempts(AuthService::loginThrottleKey($email, '127.0.0.1')))->toBe(0);
+});
