@@ -147,7 +147,11 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Penerimaan Barang (GR)');
         expect(availableNames).toContain('Pesanan Penjualan (SO)');
         expect(availableNames).toContain('Surat Jalan / Kirim (DO)');
-        expect(availableItems.length).toBe(19);
+        expect(availableNames).toContain('Pengguna');
+        expect(availableNames).toContain('Peran & Hak Akses');
+        expect(availableNames).toContain('Log Audit');
+        expect(availableNames).not.toContain('Pengaturan Sistem');
+        expect(availableItems.length).toBe(22);
     });
 
     it('ensures PurchaseOrders/Form.vue renders discount_amount error per item row', () => {

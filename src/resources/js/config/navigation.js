@@ -247,18 +247,18 @@ export const navigationGroups = [
         items: [
             {
                 name: 'Pengguna',
-                href: '#',
+                href: '/admin/users',
                 icon: 'UserCheck',
                 permission: 'users.view',
-                available: false,
+                available: true,
                 description: 'Manajemen akun pengguna dan status aktif sistem.',
             },
             {
                 name: 'Peran & Hak Akses',
-                href: '#',
+                href: '/admin/roles',
                 icon: 'Shield',
                 permission: 'roles.view',
-                available: false,
+                available: true,
                 description: 'Pengaturan peran dan matriks izin RBAC.',
             },
             {
@@ -271,10 +271,10 @@ export const navigationGroups = [
             },
             {
                 name: 'Log Audit',
-                href: '#',
+                href: '/admin/audit-logs',
                 icon: 'ShieldAlert',
                 permission: 'audit_logs.view',
-                available: false,
+                available: true,
                 description: 'Pencatatan jejak audit aktivitas dan perubahan data.',
             },
         ],
