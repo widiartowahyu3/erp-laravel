@@ -16,12 +16,15 @@ use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Services\Accounting\Builders\GoodsReceiptJournalBuilder;
+use App\Services\Accounting\JournalService;
 use App\Services\Documents\DocumentNumberService;
 use App\Services\Documents\DocumentStateMachine;
 use App\Services\Inventory\StockService;
 use App\Support\Concerns\RequiresTransaction;
 use App\Support\Decimal;
 use App\Support\Purchasing\PurchaseOrderProgress;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -30,7 +33,8 @@ class GoodsReceiptService
     use RequiresTransaction;
 
     public function __construct(
-        private readonly StockService $stockService
+        private readonly StockService $stockService,
+        private readonly JournalService $journals = new JournalService
     ) {}
 
     /**
@@ -380,6 +384,14 @@ class GoodsReceiptService
             }
             $lockedGr->save();
 
+            // 8. Journal last, after stock and sequences, in the same transaction
+            $this->journals->postAutomatic(
+                GoodsReceiptJournalBuilder::build($lockedGr, $grItems),
+                StockService::SOURCE_GOODS_RECEIPT,
+                $lockedGr->id,
+                CarbonImmutable::parse($lockedGr->receipt_date)
+            );
+
             return $lockedGr->load(['items.product', 'purchaseOrder', 'supplier', 'warehouse']);
         });
     }
@@ -460,7 +472,10 @@ class GoodsReceiptService
                     );
                 }
 
-                // 6. Rollback Purchase Order status based on remaining quantities
+                // 6. Reverse the journal of the voided receipt
+                $this->journals->reverseAutomatic(StockService::SOURCE_GOODS_RECEIPT, $lockedGr->id, now());
+
+                // 7. Rollback Purchase Order status based on remaining quantities
                 $newPoStatus = PurchaseOrderProgress::statusFor($poItems, $lockedPo->status);
                 if ($newPoStatus !== $lockedPo->status) {
                     $lockedPo->status = $newPoStatus;

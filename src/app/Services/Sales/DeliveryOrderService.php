@@ -17,12 +17,15 @@ use App\Models\DeliveryOrder;
 use App\Models\DeliveryOrderItem;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
+use App\Services\Accounting\Builders\DeliveryOrderJournalBuilder;
+use App\Services\Accounting\JournalService;
 use App\Services\Documents\DocumentNumberService;
 use App\Services\Documents\DocumentStateMachine;
 use App\Services\Inventory\StockService;
 use App\Support\Concerns\RequiresTransaction;
 use App\Support\Decimal;
 use App\Support\Sales\SalesOrderProgress;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -31,7 +34,8 @@ class DeliveryOrderService
     use RequiresTransaction;
 
     public function __construct(
-        private readonly StockService $stockService
+        private readonly StockService $stockService,
+        private readonly JournalService $journals = new JournalService
     ) {}
 
     /**
@@ -443,6 +447,14 @@ class DeliveryOrderService
             }
             $lockedDo->save();
 
+            // 8. Journal last, after stock and sequences, in the same transaction
+            $this->journals->postAutomatic(
+                DeliveryOrderJournalBuilder::build($lockedDo, $doItemsSorted),
+                StockService::SOURCE_DELIVERY_ORDER,
+                $lockedDo->id,
+                CarbonImmutable::parse($lockedDo->delivery_date)
+            );
+
             return $lockedDo->load(['items.product', 'salesOrder', 'customer', 'warehouse']);
         });
     }
@@ -524,7 +536,10 @@ class DeliveryOrderService
                     );
                 }
 
-                // 5. Recalculate Sales Order status based on updated delivered quantities
+                // 5. Reverse the journal of the voided delivery
+                $this->journals->reverseAutomatic(StockService::SOURCE_DELIVERY_ORDER, $lockedDo->id, now());
+
+                // 6. Recalculate Sales Order status based on updated delivered quantities
                 $newSoStatus = SalesOrderProgress::statusFor($soItems, $lockedSo->status);
                 if ($newSoStatus !== $lockedSo->status) {
                     $lockedSo->status = $newSoStatus;
@@ -535,7 +550,7 @@ class DeliveryOrderService
                 }
             }
 
-            // 6. Update Delivery Order status to VOID
+            // 7. Update Delivery Order status to VOID
             $lockedDo->status = DeliveryOrderStatus::VOID;
             $lockedDo->voided_by = $effectiveUserId;
             $lockedDo->voided_at = now();

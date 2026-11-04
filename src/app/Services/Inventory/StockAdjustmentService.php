@@ -14,16 +14,20 @@ use App\Exceptions\InvalidStateTransitionException;
 use App\Models\StockAdjustment;
 use App\Models\StockAdjustmentItem;
 use App\Models\StockBalance;
+use App\Services\Accounting\Builders\StockAdjustmentJournalBuilder;
+use App\Services\Accounting\JournalService;
 use App\Services\Documents\DocumentNumberService;
 use App\Services\Documents\DocumentStateMachine;
 use App\Support\Decimal;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 final class StockAdjustmentService
 {
     public function __construct(
-        private readonly StockService $stockService
+        private readonly StockService $stockService,
+        private readonly JournalService $journals = new JournalService
     ) {}
 
     /**
@@ -219,6 +223,14 @@ final class StockAdjustmentService
             $locked->posted_at = now();
             $locked->save();
 
+            // Journal last, after stock and sequences, in the same transaction
+            $this->journals->postAutomatic(
+                StockAdjustmentJournalBuilder::build($locked, $items),
+                StockService::SOURCE_STOCK_ADJUSTMENT,
+                $locked->id,
+                CarbonImmutable::parse($locked->adjustment_date)
+            );
+
             return $locked->load(['warehouse', 'items.product']);
         });
     }
@@ -285,6 +297,10 @@ final class StockAdjustmentService
                         );
                     }
                 }
+            }
+
+            if ($locked->status === StockAdjustmentStatus::POSTED) {
+                $this->journals->reverseAutomatic(StockService::SOURCE_STOCK_ADJUSTMENT, $locked->id, now());
             }
 
             $locked->status = StockAdjustmentStatus::VOID;
