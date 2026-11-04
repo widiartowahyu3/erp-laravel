@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Account\PasswordController;
+use App\Http\Controllers\Accounting\AccountController;
+use App\Http\Controllers\Accounting\JournalController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
@@ -174,6 +176,27 @@ Route::middleware([
         Route::put('delivery-orders/{delivery_order}', [DeliveryOrderController::class, 'update'])->middleware('can:delivery_orders.update')->name('delivery-orders.update');
         Route::post('delivery-orders/{delivery_order}/post', [DeliveryOrderController::class, 'post'])->middleware('can:delivery_orders.post')->name('delivery-orders.post');
         Route::post('delivery-orders/{delivery_order}/void', [DeliveryOrderController::class, 'void'])->middleware('can:delivery_orders.void')->name('delivery-orders.void');
+    });
+
+    // Accounting module routes
+    Route::prefix('accounting')->name('accounting.')->group(function (): void {
+        Route::get('journals', [JournalController::class, 'index'])->middleware('can:journals.view')->name('journals.index');
+        Route::get('journals/create', [JournalController::class, 'create'])->middleware('can:journals.create')->name('journals.create');
+        Route::post('journals', [JournalController::class, 'store'])->middleware('can:journals.create')->name('journals.store');
+        Route::get('journals/{journal}', [JournalController::class, 'show'])->middleware('can:journals.view')->name('journals.show');
+        Route::get('journals/{journal}/edit', [JournalController::class, 'edit'])->middleware('can:journals.update')->name('journals.edit');
+        Route::put('journals/{journal}', [JournalController::class, 'update'])->middleware('can:journals.update')->name('journals.update');
+        Route::post('journals/{journal}/post', [JournalController::class, 'post'])->middleware('can:journals.post')->name('journals.post');
+        Route::post('journals/{journal}/reverse', [JournalController::class, 'reverse'])->middleware('can:journals.reverse')->name('journals.reverse');
+        Route::post('journals/{journal}/void', [JournalController::class, 'void'])->middleware('can:journals.void')->name('journals.void');
+
+        Route::get('accounts', [AccountController::class, 'index'])->middleware('can:chart_of_accounts.view')->name('accounts.index');
+        Route::get('accounts/create', [AccountController::class, 'create'])->middleware('can:chart_of_accounts.create')->name('accounts.create');
+        Route::post('accounts', [AccountController::class, 'store'])->middleware('can:chart_of_accounts.create')->name('accounts.store');
+        Route::get('accounts/{account}', [AccountController::class, 'show'])->middleware('can:chart_of_accounts.view')->name('accounts.show');
+        Route::get('accounts/{account}/edit', [AccountController::class, 'edit'])->middleware('can:chart_of_accounts.update')->name('accounts.edit');
+        Route::put('accounts/{account}', [AccountController::class, 'update'])->middleware('can:chart_of_accounts.update')->name('accounts.update');
+        Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->middleware('can:chart_of_accounts.delete')->name('accounts.destroy');
     });
 });
 

@@ -92,7 +92,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             // Strictly check for known master data and user unique constraints
-            if ($constraint !== '' && preg_match('/^(units|product_categories|products|warehouses|suppliers|customers|tax_rates|payment_terms|users)_(code|sku|barcode|email)_unique$/', $constraint, $m)) {
+            if ($constraint !== '' && preg_match('/^(units|product_categories|products|warehouses|suppliers|customers|tax_rates|payment_terms|users|chart_of_accounts)_(code|sku|barcode|email)_unique$/', $constraint, $m)) {
                 $column = $m[2];
                 $field = $column;
                 $validationMsg = match ($column) {

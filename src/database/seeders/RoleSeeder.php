@@ -153,6 +153,7 @@ class RoleSeeder extends Seeder
             'journals.create',
             'journals.update',
             'journals.post',
+            'journals.reverse',
             'journals.void',
             'sales_invoices.view',
             'sales_invoices.create',

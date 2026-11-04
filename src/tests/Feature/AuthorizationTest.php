@@ -17,10 +17,10 @@ beforeEach(function () {
     $this->seed([PermissionSeeder::class, RoleSeeder::class]);
 });
 
-test('permission catalog contains exactly 98 permissions with valid formats and modules', function () {
+test('permission catalog contains exactly 99 permissions with valid formats and modules', function () {
     $permissions = Permission::all();
 
-    expect($permissions->count())->toBe(98);
+    expect($permissions->count())->toBe(99);
 
     $validModules = [
         'administration',
@@ -46,9 +46,9 @@ test('permission catalog contains exactly 98 permissions with valid formats and 
     }
 });
 
-test('super_admin role has all 98 permissions synchronized via seeder without gate bypass', function () {
+test('super_admin role has all 99 permissions synchronized via seeder without gate bypass', function () {
     $superAdminRole = Role::where('name', 'super_admin')->firstOrFail();
-    expect($superAdminRole->permissions()->count())->toBe(98);
+    expect($superAdminRole->permissions()->count())->toBe(99);
 
     $user = User::factory()->create();
     $user->roles()->attach($superAdminRole->id, ['created_at' => now()]);
@@ -176,13 +176,13 @@ test('seeders are idempotent and never create users', function () {
     $this->seed(DatabaseSeeder::class);
 
     // Permission count remains 98
-    expect(Permission::count())->toBe(98);
+    expect(Permission::count())->toBe(99);
 
     // Role count remains 7
     expect(Role::count())->toBe(7);
 
-    // Pivot count remains exactly 275
-    expect(DB::table('permission_role')->count())->toBe(275);
+    // Pivot count remains exactly 277
+    expect(DB::table('permission_role')->count())->toBe(277);
 
     // User count remains strictly unchanged
     expect(User::withTrashed()->count())->toBe($initialUserCount);

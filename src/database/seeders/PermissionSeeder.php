@@ -97,6 +97,9 @@ class PermissionSeeder extends Seeder
             $permissions[] = ['name' => "{$resource}.void", 'module' => $module, 'display_name' => "Membatalkan (Void) {$label}"];
         }
 
+        // Journals are corrected by reversal, which is a separate duty from cancelling a draft
+        $permissions[] = ['name' => 'journals.reverse', 'module' => 'finance', 'display_name' => 'Membalik Jurnal Akuntansi'];
+
         // 4. Inventory views (2)
         $permissions[] = ['name' => 'stock_balances.view', 'module' => 'inventory', 'display_name' => 'Melihat Saldo Stok'];
         $permissions[] = ['name' => 'stock_movements.view', 'module' => 'inventory', 'display_name' => 'Melihat Mutasi Stok'];

@@ -12,6 +12,6 @@ test('database guard at end of suite: user count is 0, permission count remains 
     $testRolesCount = Role::where('name', 'LIKE', 'test_role_%')->count();
 
     expect($usersCount)->toBe(0)
-        ->and($permissionsCount)->toBe(98)
+        ->and($permissionsCount)->toBe(99)
         ->and($testRolesCount)->toBe(0);
 });

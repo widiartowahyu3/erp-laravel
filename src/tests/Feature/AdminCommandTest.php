@@ -129,7 +129,7 @@ test('erp:permissions:sync command executes seeders idempotently', function () {
     $this->artisan('erp:permissions:sync')
         ->assertSuccessful();
 
-    expect(DB::table('permissions')->count())->toBe(98);
+    expect(DB::table('permissions')->count())->toBe(99);
     expect(DB::table('roles')->count())->toBe(7);
-    expect(DB::table('permission_role')->count())->toBe(275);
+    expect(DB::table('permission_role')->count())->toBe(277);
 });
