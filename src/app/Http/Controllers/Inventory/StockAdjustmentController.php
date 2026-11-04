@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\StockAdjustment;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
+use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Inventory\StockAdjustmentService;
 use App\Services\Inventory\StockService;
 use App\Support\Inertia\Paginated;
@@ -106,6 +107,7 @@ final class StockAdjustmentController extends Controller
         return Inertia::render('Inventory/StockAdjustments/Show', [
             'item' => $stockAdjustment,
             'movements' => $movements,
+            'journal' => JournalSourceResolver::related(StockService::SOURCE_STOCK_ADJUSTMENT, $stockAdjustment->id),
         ]);
     }
 

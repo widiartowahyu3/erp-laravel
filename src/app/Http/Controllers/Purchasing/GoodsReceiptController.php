@@ -14,6 +14,8 @@ use App\Models\GoodsReceipt;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Warehouse;
+use App\Services\Accounting\JournalSourceResolver;
+use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
@@ -126,6 +128,7 @@ class GoodsReceiptController extends Controller
 
         return Inertia::render('Purchasing/GoodsReceipts/Show', [
             'item' => $goodsReceipt,
+            'journal' => JournalSourceResolver::related(StockService::SOURCE_GOODS_RECEIPT, $goodsReceipt->id),
         ]);
     }
 

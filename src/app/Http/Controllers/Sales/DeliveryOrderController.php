@@ -14,6 +14,8 @@ use App\Models\Customer;
 use App\Models\DeliveryOrder;
 use App\Models\SalesOrder;
 use App\Models\Warehouse;
+use App\Services\Accounting\JournalSourceResolver;
+use App\Services\Inventory\StockService;
 use App\Services\Sales\DeliveryOrderService;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
@@ -127,6 +129,7 @@ class DeliveryOrderController extends Controller
 
         return Inertia::render('Sales/DeliveryOrders/Show', [
             'item' => $deliveryOrder,
+            'journal' => JournalSourceResolver::related(StockService::SOURCE_DELIVERY_ORDER, $deliveryOrder->id),
         ]);
     }
 

@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
 import Card from '@/Components/ui/Card.vue';
+import RelatedJournalCard from '@/Components/accounting/RelatedJournalCard.vue';
 import Button from '@/Components/ui/Button.vue';
 import StatusBadge from '@/Components/ui/StatusBadge.vue';
 import DateDisplay from '@/Components/ui/DateDisplay.vue';
@@ -18,6 +19,10 @@ import { useConfirm } from '@/composables/useConfirm';
 import { mulDecimals, addDecimals } from '@/Support/decimal';
 
 const props = defineProps({
+    journal: {
+        type: Object,
+        default: null,
+    },
     item: {
         type: Object,
         default: null,
@@ -345,6 +350,8 @@ async function handleVoid() {
                     </table>
                 </div>
             </Card>
+
+            <RelatedJournalCard :journal="journal" />
         </div>
     </AppLayout>
 </template>

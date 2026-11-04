@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Accounting;
 
+use App\Models\Journal;
 use App\Services\Inventory\StockService;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Maps a journal's source code to its Indonesian label and document URL.
@@ -36,6 +38,31 @@ final class JournalSourceResolver
         }
 
         return route(self::SOURCES[$sourceType]['route'], $sourceId);
+    }
+
+    /**
+     * The original journal of a source document, for viewers allowed to see journals.
+     *
+     * @return array{id: int, number: string, status: string}|null
+     */
+    public static function related(string $sourceType, int $sourceId): ?array
+    {
+        if (! Gate::allows('journals.view')) {
+            return null;
+        }
+
+        $journal = Journal::query()
+            ->select(['id', 'number', 'status'])
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->whereNull('reversal_of_id')
+            ->first();
+
+        return $journal === null ? null : [
+            'id' => $journal->id,
+            'number' => $journal->number,
+            'status' => $journal->status->value,
+        ];
     }
 
     /**

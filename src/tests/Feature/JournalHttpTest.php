@@ -7,8 +7,10 @@ namespace Tests\Feature;
 use App\Enums\JournalStatus;
 use App\Models\Journal;
 use App\Services\Accounting\JournalService;
+use App\Services\Inventory\StockAdjustmentService;
 use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
+use App\Services\Sales\DeliveryOrderService;
 use Database\Seeders\ChartOfAccountSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Facades\DB;
@@ -252,4 +254,66 @@ test('automatic journals cannot be reversed or voided directly over http', funct
     $this->flushHeaders();
     $this->actingAs($user)->get("/accounting/journals/{$journal->id}")
         ->assertInertia(fn (Assert $page) => $page->where('isAutomatic', true));
+});
+
+test('document detail pages expose their related journal to viewers who may see journals', function (): void {
+    $gr = (new GoodsReceiptService(new StockService))->post(
+        AccountingFixtures::draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']])
+    );
+    $journal = Journal::where('source_type', 'goods_receipt')->where('source_id', $gr->id)->firstOrFail();
+
+    $this->actingAs(userWithPermissions(['goods_receipts.view', 'journals.view']))
+        ->get("/purchasing/goods-receipts/{$gr->id}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('journal.id', $journal->id)
+            ->where('journal.number', $journal->number)
+            ->where('journal.status', 'posted')
+        );
+
+    $this->flushSession();
+
+    $this->actingAs(userWithPermissions(['goods_receipts.view']))
+        ->get("/purchasing/goods-receipts/{$gr->id}")
+        ->assertInertia(fn (Assert $page) => $page->where('journal', null));
+});
+
+test('delivery order and stock adjustment detail pages expose their related journal', function (): void {
+    $productId = TestDataFactory::createProduct();
+    $warehouseId = TestDataFactory::createWarehouse();
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '100.0000');
+
+    $do = (new DeliveryOrderService(new StockService))->post(
+        AccountingFixtures::draftDelivery($productId, $warehouseId, '1.0000', '200.0000')
+    );
+    $saService = new StockAdjustmentService(new StockService);
+    $sa = $saService->post($saService->create([
+        'warehouse_id' => $warehouseId,
+        'adjustment_date' => '2026-10-27',
+        'reason' => 'Stock opname',
+        'items' => [['product_id' => $productId, 'counted_quantity' => '5.0000']],
+    ]));
+
+    $user = userWithPermissions(['delivery_orders.view', 'stock_adjustments.view', 'journals.view']);
+
+    $this->actingAs($user)->get("/sales/delivery-orders/{$do->id}")
+        ->assertInertia(fn (Assert $page) => $page->where(
+            'journal.id',
+            Journal::where('source_type', 'delivery_order')->where('source_id', $do->id)->value('id')
+        ));
+
+    $this->flushSession();
+
+    $this->actingAs($user)->get("/inventory/stock-adjustments/{$sa->id}")
+        ->assertInertia(fn (Assert $page) => $page->where(
+            'journal.id',
+            Journal::where('source_type', 'stock_adjustment')->where('source_id', $sa->id)->value('id')
+        ));
+});
+
+test('a draft document page shows no journal', function (): void {
+    $gr = AccountingFixtures::draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]);
+
+    $this->actingAs(userWithPermissions(['goods_receipts.view', 'journals.view']))
+        ->get("/purchasing/goods-receipts/{$gr->id}")
+        ->assertInertia(fn (Assert $page) => $page->where('journal', null));
 });

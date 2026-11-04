@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
 import Card from '@/Components/ui/Card.vue';
+import RelatedJournalCard from '@/Components/accounting/RelatedJournalCard.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import StatusBadge from '@/Components/ui/StatusBadge.vue';
@@ -19,6 +20,10 @@ import { useConfirm } from '@/composables/useConfirm';
 import { stockMovementTypeConfig } from '@/config/inventory';
 
 const props = defineProps({
+    journal: {
+        type: Object,
+        default: null,
+    },
     item: {
         type: Object,
         required: true,
@@ -404,6 +409,8 @@ async function handleVoid() {
                     </table>
                 </div>
             </Card>
+
+            <RelatedJournalCard :journal="journal" />
         </div>
     </AppLayout>
 </template>
