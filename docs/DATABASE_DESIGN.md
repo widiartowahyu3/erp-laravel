@@ -262,7 +262,7 @@ Sistem menyediakan seeder referensi idempoten berbasis query builder (`upsert`) 
    - `NET30` (Net 30 Hari, 30 hari)
 3. **Tarif Pajak (`TaxRateSeeder`)**: 1 tarif pajak non-aktif/bebas:
    - `NOL` (Bebas Pajak / 0%, tarif 0.00%)
-4. **Bagan Akun Standar (`ChartOfAccountSeeder`)**: Tepat 20 akun COA terstruktur hierarkis (6 akun header non-postable dan 14 akun detail postable):
+4. **Bagan Akun Standar (`ChartOfAccountSeeder`)**: Tepat 21 akun COA terstruktur hierarkis (6 akun header non-postable dan 15 akun detail postable):
    - Aset (1000): Kas Utama (1101), Bank Operasional (1102), Piutang Usaha (1201), Persediaan Barang Dagang (1301)
    - Kewajiban (2000): Utang Usaha (2101), Utang Pajak PPN (2102)
    - Ekuitas (3000): Modal Pemilik (3101), Laba Ditahan (3201)

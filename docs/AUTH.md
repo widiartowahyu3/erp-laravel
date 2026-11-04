@@ -242,7 +242,7 @@ Format penamaan permission mengikuti standar `<resource>.<aksi>` (huruf kecil, *
 
 Sistem ERP Distribusi/Trading dilengkapi 7 peran bawaan (*built-in system roles*):
 
-1. **`super_admin` (98 Permissions)**:
+1. **`super_admin` (99 Permissions)**:
    Akses penuh tanpa kecuali ke seluruh 98 hak akses sistem.
 2. **`admin` (59 Permissions)**:
    Pengelolaan master data, pengguna, peran, konfigurasi sistem, dan log audit, serta hak melihat (view) seluruh dokumen transaksi dan laporan. Dilarang melakukan operasi mutasi transaksi keuangan tingkat lanjut (*approve*, *post*, *void* dokumen keuangan).

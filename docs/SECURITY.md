@@ -245,7 +245,7 @@ Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
 | **Brute Force & Credential Stuffing** | Pembajakan akun pengguna via pencocokan massal | Rate Limiter database (5 kegagalan/menit per email+IP, percobaan ke-6 HTTP 429; percobaan dihitung sebelum `Hash::check` agar permintaan paralel tidak mendahului pembatas), Argon2id memory-hard password hashing | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
 | **Account Enumeration** | Mengidentifikasi akun valid via perbedaan respon error | Pesan error generik `"Email atau kata sandi salah."`, email mentah di-hash SHA-256 pada audit log | `AuthenticationTest.php`, `AuditLogTest.php` |
 | **Session Hijacking & Fixation** | Pencurian cookie sesi aktif atau penyusupan session ID | Regenerasi ID sesi saat login, `HttpOnly`, `SameSite=Lax`, idle timeout 120 menit, absolute session lifetime 480 menit | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
-| **Privilege Escalation** | Pengguna mengakses modul atau data di luar haknya | Otorisasi RBAC via database (98 permission, 7 system roles), `Gate::before`, in-memory permission caching, middleware `can:<permission>` | `AuthorizationTest.php` |
+| **Privilege Escalation** | Pengguna mengakses modul atau data di luar haknya | Otorisasi RBAC via database (99 permission, 7 system roles), `Gate::before`, in-memory permission caching, middleware `can:<permission>` | `AuthorizationTest.php` |
 | **Inactive User Access** | Pengguna yang dinonaktifkan tetap menggunakan sesi lama | Middleware `EnsureUserIsActive` memaksa logout pengguna non-aktif pada setiap request berikutnya | `AuthenticationTest.php` |
 | **Credential Leakage in Logs** | Kata sandi atau token sensitif tersimpan di riwayat audit | Sanitasi rekursif regex `/password\|token\|secret\|key/i` pada `AuditLogger` | `AuditLogTest.php` |
 | **IP Spoofing & XFF Rate Limit Bypass** | Penyerang memalsukan `X-Forwarded-For` untuk melewati batas laju login | `TRUSTED_PROXIES` kosong bawaan (tanpa CIDR privat), ditambah Nginx `limit_req_zone` berbasis TCP socket `$binary_remote_addr` (status 429) | `AuthenticationTest.php`, `ConfigSafetyTest.php`, `probe-login-throttle.sh`, `verify-hardening.sh` (Butir 17) |
@@ -264,7 +264,7 @@ Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
 - [x] `Model::shouldBeStrict()`, `Date::use(CarbonImmutable::class)`, `DB::prohibitDestructiveCommands()`, dan `Vite::useCspNonce()` terkonfigurasi di `AppServiceProvider`.
 - [x] Middleware `SecurityHeaders` aktif di web group dengan per-request nonce CSP dan seluruh header keamanan wajib.
 - [x] Model `User`, `Role`, `Permission` terkonfigurasi dengan relasi Many-to-Many (`role_user`, `permission_role`).
-- [x] Katalog 98 permission dan 7 peran sistem terpasang idempoten via `PermissionSeeder` dan `RoleSeeder`.
+- [x] Katalog 99 permission dan 7 peran sistem terpasang idempoten via `PermissionSeeder` dan `RoleSeeder`.
 - [x] Hashing Argon2id terverifikasi pada PHP-FPM dan PHP-CLI (`password_algos()`).
 - [x] Rate limiting login berbasis database (5 percobaan/menit, percobaan ke-6 HTTP 429).
 - [x] Session timeouts terpasang: idle 120 menit dan absolute lifetime 480 menit (`EnforceSessionTimeouts`).
