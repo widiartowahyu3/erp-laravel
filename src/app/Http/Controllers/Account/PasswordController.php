@@ -32,6 +32,9 @@ class PasswordController extends Controller
 
         $authService->updatePassword($user, (string) $request->input('password'));
 
+        // Rotate the session id so a stolen session cookie does not survive the password change
+        $request->session()->regenerate(true);
+
         return back()->with('status', 'Kata sandi berhasil diperbarui.');
     }
 }

@@ -605,3 +605,20 @@ test('successful login does not consume the per-ip attempt budget', function () 
     expect((int) RateLimiter::attempts('login_ip|127.0.0.1'))->toBe(0)
         ->and((int) RateLimiter::attempts(AuthService::loginThrottleKey($email, '127.0.0.1')))->toBe(0);
 });
+
+test('successful password change rotates the session id', function () {
+    $user = User::factory()->create(['password' => 'Initial#SecurePass123']);
+    RateLimiter::clear("pwd_fail_user|{$user->id}");
+    RateLimiter::clear("password_change|{$user->id}");
+
+    $this->actingAs($user)->get('/account/password');
+    $sessionIdBefore = session()->getId();
+
+    $this->put('/account/password', [
+        'current_password' => 'Initial#SecurePass123',
+        'password' => 'Rotated#SecurePass456',
+        'password_confirmation' => 'Rotated#SecurePass456',
+    ])->assertSessionHasNoErrors();
+
+    expect(session()->getId())->not->toBe($sessionIdBefore);
+});
