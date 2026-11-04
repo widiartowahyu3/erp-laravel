@@ -102,7 +102,14 @@ Perintah ini idempoten, memproses GR, DO, dan penyesuaian stok berstatus `posted
 - Akun yang dipetakan di `config/accounting.php` tidak boleh dinonaktifkan, diganti kodenya, diubah menjadi header, atau dihapus.
 - Hapus (*soft delete*) hanya untuk akun tanpa baris jurnal dan tanpa anak.
 
-## 9. Batasan yang Disengaja
+## 9. Antarmuka
+
+- **Bagan Akun:** daftar pohon dengan indentasi per level, filter tipe dan status, serta kolom terkunci yang tampil nonaktif beserta keterangannya.
+- **Jurnal:** filter tanggal, status, dan sumber. Jurnal pembalik diberi lencana "Pembalik" dan jurnal yang sudah dibalik diberi lencana "Sudah dibalik".
+- **Editor baris:** mengisi debit mengosongkan kredit pada baris yang sama, dan sebaliknya. Indikator total dan selisih memakai `Support/money.js`. Tombol "Simpan dan Posting" hanya aktif saat seimbang. Tombol "Simpan Draf" tetap bisa ditekan, tetapi server menolak draf yang tidak seimbang.
+- **Jurnal terkait:** halaman detail GR, DO, dan penyesuaian stok menampilkan nomor dan status jurnalnya bagi pengguna yang punya izin `journals.view`.
+
+## 10. Batasan yang Disengaja
 
 Tanpa tutup buku/periode terkunci, tanpa nota retur/kredit, tanpa uang muka/kelebihan bayar, tanpa multi-mata-uang, tanpa penyusutan/aset tetap, tanpa gabungan faktur lintas SO/PO, kredit pelanggan hanya dicek saat menyetujui SO, dan laporan umur piutang/utang hanya posisi hari ini.
 

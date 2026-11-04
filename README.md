@@ -76,6 +76,7 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
 - **Jurnal otomatis**: posting penerimaan barang, surat jalan, dan penyesuaian stok otomatis membuat jurnal dalam transaksi yang sama, dan pembatalannya membuat jurnal pembalik.
 - **Jurnal manual (`/accounting/journals`)**: siklus draf, posting, pembatalan draf, dan pembalik.
 - **Bagan akun (`/accounting/accounts`)**: hierarki akun dengan perlindungan akun yang sudah dipakai atau dipetakan.
+- **Jurnal terkait**: halaman detail GR, DO, dan penyesuaian stok menampilkan jurnal dari dokumen tersebut.
 - Rincian ada di [`docs/ACCOUNTING.md`](docs/ACCOUNTING.md).
 
 ---

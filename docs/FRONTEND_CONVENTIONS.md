@@ -198,4 +198,11 @@ Untuk menjaga keseragaman antarmuka pengguna pada seluruh modul ERP, istilah UI 
    - Rasio kontras teks terhadap latar belakang memenuhi batas minimum WCAG AA (minimal 4.5:1 untuk teks normal, 3:1 untuk teks besar dan elemen UI grafis) pada mode terang maupun gelap.
    - Status badge dan indikator kesalahan tidak hanya bergantung pada warna (selalu menyertakan label teks atau ikon penjelas).
 
+## Helper Uang (`Support/money.js`)
+
+Penjumlahan dan pengurangan uang di browser memakai `addMoney`, `subtractMoney`, `compareMoney`, dan `sumMoney`, yang bekerja pada string desimal dua digit dalam satuan sen `BigInt`, tanpa float. Masukan tidak valid melempar `RangeError`, jadi periksa dulu dengan `isValidMoney`. Helper ini hanya untuk indikator di layar; server tetap sumber kebenaran validasi.
+
+## Editor Baris Jurnal
+
+Editor baris ada di `Pages/Accounting/Journals/Form.vue`. Setiap baris hanya boleh terisi satu sisi, dan minimal dua baris selalu tersisa. Kesalahan server ditampilkan per baris lewat kunci `lines.<indeks>.<kolom>`.
 
