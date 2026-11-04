@@ -62,3 +62,33 @@ describe('DataTable Static Compliance in Sales Pages (Butir 1)', () => {
         expect(violations).toEqual([]);
     });
 });
+
+describe('DataTable and FilterBar contract in every page', () => {
+    const pages = getVueFiles(path.resolve(__dirname, '../Pages')).filter((file) => !file.includes('/Dev/'));
+
+    it('binds DataTable rows through :data', () => {
+        const violations = [];
+        for (const file of pages) {
+            const content = fs.readFileSync(file, 'utf-8');
+            for (const match of content.matchAll(/<DataTable\b([^>]*)>/g)) {
+                if (!/:data\s*=/.test(match[1]) || /:rows\s*=|:empty\s*=/.test(match[1])) {
+                    violations.push(path.relative(path.resolve(__dirname, '../Pages'), file));
+                }
+            }
+        }
+        expect(violations).toEqual([]);
+    });
+
+    it('puts FilterBar filters in its default slot and names its placeholder prop correctly', () => {
+        const violations = [];
+        for (const file of pages) {
+            const content = fs.readFileSync(file, 'utf-8');
+            for (const match of content.matchAll(/<FilterBar\b([^>]*)>([\s\S]*?)<\/FilterBar>/g)) {
+                if (/\splaceholder\s*=/.test(match[1]) || /<template #filters>/.test(match[2])) {
+                    violations.push(path.relative(path.resolve(__dirname, '../Pages'), file));
+                }
+            }
+        }
+        expect(violations).toEqual([]);
+    });
+});

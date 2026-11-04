@@ -126,65 +126,62 @@ const hasActiveFilters = computed(() => {
             <FilterBar
                 :search="search"
                 :has-active-filters="hasActiveFilters"
-                placeholder="Cari no. GR, PO, pemasok, catatan..."
+                search-placeholder="Cari no. GR, PO, pemasok, catatan..."
                 @update:search="setSearch"
                 @reset="resetFilters"
             >
-                <template #filters>
-                    <div class="w-44">
-                        <Select
-                            :model-value="filters.supplier_id"
-                            :options="supplierOptions"
-                            size="sm"
-                            aria-label="Filter berdasarkan pemasok"
-                            @update:model-value="setFilter('supplier_id', $event)"
-                        />
-                    </div>
-                    <div class="w-44">
-                        <Select
-                            :model-value="filters.warehouse_id"
-                            :options="warehouseOptions"
-                            size="sm"
-                            aria-label="Filter berdasarkan gudang"
-                            @update:model-value="setFilter('warehouse_id', $event)"
-                        />
-                    </div>
-                    <div class="w-40">
-                        <Select
-                            :model-value="filters.status"
-                            :options="statusOptions"
-                            size="sm"
-                            aria-label="Filter berdasarkan status penerimaan"
-                            @update:model-value="setFilter('status', $event)"
-                        />
-                    </div>
-                    <div class="w-36">
-                        <TextInput
-                            type="date"
-                            :model-value="filters.date_from"
-                            size="sm"
-                            aria-label="Dari tanggal penerimaan"
-                            placeholder="Dari tanggal"
-                            @update:model-value="setFilter('date_from', $event)"
-                        />
-                    </div>
-                    <div class="w-36">
-                        <TextInput
-                            type="date"
-                            :model-value="filters.date_to"
-                            size="sm"
-                            aria-label="Sampai tanggal penerimaan"
-                            placeholder="Sampai tanggal"
-                            @update:model-value="setFilter('date_to', $event)"
-                        />
-                    </div>
-                </template>
+                <div class="w-44">
+                    <Select
+                        :model-value="filters.supplier_id"
+                        :options="supplierOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan pemasok"
+                        @update:model-value="setFilter('supplier_id', $event)"
+                    />
+                </div>
+                <div class="w-44">
+                    <Select
+                        :model-value="filters.warehouse_id"
+                        :options="warehouseOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan gudang"
+                        @update:model-value="setFilter('warehouse_id', $event)"
+                    />
+                </div>
+                <div class="w-40">
+                    <Select
+                        :model-value="filters.status"
+                        :options="statusOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan status penerimaan"
+                        @update:model-value="setFilter('status', $event)"
+                    />
+                </div>
+                <div class="w-36">
+                    <TextInput
+                        type="date"
+                        :model-value="filters.date_from"
+                        size="sm"
+                        aria-label="Dari tanggal penerimaan"
+                        placeholder="Dari tanggal"
+                        @update:model-value="setFilter('date_from', $event)"
+                    />
+                </div>
+                <div class="w-36">
+                    <TextInput
+                        type="date"
+                        :model-value="filters.date_to"
+                        size="sm"
+                        aria-label="Sampai tanggal penerimaan"
+                        placeholder="Sampai tanggal"
+                        @update:model-value="setFilter('date_to', $event)"
+                    />
+                </div>
             </FilterBar>
 
             <DataTable
                 :columns="columns"
-                :rows="items.data"
-                :empty="items.data.length === 0"
+                :data="items.data"
                 empty-title="Belum ada penerimaan barang"
                 empty-description="Buat penerimaan barang baru berdasarkan pesanan pembelian yang telah disetujui."
             >
