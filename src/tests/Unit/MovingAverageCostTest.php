@@ -67,3 +67,37 @@ test('afterReceipt strictly rejects invalid inputs with specific exceptions and 
     $fn = fn ($val) => MovingAverageCost::afterReceipt('10', '1000', $val, '1000');
     expect(fn () => $fn(1.5))->toThrow(TypeError::class);
 });
+
+test('afterReversal removes the reversed value from the moving average', function (): void {
+    // 20 @ 150 - 10 @ 200 -> 10 @ 100
+    expect(MovingAverageCost::afterReversal('20', '150', '10', '200'))->toBe('100.0000');
+
+    // 15 @ 150 - 10 @ 200 -> 5 @ 50
+    expect(MovingAverageCost::afterReversal('15', '150', '10', '200'))->toBe('50.0000');
+
+    // Reversing at the current average leaves it unchanged
+    expect(MovingAverageCost::afterReversal('20', '150', '10', '150'))->toBe('150.0000');
+});
+
+test('afterReversal keeps the average when no quantity remains', function (): void {
+    expect(MovingAverageCost::afterReversal('10', '150', '10', '200'))->toBe('150.0000');
+});
+
+test('afterReversal returns null when the remaining value would be negative', function (): void {
+    expect(MovingAverageCost::afterReversal('15', '550', '10', '1000'))->toBeNull();
+});
+
+test('afterReversal absorbs a negative remainder caused only by average rounding', function (): void {
+    // 3 @ 0 + 9 @ 1.1111 rounds to 12 @ 0.8333; the true remainder is zero, the rounded one is -0.0003
+    expect(MovingAverageCost::afterReversal('12', '0.8333', '9', '1.1111'))->toBe('0.0000');
+});
+
+test('afterReversal rejects invalid inputs', function (string $oldQty, string $oldAvg, string $outQty, string $outCost): void {
+    expect(fn () => MovingAverageCost::afterReversal($oldQty, $oldAvg, $outQty, $outCost))
+        ->toThrow(InvalidArgumentException::class);
+})->with([
+    'negative average' => ['10', '-1', '5', '100'],
+    'zero reversal' => ['10', '100', '0', '100'],
+    'negative cost' => ['10', '100', '5', '-1'],
+    'reversal above quantity' => ['10', '100', '11', '100'],
+]);

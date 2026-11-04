@@ -137,6 +137,8 @@ Saat sebuah dokumen Penerimaan Barang (`GoodsReceipt`) berstatus `posted` dibata
    - GR berstatus `DRAFT` dapat dibatalkan kapan saja tanpa memandang status PO induk.
    - GR berstatus `POSTED` **HANYA** dapat dibatalkan jika PO induk belum berstatus `CLOSED`. Jika PO sudah `CLOSED`, pembatalan ditolak dengan HTTP 409 Conflict ("Penerimaan barang pada pesanan pembelian yang sudah ditutup tidak dapat dibatalkan.").
    - Pembalikan mutasi stok saat void GR dicatat sebagai **`adjustment_out`** dengan `source_type = goods_receipt_void` (bukan `delivery`).
+   - Barang dikeluarkan pada **biaya satuan GR tersebut**, bukan biaya rata-rata saat itu, sehingga nilai persediaan turun persis sebesar nilai yang ditambahkan GR dan biaya rata-rata dihitung ulang. Contoh: 10 @100 ditambah GR 10 @200 menjadi 20 @150; setelah void kembali menjadi 10 @100.
+   - Bila sebagian barang sudah keluar dan sisa nilai persediaan akan menjadi negatif, pembatalan ditolak dengan HTTP 409 Conflict (`field: 'status'`).
 3. **Penutupan (*Close*) Purchase Order:**
    - PO hanya dapat ditutup (`close`) jika tidak ada dokumen Goods Receipt yang masih berstatus `DRAFT` pada PO tersebut.
    - Jika masih ada GR draf, penutupan PO ditolak dengan HTTP 409 Conflict ("Masih ada penerimaan barang berstatus draf. Posting atau batalkan terlebih dahulu.").

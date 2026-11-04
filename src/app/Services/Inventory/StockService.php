@@ -144,6 +144,95 @@ final class StockService
         $product = $this->findAndValidateProduct($productId);
         $warehouse = $this->findAndValidateWarehouse($warehouseId);
 
+        $balance = $this->lockBalanceWithSufficientStock($product, $warehouse, $quantity);
+
+        $unitCost = $balance->avg_cost;
+        $newQuantity = Decimal::sub($balance->quantity, $quantity, Decimal::SCALE_QUANTITY);
+
+        $balance->quantity = $newQuantity;
+        $balance->save();
+
+        $signedQuantity = '-'.Decimal::round($quantity, Decimal::SCALE_QUANTITY);
+
+        return StockMovement::create([
+            'movement_date' => $movementDate ?? now(),
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'movement_type' => $type,
+            'quantity' => $signedQuantity,
+            'unit_cost' => $unitCost,
+            'balance_after' => $balance->quantity,
+            'avg_cost_after' => $balance->avg_cost,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+            'created_by' => Auth::id() ? (int) Auth::id() : null,
+        ]);
+    }
+
+    /**
+     * Reverse a posted receipt: stock leaves at the receipt's own unit cost, not the current average,
+     * so the stock value drops by exactly what the receipt added and matches its reversing journal.
+     *
+     * @throws BusinessRuleException
+     * @throws InsufficientStockException
+     * @throws InvalidArgumentException
+     * @throws \LogicException
+     */
+    public function reverseReceipt(
+        int $productId,
+        int $warehouseId,
+        string $quantity,
+        string $unitCost,
+        string $sourceType,
+        int $sourceId,
+        ?CarbonInterface $movementDate = null
+    ): StockMovement {
+        self::ensureInTransaction();
+
+        $this->validateQuantity($quantity);
+        $this->validateUnitCost($unitCost);
+
+        $product = $this->findAndValidateProduct($productId);
+        $warehouse = $this->findAndValidateWarehouse($warehouseId);
+
+        $balance = $this->lockBalanceWithSufficientStock($product, $warehouse, $quantity);
+
+        $newAvgCost = MovingAverageCost::afterReversal($balance->quantity, $balance->avg_cost, $quantity, $unitCost);
+
+        if ($newAvgCost === null) {
+            throw new BusinessRuleException(
+                "Pembatalan ditolak: nilai persediaan produk '{$product->sku}' di gudang '{$warehouse->code}' akan menjadi negatif karena sebagian barang sudah keluar.",
+                409,
+                'status'
+            );
+        }
+
+        $balance->quantity = Decimal::sub($balance->quantity, $quantity, Decimal::SCALE_QUANTITY);
+        $balance->avg_cost = $newAvgCost;
+        $balance->save();
+
+        return StockMovement::create([
+            'movement_date' => $movementDate ?? now(),
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'movement_type' => StockMovementType::ADJUSTMENT_OUT,
+            'quantity' => '-'.Decimal::round($quantity, Decimal::SCALE_QUANTITY),
+            'unit_cost' => Decimal::round($unitCost, Decimal::SCALE_COST),
+            'balance_after' => $balance->quantity,
+            'avg_cost_after' => $balance->avg_cost,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+            'created_by' => Auth::id() ? (int) Auth::id() : null,
+        ]);
+    }
+
+    /**
+     * Lock the balance row for an outgoing movement and verify it holds enough stock.
+     *
+     * @throws InsufficientStockException
+     */
+    private function lockBalanceWithSufficientStock(Product $product, Warehouse $warehouse, string $quantity): StockBalance
+    {
         $balance = StockBalance::query()
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
@@ -169,27 +258,7 @@ final class StockService
             );
         }
 
-        $unitCost = $balance->avg_cost;
-        $newQuantity = Decimal::sub($balance->quantity, $quantity, Decimal::SCALE_QUANTITY);
-
-        $balance->quantity = $newQuantity;
-        $balance->save();
-
-        $signedQuantity = '-'.Decimal::round($quantity, Decimal::SCALE_QUANTITY);
-
-        return StockMovement::create([
-            'movement_date' => $movementDate ?? now(),
-            'product_id' => $product->id,
-            'warehouse_id' => $warehouse->id,
-            'movement_type' => $type,
-            'quantity' => $signedQuantity,
-            'unit_cost' => $unitCost,
-            'balance_after' => $balance->quantity,
-            'avg_cost_after' => $balance->avg_cost,
-            'source_type' => $sourceType,
-            'source_id' => $sourceId,
-            'created_by' => Auth::id() ? (int) Auth::id() : null,
-        ]);
+        return $balance;
     }
 
     /**

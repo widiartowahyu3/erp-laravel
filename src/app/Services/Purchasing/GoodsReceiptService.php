@@ -449,12 +449,12 @@ class GoodsReceiptService
                         $poItem->save();
                     }
 
-                    // 5. Decrease stock via StockService (throws InsufficientStockException if balance is insufficient)
-                    $this->stockService->decrease(
+                    // 5. Remove the stock at its receipt cost (throws if quantity is short or the remaining value would be negative)
+                    $this->stockService->reverseReceipt(
                         productId: $grItem->product_id,
                         warehouseId: $lockedGr->warehouse_id,
                         quantity: $grItem->quantity,
-                        type: StockMovementType::ADJUSTMENT_OUT,
+                        unitCost: $grItem->unit_cost,
                         sourceType: StockService::SOURCE_GOODS_RECEIPT_VOID,
                         sourceId: $lockedGr->id
                     );

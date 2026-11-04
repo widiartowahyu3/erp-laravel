@@ -11,11 +11,13 @@ use App\Exceptions\BusinessRuleException;
 use App\Exceptions\DocumentNotEditableException;
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\InvalidStateTransitionException;
+use App\Models\GoodsReceipt;
 use App\Models\StockBalance;
 use App\Models\StockMovement;
 use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
 use App\Services\Purchasing\PurchaseOrderService;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\TestDataFactory;
 
 test('full purchasing receipt cycle: partial receipt -> full receipt -> void rollback', function (): void {
@@ -888,4 +890,109 @@ test('GoodsReceiptService post checks GR status before PO status when PO is clos
     expect($draftGrOnClosedPo->fresh()->status)->toBe(GoodsReceiptStatus::DRAFT);
     expect(StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->value('quantity'))->toBe($stockBefore);
     expect(StockMovement::count())->toBe($movementsBefore);
+});
+
+/**
+ * Seed an opening balance, then post a goods receipt for the same product.
+ *
+ * @return array{product: int, warehouse: int, receipt: GoodsReceipt}
+ */
+function postedReceiptOverOpeningStock(string $openingCost, string $receiptCost): array
+{
+    $supplierId = TestDataFactory::createSupplier();
+    $warehouseId = TestDataFactory::createWarehouse();
+    $productId = TestDataFactory::createProduct(['track_stock' => true]);
+
+    $stockService = new StockService;
+    $poService = new PurchaseOrderService;
+    $grService = new GoodsReceiptService($stockService);
+
+    DB::transaction(fn () => $stockService->increase(
+        $productId, $warehouseId, '10.0000', $openingCost,
+        StockMovementType::ADJUSTMENT_IN, StockService::SOURCE_STOCK_ADJUSTMENT, 1
+    ));
+
+    $po = $poService->create([
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'order_date' => '2026-10-26',
+        'items' => [
+            ['product_id' => $productId, 'quantity' => '10.0000', 'unit_price' => $receiptCost],
+        ],
+    ]);
+    $poService->approve($po);
+
+    $receipt = $grService->post($grService->create([
+        'purchase_order_id' => $po->id,
+        'supplier_id' => $supplierId,
+        'warehouse_id' => $warehouseId,
+        'receipt_date' => '2026-10-26',
+        'items' => [
+            ['purchase_order_item_id' => $po->items()->firstOrFail()->id, 'product_id' => $productId, 'quantity' => '10.0000'],
+        ],
+    ]));
+
+    return ['product' => $productId, 'warehouse' => $warehouseId, 'receipt' => $receipt];
+}
+
+test('voiding posted goods receipt removes its value at the receipt cost and restores the prior average', function (): void {
+    $ctx = postedReceiptOverOpeningStock('100.0000', '200.0000');
+
+    $balance = StockBalance::where('product_id', $ctx['product'])->where('warehouse_id', $ctx['warehouse'])->firstOrFail();
+    expect($balance->quantity)->toBe('20.0000')->and($balance->avg_cost)->toBe('150.0000');
+
+    (new GoodsReceiptService(new StockService))->void($ctx['receipt'], 'Batal penerimaan');
+
+    $balance->refresh();
+    expect($balance->quantity)->toBe('10.0000')->and($balance->avg_cost)->toBe('100.0000');
+
+    $reversal = StockMovement::query()
+        ->where('source_type', StockService::SOURCE_GOODS_RECEIPT_VOID)
+        ->where('source_id', $ctx['receipt']->id)
+        ->firstOrFail();
+
+    expect($reversal->movement_type)->toBe(StockMovementType::ADJUSTMENT_OUT)
+        ->and($reversal->quantity)->toBe('-10.0000')
+        ->and($reversal->unit_cost)->toBe('200.0000')
+        ->and($reversal->avg_cost_after)->toBe('100.0000');
+});
+
+test('voiding goods receipt after a partial sale keeps the remaining stock value consistent', function (): void {
+    $ctx = postedReceiptOverOpeningStock('100.0000', '200.0000');
+
+    DB::transaction(fn () => (new StockService)->decrease(
+        $ctx['product'], $ctx['warehouse'], '5.0000',
+        StockMovementType::DELIVERY, StockService::SOURCE_DELIVERY_ORDER, 1
+    ));
+
+    (new GoodsReceiptService(new StockService))->void($ctx['receipt'], 'Batal penerimaan');
+
+    // 15 @ 150 = 2250, minus 10 @ 200 = 250 left on 5 units
+    $balance = StockBalance::where('product_id', $ctx['product'])->where('warehouse_id', $ctx['warehouse'])->firstOrFail();
+    expect($balance->quantity)->toBe('5.0000')->and($balance->avg_cost)->toBe('50.0000');
+});
+
+test('voiding goods receipt is rejected with 409 when the remaining stock value would become negative', function (): void {
+    $ctx = postedReceiptOverOpeningStock('100.0000', '1000.0000');
+
+    DB::transaction(fn () => (new StockService)->decrease(
+        $ctx['product'], $ctx['warehouse'], '5.0000',
+        StockMovementType::DELIVERY, StockService::SOURCE_DELIVERY_ORDER, 1
+    ));
+
+    // 15 @ 550 = 8250 cannot absorb 10 @ 1000 = 10000
+    try {
+        (new GoodsReceiptService(new StockService))->void($ctx['receipt'], 'Batal penerimaan');
+        test()->fail('Expected BusinessRuleException was not thrown.');
+    } catch (BusinessRuleException $e) {
+        expect($e->getCode())->toBe(409)
+            ->and($e->field)->toBe('status')
+            ->and($e->getMessage())->toContain('nilai persediaan');
+    }
+
+    $balance = StockBalance::where('product_id', $ctx['product'])->where('warehouse_id', $ctx['warehouse'])->firstOrFail();
+    expect($balance->quantity)->toBe('15.0000')
+        ->and($balance->avg_cost)->toBe('550.0000')
+        ->and($ctx['receipt']->fresh()->status)->toBe(GoodsReceiptStatus::POSTED)
+        ->and(StockMovement::where('source_type', StockService::SOURCE_GOODS_RECEIPT_VOID)->where('source_id', $ctx['receipt']->id)->count())->toBe(0);
 });
