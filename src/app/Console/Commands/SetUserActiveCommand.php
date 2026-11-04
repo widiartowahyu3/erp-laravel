@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\User;
-use App\Services\Audit\AuditLogger;
+use App\Services\Administration\UserAdministrationService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -31,7 +30,7 @@ class SetUserActiveCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(UserAdministrationService $administration): int
     {
         $rawEmail = (string) $this->argument('email');
         $normalizedEmail = strtolower(trim($rawEmail));
@@ -54,27 +53,7 @@ class SetUserActiveCommand extends Command
             return self::FAILURE;
         }
 
-        $oldActive = (bool) $user->is_active;
-
-        $user->forceFill([
-            'is_active' => $isActive,
-        ])->save();
-
-        if (! $isActive) {
-            // Delete active sessions when user is deactivated
-            DB::table('sessions')->where('user_id', $user->id)->delete();
-        }
-
-        $event = $isActive ? 'user.activated' : 'user.deactivated';
-
-        AuditLogger::record(
-            event: $event,
-            auditableType: User::class,
-            auditableId: (int) $user->id,
-            old: ['is_active' => $oldActive],
-            new: ['is_active' => $isActive],
-            userId: null
-        );
+        $administration->setActive($user, $isActive);
 
         $stateText = $isActive ? 'diaktifkan' : 'dinonaktifkan';
         info("Pengguna [{$normalizedEmail}] berhasil {$stateText}.");

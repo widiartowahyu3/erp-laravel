@@ -6,10 +6,9 @@ namespace App\Console\Commands;
 
 use App\Models\Role;
 use App\Models\User;
-use App\Services\Audit\AuditLogger;
+use App\Services\Administration\UserAdministrationService;
 use App\Support\PasswordPolicy;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -36,7 +35,7 @@ class CreateAdminCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(UserAdministrationService $administration): int
     {
         $name = text(
             label: 'Nama Admin:',
@@ -83,30 +82,7 @@ class CreateAdminCommand extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($name, $normalizedEmail, $pwd, $superAdminRole): void {
-            $user = User::create([
-                'name' => trim($name),
-                'email' => $normalizedEmail,
-                'password' => $pwd,
-                'is_active' => true,
-            ]);
-
-            $user->roles()->attach($superAdminRole->id, ['created_at' => now()]);
-
-            AuditLogger::record(
-                event: 'user.created',
-                auditableType: User::class,
-                auditableId: (int) $user->id,
-                old: null,
-                new: [
-                    'id' => (int) $user->id,
-                    'name' => $user->name,
-                    'email_hash' => hash('sha256', $normalizedEmail),
-                    'role' => 'super_admin',
-                ],
-                userId: null
-            );
-        });
+        $administration->create($name, $normalizedEmail, $pwd, [(int) $superAdminRole->id]);
 
         info("Pengguna admin [{$normalizedEmail}] berhasil dibuat dengan role super_admin.");
 

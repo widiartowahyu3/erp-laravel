@@ -24,7 +24,7 @@ class SyncPermissionsCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Menyinkronkan katalog 98 permission dan pemetaan peran bawaan sistem';
+    protected $description = 'Menyinkronkan katalog permission dan pemetaan peran bawaan sistem';
 
     /**
      * Execute the console command.

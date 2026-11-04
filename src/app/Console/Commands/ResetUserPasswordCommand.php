@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\User;
-use App\Services\Audit\AuditLogger;
+use App\Services\Administration\UserAdministrationService;
 use App\Support\PasswordPolicy;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -34,7 +33,7 @@ class ResetUserPasswordCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(UserAdministrationService $administration): int
     {
         $rawEmail = (string) $this->argument('email');
         $normalizedEmail = strtolower(trim($rawEmail));
@@ -60,21 +59,7 @@ class ResetUserPasswordCommand extends Command
             validate: fn (string $c): ?string => $c === $pwd ? null : 'Konfirmasi kata sandi tidak cocok.'
         );
 
-        $user->forceFill([
-            'password' => $pwd,
-        ])->save();
-
-        // Invalidate all active sessions for this user
-        DB::table('sessions')->where('user_id', $user->id)->delete();
-
-        AuditLogger::record(
-            event: 'password.reset',
-            auditableType: User::class,
-            auditableId: (int) $user->id,
-            old: null,
-            new: ['email_hash' => hash('sha256', $normalizedEmail)],
-            userId: null
-        );
+        $administration->resetPassword($user, $pwd);
 
         info("Kata sandi pengguna [{$normalizedEmail}] berhasil direset dan seluruh sesi aktif telah dihapus.");
 
