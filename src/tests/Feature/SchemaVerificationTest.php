@@ -215,8 +215,8 @@ test('seeders are idempotent and COA hierarchy is structurally balanced', functi
     expect($paymentTermsCount2)->toBe(4);
     expect($taxRatesCount1)->toBe(1);
     expect($taxRatesCount2)->toBe(1);
-    expect($coaCount1)->toBe(20);
-    expect($coaCount2)->toBe(20);
+    expect($coaCount1)->toBe(21);
+    expect($coaCount2)->toBe(21);
 
     // Verify all non-root accounts have an existing parent
     $orphanedAccounts = DB::table('chart_of_accounts as child')

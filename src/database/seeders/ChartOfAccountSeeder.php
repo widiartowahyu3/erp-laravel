@@ -42,6 +42,7 @@ class ChartOfAccountSeeder extends Seeder
 
             // Under 2000 LIABILITAS
             ['code' => '2101', 'name' => 'Utang Usaha', 'type' => 'liability', 'normal_balance' => 'credit', 'parent_id' => $headerIds['2000'] ?? null, 'is_postable' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => '2103', 'name' => 'Barang Diterima Belum Ditagih (GR/IR)', 'type' => 'liability', 'normal_balance' => 'credit', 'parent_id' => $headerIds['2000'] ?? null, 'is_postable' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['code' => '2201', 'name' => 'PPN Keluaran', 'type' => 'liability', 'normal_balance' => 'credit', 'parent_id' => $headerIds['2000'] ?? null, 'is_postable' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
 
             // Under 3000 EKUITAS
