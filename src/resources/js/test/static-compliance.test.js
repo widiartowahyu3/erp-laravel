@@ -37,6 +37,24 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(violations).toEqual([]);
     });
 
+    // Heuristic: it reads one file at a time, so a page whose h2 comes from a child component is not understood.
+    it('requires card header titles in Pages/** to start at h2, not h3', () => {
+        const violations = [];
+        const pageFiles = getAllFiles(path.resolve(jsRoot, 'Pages'), ['.vue']);
+        for (const file of pageFiles) {
+            const content = fs.readFileSync(file, 'utf-8');
+            for (const match of content.matchAll(/<template #header>([\s\S]*?)<\/template>/g)) {
+                const hasH3 = /<h3\b/.test(match[1]);
+                const h2Before = /<h2\b/.test(content.slice(0, match.index));
+                if (hasH3 && !h2Before) {
+                    violations.push(path.relative(jsRoot, file));
+                }
+            }
+        }
+        console.info(`card header h3 violations: ${violations.length}`);
+        expect(violations).toEqual([]);
+    });
+
     it('prohibits static style attributes in all Vue SFC files (strict CSP compliance)', () => {
         const violations = [];
         for (const file of vueFiles) {

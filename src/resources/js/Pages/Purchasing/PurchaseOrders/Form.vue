@@ -219,9 +219,9 @@ function submit() {
         <Card>
             <template #header>
                 <div class="space-y-0.5">
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Informasi Pesanan Pembelian
-                    </h3>
+                    </h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         Identitas pemasok, lokasi penerimaan gudang, dan termin transaksi.
                     </p>
@@ -314,9 +314,9 @@ function submit() {
             <template #header>
                 <div class="flex items-center justify-between">
                     <div class="space-y-0.5">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Rincian Barang yang Dipesan
-                        </h3>
+                        </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             Pilih produk, kuantitas, harga penawaran satuan, diskon, dan tarif pajak.
                         </p>

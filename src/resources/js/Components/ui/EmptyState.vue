@@ -22,9 +22,9 @@ defineProps({
         </div>
 
         <div class="space-y-1 max-w-sm">
-            <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">
+            <h2 class="text-base font-semibold text-slate-800 dark:text-slate-200">
                 {{ title }}
-            </h3>
+            </h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 {{ description }}
             </p>

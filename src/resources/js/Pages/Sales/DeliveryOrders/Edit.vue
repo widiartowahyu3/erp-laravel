@@ -95,9 +95,9 @@ function submit() {
                     <Card class="md:col-span-2">
                         <template #header>
                             <div class="space-y-0.5">
-                                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                     Informasi Pengiriman
-                                </h3>
+                                </h2>
                                 <p class="text-xs text-slate-500 dark:text-slate-400">
                                     Tanggal pengiriman fisik dan alamat tujuan pengiriman.
                                 </p>
@@ -151,9 +151,9 @@ function submit() {
                     <!-- Info Referensi SO -->
                     <Card>
                         <template #header>
-                            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                 Referensi Pesanan (SO)
-                            </h3>
+                            </h2>
                         </template>
                         <div class="space-y-3 text-sm">
                             <div>
@@ -189,9 +189,9 @@ function submit() {
                 <Card>
                     <template #header>
                         <div class="space-y-0.5">
-                            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                 Barang yang Akan Dikirim
-                            </h3>
+                            </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400">
                                 Perbarui kuantitas barang yang dikirim pada pengiriman ini.
                             </p>

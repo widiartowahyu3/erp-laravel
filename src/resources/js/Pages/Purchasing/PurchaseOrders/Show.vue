@@ -218,9 +218,9 @@ async function handleVoid() {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card class="md:col-span-2">
                     <template #header>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Informasi Pengadaan
-                        </h3>
+                        </h2>
                     </template>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                         <div>
@@ -288,9 +288,9 @@ async function handleVoid() {
                 <!-- Ringkasan Finansial -->
                 <Card>
                     <template #header>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Ringkasan Biaya
-                        </h3>
+                        </h2>
                     </template>
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between text-slate-600 dark:text-slate-300">
@@ -317,9 +317,9 @@ async function handleVoid() {
             <Card>
                 <template #header>
                     <div class="space-y-0.5">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Daftar Barang Pesanan
-                        </h3>
+                        </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             Rincian kuantitas pesanan, pemenuhan barang yang sudah diterima, dan sisa pesanan.
                         </p>
@@ -385,9 +385,9 @@ async function handleVoid() {
             <Card>
                 <template #header>
                     <div class="space-y-0.5">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Riwayat Penerimaan Barang (GR)
-                        </h3>
+                        </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             Daftar seluruh dokumen surat penerimaan barang yang bersumber dari pesanan pembelian ini.
                         </p>

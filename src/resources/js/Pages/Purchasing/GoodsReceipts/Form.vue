@@ -160,9 +160,9 @@ function submit() {
         <Card>
             <template #header>
                 <div class="space-y-0.5">
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Informasi Penerimaan Barang
-                    </h3>
+                    </h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         Pilih pesanan pembelian acuan dan tanggal fisik kedatangan barang di gudang.
                     </p>
@@ -234,9 +234,9 @@ function submit() {
         <Card>
             <template #header>
                 <div class="space-y-0.5">
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Rincian Barang yang Diterima
-                    </h3>
+                    </h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         Kuantitas yang diinput akan menambah saldo fisik gudang saat dokumen diposting.
                     </p>

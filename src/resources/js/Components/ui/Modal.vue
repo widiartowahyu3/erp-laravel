@@ -145,12 +145,12 @@ onUnmounted(() => {
                     >
                         <div class="space-y-1">
                             <slot name="header">
-                                <h3
+                                <h2
                                     v-if="title"
                                     class="text-lg font-semibold text-slate-900 dark:text-slate-100"
                                 >
                                     {{ title }}
-                                </h3>
+                                </h2>
                                 <p
                                     v-if="description"
                                     class="text-sm text-slate-500 dark:text-slate-400"

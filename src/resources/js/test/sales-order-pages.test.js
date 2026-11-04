@@ -134,7 +134,7 @@ async function expectNoViolations(element) {
         },
     });
     const severeViolations = results.violations.filter((v) =>
-        ['critical', 'serious'].includes(v.impact)
+        ['critical', 'serious'].includes(v.impact) || v.id === 'heading-order'
     );
     expect(severeViolations).toEqual([]);
 }

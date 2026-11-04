@@ -173,9 +173,9 @@ async function handleVoid() {
             <!-- Informasi Dokumen -->
             <Card>
                 <template #header>
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Informasi Penerimaan
-                    </h3>
+                    </h2>
                 </template>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                     <div>
@@ -237,9 +237,9 @@ async function handleVoid() {
             <Card>
                 <template #header>
                     <div class="space-y-0.5">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Rincian Barang yang Diterima
-                        </h3>
+                        </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             Kuantitas fisik yang dicatat masuk ke persediaan gudang beserta nilai biaya perolehan.
                         </p>

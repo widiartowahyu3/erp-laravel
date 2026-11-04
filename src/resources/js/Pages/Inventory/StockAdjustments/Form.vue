@@ -145,9 +145,9 @@ function submit() {
             <!-- Header Information Card -->
             <Card>
                 <template #header>
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Informasi Header Dokumen
-                    </h3>
+                    </h2>
                 </template>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -235,9 +235,9 @@ function submit() {
                 <template #header>
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                 Rincian Barang Penyesuaian
-                            </h3>
+                            </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                 Catat kuantitas hasil hitung fisik (stock opname) untuk setiap produk.
                             </p>

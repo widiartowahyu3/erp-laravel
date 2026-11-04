@@ -194,9 +194,9 @@ async function handleVoid() {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card class="md:col-span-2">
                     <template #header>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Informasi Pengiriman
-                        </h3>
+                        </h2>
                     </template>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div>
@@ -250,9 +250,9 @@ async function handleVoid() {
 
                 <Card>
                     <template #header>
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Status & Jejak Dokumen
-                        </h3>
+                        </h2>
                     </template>
                     <div class="space-y-3 text-sm">
                         <div>
@@ -292,9 +292,9 @@ async function handleVoid() {
             <!-- Tabel Barang yang Dikirim -->
             <Card>
                 <template #header>
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Rincian Barang yang Dikirim
-                    </h3>
+                    </h2>
                 </template>
 
                 <div class="overflow-x-auto -mx-4 sm:mx-0">

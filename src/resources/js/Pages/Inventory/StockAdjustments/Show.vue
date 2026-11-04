@@ -174,9 +174,9 @@ async function handleVoid() {
             <Card>
                 <template #header>
                     <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             Informasi Dokumen
-                        </h3>
+                        </h2>
                         <StatusBadge :status="item.status" />
                     </div>
                 </template>
@@ -267,9 +267,9 @@ async function handleVoid() {
             <!-- Line Items Table -->
             <Card>
                 <template #header>
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Rincian Barang Penyesuaian
-                    </h3>
+                    </h2>
                 </template>
 
                 <div class="overflow-x-auto">
@@ -336,9 +336,9 @@ async function handleVoid() {
             <!-- Related Stock Movements (Only if user has permission & data present) -->
             <Card v-if="movements && movements.length > 0">
                 <template #header>
-                    <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         Mutasi Stok Terkait Dokumen
-                    </h3>
+                    </h2>
                 </template>
 
                 <div class="overflow-x-auto">
