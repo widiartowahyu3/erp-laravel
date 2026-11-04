@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Read-only view of audit_logs. Entries are written by AuditLogger only.
+ * Read-only view of audit_logs. Entries are written by AuditLogger and removed by AuditRetentionService only.
  *
  * @property int $id
  * @property int|null $user_id
