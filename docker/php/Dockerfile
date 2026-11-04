@@ -84,6 +84,32 @@ EXPOSE 9000
 CMD ["php-fpm", "-F"]
 
 # ------------------------------------------------------------------------------
+# Build Stages: production vendor tree and compiled frontend assets
+# ------------------------------------------------------------------------------
+FROM base AS app-build
+
+COPY --from=composer:2.10.3@sha256:b6dcd72ca98fa19d0e5b8476de179859704891fad06dd9e0b96833d4c430a5fc /usr/bin/composer /usr/bin/composer
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+COPY src/composer.json src/composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction --prefer-dist --no-progress
+
+COPY src/ ./
+RUN composer dump-autoload --no-dev --no-scripts --optimize --no-interaction \
+    && mkdir -p storage/app storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+
+FROM node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS assets
+
+WORKDIR /var/www/html
+
+COPY src/package.json src/package-lock.json src/.npmrc ./
+RUN npm ci --no-audit --no-fund
+
+COPY src/ ./
+RUN npm run build
+
+# ------------------------------------------------------------------------------
 # Prod Stage: hardened for production, without dev tools
 # ------------------------------------------------------------------------------
 FROM base AS prod
@@ -98,7 +124,25 @@ RUN { \
     echo 'opcache.validate_timestamps=0'; \
 } > /usr/local/etc/php/conf.d/30-opcache.ini
 
+# Application code stays root-owned so a compromised worker cannot modify it
+COPY --from=app-build /var/www/html ./
+COPY --from=assets /var/www/html/public/build ./public/build
+COPY --chmod=0755 docker/php/prod-entrypoint.sh /usr/local/bin/prod-entrypoint
+
 USER appuser
 
 EXPOSE 9000
+ENTRYPOINT ["/usr/local/bin/prod-entrypoint"]
 CMD ["php-fpm", "-F"]
+
+# ------------------------------------------------------------------------------
+# Web Stage: production nginx with the public assets baked in
+# ------------------------------------------------------------------------------
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03 AS web
+
+COPY docker/nginx/prod.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/snippets/ /etc/nginx/snippets/
+COPY src/public/ /var/www/html/public/
+COPY --from=assets /var/www/html/public/build /var/www/html/public/build
+
+EXPOSE 8080 8443

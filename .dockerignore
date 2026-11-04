@@ -26,3 +26,7 @@ docker-compose*.yml
 compose*.yaml
 Makefile
 scripts
+src/tests
+src/public/build
+src/public/hot
+src/bootstrap/cache/*.php
