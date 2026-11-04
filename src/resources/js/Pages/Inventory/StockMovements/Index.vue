@@ -155,11 +155,14 @@ const hasActiveFilters = computed(() => {
                             :href="row.source_url"
                             class="font-mono text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
-                            {{ row.source_label || row.source_number || '-' }}
+                            {{ row.source_number || '-' }}
                         </Link>
                         <span v-else class="font-mono text-xs text-slate-700 dark:text-slate-300">
-                            {{ row.source_label || row.source_number || '-' }}
+                            {{ row.source_number || '-' }}
                         </span>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                            {{ row.source_label }}
+                        </div>
                     </template>
 
                     <template #cell(movement_type)="{ row }">

@@ -303,10 +303,10 @@ function setPerPage(perPage) {
                                             :href="row.source_url"
                                             class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                                         >
-                                            {{ row.document_number || '-' }}
+                                            {{ row.source_number || '-' }}
                                         </Link>
                                         <span v-else class="text-slate-700 dark:text-slate-300">
-                                            {{ row.document_number || '-' }}
+                                            {{ row.source_number || '-' }}
                                         </span>
                                     </td>
                                     <td class="py-3 px-4 whitespace-nowrap">

@@ -12,6 +12,7 @@ use App\Models\StockMovement;
 use App\Models\Warehouse;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
+use App\Support\Inventory\StockMovementSources;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -95,7 +96,9 @@ final class StockCardController extends Controller
             ->paginate(50)
             ->withQueryString();
 
-        $rows = Paginated::from($paginator, function (StockMovement $movement): array {
+        $sourceNumbers = StockMovementSources::numbers($paginator->items());
+
+        $rows = Paginated::from($paginator, function (StockMovement $movement) use ($sourceNumbers): array {
             $cmp = Decimal::cmp($movement->quantity, '0');
             $in = $cmp > 0 ? $movement->quantity : null;
             $out = $cmp < 0 ? substr($movement->quantity, 1) : null;
@@ -121,6 +124,7 @@ final class StockCardController extends Controller
                 'source_type' => $movement->source_type,
                 'source_id' => $movement->source_id,
                 'source_url' => $sourceUrl,
+                'source_number' => $sourceNumbers[$movement->id] ?? null,
                 'in' => $in,
                 'out' => $out,
                 'unit_cost' => $movement->unit_cost,

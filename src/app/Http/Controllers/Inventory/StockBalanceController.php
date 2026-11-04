@@ -20,7 +20,7 @@ final class StockBalanceController extends Controller
 {
     public function index(Request $request): Response
     {
-        $paginator = ListQuery::for(StockBalance::with(['product.baseUnit', 'warehouse']))
+        $paginator = ListQuery::for(StockBalance::with(['product.baseUnit', 'product.category', 'warehouse']))
             ->sortable(['quantity', 'avg_cost', 'updated_at'])
             ->filterable([
                 'warehouse_id' => 'warehouse_id',
@@ -61,7 +61,11 @@ final class StockBalanceController extends Controller
                         'sku' => $product->sku,
                         'name' => $product->name,
                         'min_stock' => $minStock,
-                        'unit' => $product->baseUnit ? [
+                        'category' => $product->category ? [
+                            'id' => $product->category->id,
+                            'name' => $product->category->name,
+                        ] : null,
+                        'base_unit' => $product->baseUnit ? [
                             'id' => $product->baseUnit->id,
                             'code' => $product->baseUnit->code,
                             'name' => $product->baseUnit->name,

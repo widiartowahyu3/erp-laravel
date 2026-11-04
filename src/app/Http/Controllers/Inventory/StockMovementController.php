@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
 use App\Support\Inertia\Paginated;
+use App\Support\Inventory\StockMovementSources;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -29,8 +30,10 @@ final class StockMovementController extends Controller
             ->defaultSort('movement_date', 'desc')
             ->paginate($request, 25);
 
+        $sourceNumbers = StockMovementSources::numbers($paginator->items());
+
         return Inertia::render('Inventory/StockMovements/Index', [
-            'items' => Paginated::from($paginator, function (StockMovement $movement): array {
+            'items' => Paginated::from($paginator, function (StockMovement $movement) use ($sourceNumbers): array {
                 $sourceUrl = match ($movement->source_type) {
                     'stock_adjustment', 'stock_adjustment_void' => Route::has('inventory.stock-adjustments.show')
                         ? route('inventory.stock-adjustments.show', $movement->source_id)
@@ -69,6 +72,7 @@ final class StockMovementController extends Controller
                     'source_id' => $movement->source_id,
                     'source_url' => $sourceUrl,
                     'source_label' => $sourceLabel,
+                    'source_number' => $sourceNumbers[$movement->id] ?? null,
                     'created_by' => $movement->created_by,
                     'created_at' => $movement->created_at?->toISOString(),
                     'creator' => $movement->creator ? [
