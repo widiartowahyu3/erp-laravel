@@ -61,6 +61,7 @@ const describedBy = computed(() => {
             <slot
                 :id="fieldId"
                 :invalid="Boolean(error)"
+                :has-error="Boolean(error)"
                 :described-by="describedBy"
             />
         </div>
