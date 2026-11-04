@@ -67,3 +67,8 @@ Thumbs.db
 # Database Backups
 /backups/
 
+# Production host state
+/certs/
+/certbot-www/
+/.deploy/
+

@@ -7,7 +7,7 @@ set -euo pipefail
 # Tidak pernah mencetak atau meneruskan kata sandi via CLI argument
 # ==============================================================================
 
-BACKUP_DIR="backups"
+BACKUP_DIR="${BACKUP_DIR:-backups}"
 TIMESTAMP=$(date -u +%Y%m%d_%H%M%SZ)
 BACKUP_FILE="${BACKUP_DIR}/erp_trading_${TIMESTAMP}.sql.gz"
 
