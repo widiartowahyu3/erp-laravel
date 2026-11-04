@@ -132,6 +132,12 @@ jobs:
       - name: NPM security audit (runtime dependencies)
         run: docker compose --profile tools run --rm -T node npm audit --omit=dev --audit-level=moderate < /dev/null
 
+      # make test only migrates erp_trading_test; the running app and make verify use erp_trading
+      - name: Migrate and seed application database
+        run: |
+          make migrate
+          make seed
+
       - name: Hardening verification
         run: make verify
 
