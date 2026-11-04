@@ -64,7 +64,8 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
    - Mengaktifkan `limit_req_zone` untuk rate limiting umum IP klien.
    - Zona Khusus Autentikasi (`login_limit`): Membatasi metode POST pada `/login` berbasis alamat IP soket TCP fisik (`$binary_remote_addr`) dengan parameter `rate=10r/m` dan `burst=5 nodelay;`.
    - Mengonfigurasi `limit_req_status 429;` agar Nginx langsung mengembalikan kode status HTTP 429 saat batas terlampaui mendahului FastCGI PHP.
-   - Membatasi `client_max_body_size 32M` dan timeout ketat.
+   - Membatasi `client_max_body_size 2M` dan timeout ketat.
+   - Jalur alternatif menuju rute login (`/index.php/<path>` dan `/login/`) dijawab 404 agar tidak melewati zona `login_limit`.
 
 ### D. Lapisan PHP Runtime (FPM vs CLI)
 1. **Pemisahan Kebijakan FPM dan CLI**:
@@ -137,7 +138,8 @@ Dokumen ini mendokumentasikan seluruh lapisan pengamanan (*defense-in-depth*) ya
 - `SESSION_ENCRYPT=true` (payload sesi dienkripsi di level framework).
 - `SESSION_HTTP_ONLY=true` (mencegah pembacaan cookie sesi via JavaScript/XSS).
 - `SESSION_SAME_SITE=lax` (mitigasi serangan CSRF).
-- `SESSION_SECURE_COOKIE=true` pada production.
+- `SESSION_SECURE_COOKIE=true` dan `SESSION_ENCRYPT=true` dipaksakan oleh `config/session.php` pada production, terlepas dari isi `.env`. Akibatnya production wajib dilayani lewat HTTPS.
+- ID sesi dirotasi dan sesi lama dihapus setelah kata sandi diganti, sehingga cookie yang dicuri tidak bertahan.
 
 ### D. Eloquent & Database Safety Baseline
 - `Model::shouldBeStrict(! app()->isProduction())`: Mencegah N+1 lazy loading dan silent mass-assignment issues.
@@ -240,7 +242,7 @@ Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
 | **Information Disclosure** | Pembocoran credential, database path, atau source | Error handler produksi tanpa stack trace, server tokens & PHP headers tersembunyi, Nginx blokir `.env` dan `storage/logs` | `SmokeTest.php`, `verify-hardening.sh` (Butir 5 & 14) |
 | **Remote Code Execution (RCE)** | Pengambilalihan server via fungsi berbahaya | `disable_functions` pada PHP-FPM, Pest Arch test melarang `eval`, `exec`, `system`, dll di `app/` | `SecurityArchTest.php`, `verify-hardening.sh` (Butir 6) |
 | **Supply Chain Attacks** | Pemasangan dependensi berbahaya atau bervulnerabilitas | `roave/security-advisories`, `ignore-scripts=true` pada `.npmrc`, Docker images dipin dengan SHA256 digest | `composer audit`, `npm audit`, `verify-hardening.sh` |
-| **Brute Force & Credential Stuffing** | Pembajakan akun pengguna via pencocokan massal | Rate Limiter database (5 kegagalan/menit per email+IP, percobaan ke-6 HTTP 429), Argon2id memory-hard password hashing | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
+| **Brute Force & Credential Stuffing** | Pembajakan akun pengguna via pencocokan massal | Rate Limiter database (5 kegagalan/menit per email+IP, percobaan ke-6 HTTP 429; percobaan dihitung sebelum `Hash::check` agar permintaan paralel tidak mendahului pembatas), Argon2id memory-hard password hashing | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
 | **Account Enumeration** | Mengidentifikasi akun valid via perbedaan respon error | Pesan error generik `"Email atau kata sandi salah."`, email mentah di-hash SHA-256 pada audit log | `AuthenticationTest.php`, `AuditLogTest.php` |
 | **Session Hijacking & Fixation** | Pencurian cookie sesi aktif atau penyusupan session ID | Regenerasi ID sesi saat login, `HttpOnly`, `SameSite=Lax`, idle timeout 120 menit, absolute session lifetime 480 menit | `AuthenticationTest.php`, `verify-hardening.sh` (Butir 16) |
 | **Privilege Escalation** | Pengguna mengakses modul atau data di luar haknya | Otorisasi RBAC via database (98 permission, 7 system roles), `Gate::before`, in-memory permission caching, middleware `can:<permission>` | `AuthorizationTest.php` |
