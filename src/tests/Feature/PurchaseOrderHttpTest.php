@@ -307,3 +307,25 @@ test('purchase order controller update rejects closed purchase order with 409 co
         ])
         ->assertStatus(409);
 });
+
+test('purchase order detail does not expose confidential supplier fields to viewers without suppliers.view', function (): void {
+    $supplierId = TestDataFactory::createSupplier(['tax_id' => '01.234.567.8-901.000']);
+
+    $po = PurchaseOrder::create([
+        'number' => 'PO/202611/00089',
+        'supplier_id' => $supplierId,
+        'warehouse_id' => TestDataFactory::createWarehouse(),
+        'order_date' => '2026-11-01',
+        'status' => PurchaseOrderStatus::DRAFT,
+    ]);
+
+    $this->actingAs(userWithPermissions(['purchase_orders.view']))
+        ->get("/purchasing/purchase-orders/{$po->id}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('item.supplier.id', $supplierId)
+            ->has('item.supplier.name')
+            ->missing('item.supplier.tax_id')
+            ->missing('item.supplier.email')
+            ->missing('item.supplier.phone')
+        );
+});

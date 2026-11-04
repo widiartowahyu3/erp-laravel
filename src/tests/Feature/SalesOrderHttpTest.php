@@ -264,3 +264,26 @@ test('sales order index filters by status using filter[status] query parameter',
             ->where('items.data.0.status', 'approved')
         );
 });
+
+test('sales order detail does not expose confidential customer fields to viewers without customers.view', function (): void {
+    $customerId = TestDataFactory::createCustomer(['tax_id' => '01.234.567.8-901.000', 'credit_limit' => '50000000.00']);
+
+    $so = SalesOrder::create([
+        'number' => 'SO/202611/00089',
+        'customer_id' => $customerId,
+        'warehouse_id' => TestDataFactory::createWarehouse(),
+        'order_date' => '2026-11-01',
+        'status' => SalesOrderStatus::DRAFT,
+    ]);
+
+    $this->actingAs(userWithPermissions(['sales_orders.view']))
+        ->get("/sales/sales-orders/{$so->id}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('item.customer.id', $customerId)
+            ->has('item.customer.address')
+            ->missing('item.customer.tax_id')
+            ->missing('item.customer.credit_limit')
+            ->missing('item.customer.email')
+            ->missing('item.customer.phone')
+        );
+});

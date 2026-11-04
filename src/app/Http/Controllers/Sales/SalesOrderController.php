@@ -110,7 +110,7 @@ class SalesOrderController extends Controller
         $salesOrder->load([
             'items.product.baseUnit:id,code,name',
             'items.taxRate:id,code,rate',
-            'customer',
+            'customer:id,code,name,address',
             'warehouse',
             'paymentTerm',
             'deliveryOrders:id,number,sales_order_id,status,delivery_date',

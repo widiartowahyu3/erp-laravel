@@ -110,7 +110,7 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->load([
             'items.product.baseUnit:id,code,name',
             'items.taxRate:id,code,rate',
-            'supplier',
+            'supplier:id,code,name',
             'warehouse',
             'paymentTerm',
             'goodsReceipts:id,number,purchase_order_id,status,receipt_date',
