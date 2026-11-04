@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
@@ -6,9 +7,13 @@ import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
 import Form from './Form.vue';
 
 const props = defineProps({
+    item: {
+        type: Object,
+        default: null,
+    },
     order: {
         type: Object,
-        required: true,
+        default: null,
     },
     suppliers: {
         type: Array,
@@ -32,9 +37,11 @@ const props = defineProps({
     },
 });
 
+const order = computed(() => props.order || props.item);
+
 const breadcrumbs = [
     { label: 'Pesanan Pembelian', href: '/purchasing/purchase-orders' },
-    { label: props.order.number, href: `/purchasing/purchase-orders/${props.order.id}` },
+    { label: order.value.number, href: `/purchasing/purchase-orders/${order.value.id}` },
     { label: 'Edit Draf' },
 ];
 </script>

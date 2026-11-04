@@ -19,11 +19,17 @@ import { purchaseOrderStatusConfig, goodsReceiptStatusConfig } from '@/config/pu
 import { subtractDecimals } from '@/Support/decimal';
 
 const props = defineProps({
+    item: {
+        type: Object,
+        default: null,
+    },
     order: {
         type: Object,
-        required: true,
+        default: null,
     },
 });
+
+const order = computed(() => props.order || props.item);
 
 const page = usePage();
 const {
@@ -39,7 +45,7 @@ const { busy, submit } = useSubmitLock();
 
 const breadcrumbs = [
     { label: 'Pesanan Pembelian', href: '/purchasing/purchase-orders' },
-    { label: props.order.number },
+    { label: order.value.number },
 ];
 
 const flashError = computed(() => page.props.flash?.error || null);
@@ -51,14 +57,14 @@ async function handleApprove() {
 
     const ok = await confirm({
         title: 'Setujui Pesanan Pembelian',
-        message: `Apakah Anda yakin ingin menyetujui pesanan pembelian "${props.order.number}"? Dokumen yang disetujui dapat mulai diproses penerimaan barangnya di gudang.`,
+        message: `Apakah Anda yakin ingin menyetujui pesanan pembelian "${order.value.number}"? Dokumen yang disetujui dapat mulai diproses penerimaan barangnya di gudang.`,
         confirmText: 'Ya, Setujui PO',
         variant: 'primary',
     });
 
     if (ok) {
         submit((options) => {
-            router.post(`/purchasing/purchase-orders/${props.order.id}/approve`, {}, {
+            router.post(`/purchasing/purchase-orders/${order.value.id}/approve`, {}, {
                 preserveScroll: true,
                 ...options,
             });
@@ -71,14 +77,14 @@ async function handleClose() {
 
     const ok = await confirm({
         title: 'Tutup Pesanan Pembelian',
-        message: `Apakah Anda yakin ingin menutup pesanan pembelian "${props.order.number}"? Pesanan yang ditutup tidak dapat menerima barang tambahan lagi.`,
+        message: `Apakah Anda yakin ingin menutup pesanan pembelian "${order.value.number}"? Pesanan yang ditutup tidak dapat menerima barang tambahan lagi.`,
         confirmText: 'Ya, Tutup PO',
         variant: 'warning',
     });
 
     if (ok) {
         submit((options) => {
-            router.post(`/purchasing/purchase-orders/${props.order.id}/close`, {}, {
+            router.post(`/purchasing/purchase-orders/${order.value.id}/close`, {}, {
                 preserveScroll: true,
                 ...options,
             });
@@ -91,7 +97,7 @@ async function handleVoid() {
 
     const res = await confirm({
         title: 'Batalkan (Void) Pesanan Pembelian',
-        message: `Masukkan alasan pembatalan dokumen "${props.order.number}". Tindakan ini bersifat permanen.`,
+        message: `Masukkan alasan pembatalan dokumen "${order.value.number}". Tindakan ini bersifat permanen.`,
         confirmText: 'Ya, Batalkan Dokumen',
         variant: 'danger',
         requiresReason: true,
@@ -101,7 +107,7 @@ async function handleVoid() {
 
     if (res && res.confirmed) {
         submit((options) => {
-            router.post(`/purchasing/purchase-orders/${props.order.id}/void`, {
+            router.post(`/purchasing/purchase-orders/${order.value.id}/void`, {
                 reason: res.reason,
             }, {
                 preserveScroll: true,

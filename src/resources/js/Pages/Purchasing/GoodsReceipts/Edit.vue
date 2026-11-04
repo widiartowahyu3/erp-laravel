@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
@@ -6,15 +7,21 @@ import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
 import Form from './Form.vue';
 
 const props = defineProps({
+    item: {
+        type: Object,
+        default: null,
+    },
     receipt: {
         type: Object,
-        required: true,
+        default: null,
     },
 });
 
+const receipt = computed(() => props.receipt || props.item);
+
 const breadcrumbs = [
     { label: 'Penerimaan Barang', href: '/purchasing/goods-receipts' },
-    { label: props.receipt.number, href: `/purchasing/goods-receipts/${props.receipt.id}` },
+    { label: receipt.value.number, href: `/purchasing/goods-receipts/${receipt.value.id}` },
     { label: 'Edit Draf' },
 ];
 </script>

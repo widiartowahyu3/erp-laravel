@@ -17,11 +17,17 @@ import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
 
 const props = defineProps({
+    item: {
+        type: Object,
+        default: null,
+    },
     receipt: {
         type: Object,
-        required: true,
+        default: null,
     },
 });
+
+const receipt = computed(() => props.receipt || props.item);
 
 const page = usePage();
 const { canEditGoodsReceipt, canPostGoodsReceipt, canVoidGoodsReceipt } = useActionGuard();
@@ -30,7 +36,7 @@ const { busy, submit } = useSubmitLock();
 
 const breadcrumbs = [
     { label: 'Penerimaan Barang', href: '/purchasing/goods-receipts' },
-    { label: props.receipt.number },
+    { label: receipt.value.number },
 ];
 
 const flashError = computed(() => page.props.flash?.error || null);
@@ -42,14 +48,14 @@ async function handlePost() {
 
     const ok = await confirm({
         title: 'Posting Penerimaan Barang',
-        message: `Apakah Anda yakin ingin memposting penerimaan barang "${props.receipt.number}"? Kuantitas fisik barang akan langsung menambah stok persediaan gudang dan memperbarui status pesanan pembelian terkait.`,
+        message: `Apakah Anda yakin ingin memposting penerimaan barang "${receipt.value.number}"? Kuantitas fisik barang akan langsung menambah stok persediaan gudang dan memperbarui status pesanan pembelian terkait.`,
         confirmText: 'Ya, Posting Stok',
         variant: 'primary',
     });
 
     if (ok) {
         submit((options) => {
-            router.post(`/purchasing/goods-receipts/${props.receipt.id}/post`, {}, {
+            router.post(`/purchasing/goods-receipts/${receipt.value.id}/post`, {}, {
                 preserveScroll: true,
                 ...options,
             });
@@ -62,7 +68,7 @@ async function handleVoid() {
 
     const res = await confirm({
         title: 'Batalkan (Void) Penerimaan Barang',
-        message: `Masukkan alasan pembatalan dokumen "${props.receipt.number}". Jika dokumen sudah diposting, sistem akan mengurangi kembali stok fisik gudang dan mengembalikan progres pesanan pembelian.`,
+        message: `Masukkan alasan pembatalan dokumen "${receipt.value.number}". Jika dokumen sudah diposting, sistem akan mengurangi kembali stok fisik gudang dan mengembalikan progres pesanan pembelian.`,
         confirmText: 'Ya, Batalkan Dokumen',
         variant: 'danger',
         requiresReason: true,
@@ -72,7 +78,7 @@ async function handleVoid() {
 
     if (res && res.confirmed) {
         submit((options) => {
-            router.post(`/purchasing/goods-receipts/${props.receipt.id}/void`, {
+            router.post(`/purchasing/goods-receipts/${receipt.value.id}/void`, {
                 reason: res.reason,
             }, {
                 preserveScroll: true,

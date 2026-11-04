@@ -53,6 +53,8 @@ const form = useForm({
     purchase_order_id: props.receipt?.purchase_order_id
         ? String(props.receipt.purchase_order_id)
         : (props.selectedPoId ? String(props.selectedPoId) : ''),
+    supplier_id: props.receipt?.supplier_id ? String(props.receipt.supplier_id) : '',
+    warehouse_id: props.receipt?.warehouse_id ? String(props.receipt.warehouse_id) : '',
     receipt_date: props.receipt?.receipt_date
         ? String(props.receipt.receipt_date).split('T')[0]
         : today,
@@ -83,6 +85,9 @@ function loadItemsFromSelectedPo() {
 
     const po = currentSelectedPo.value;
     const newItems = [];
+
+    form.supplier_id = String(po.supplier_id);
+    form.warehouse_id = String(po.warehouse_id);
 
     if (Array.isArray(po.items)) {
         po.items.forEach((it) => {
