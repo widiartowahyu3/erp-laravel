@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\JournalController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\RoleController as AdminRoleController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Inventory\StockAdjustmentController;
@@ -179,6 +182,28 @@ Route::middleware([
     });
 
     // Accounting module routes
+    Route::prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('users', [AdminUserController::class, 'index'])->middleware('can:users.view')->name('users.index');
+        Route::get('users/create', [AdminUserController::class, 'create'])->middleware('can:users.create')->name('users.create');
+        Route::post('users', [AdminUserController::class, 'store'])->middleware('can:users.create')->name('users.store');
+        Route::get('users/{user}', [AdminUserController::class, 'show'])->middleware('can:users.view')->name('users.show');
+        Route::get('users/{user}/edit', [AdminUserController::class, 'edit'])->middleware('can:users.update')->name('users.edit');
+        Route::put('users/{user}', [AdminUserController::class, 'update'])->middleware('can:users.update')->name('users.update');
+        Route::post('users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->middleware('can:users.update')->name('users.reset-password');
+        Route::post('users/{user}/active', [AdminUserController::class, 'setActive'])->middleware('can:users.delete')->name('users.set-active');
+
+        Route::get('roles', [AdminRoleController::class, 'index'])->middleware('can:roles.view')->name('roles.index');
+        Route::get('roles/create', [AdminRoleController::class, 'create'])->middleware('can:roles.create')->name('roles.create');
+        Route::post('roles', [AdminRoleController::class, 'store'])->middleware('can:roles.create')->name('roles.store');
+        Route::get('roles/{role}', [AdminRoleController::class, 'show'])->middleware('can:roles.view')->name('roles.show');
+        Route::get('roles/{role}/edit', [AdminRoleController::class, 'edit'])->middleware('can:roles.update')->name('roles.edit');
+        Route::put('roles/{role}', [AdminRoleController::class, 'update'])->middleware('can:roles.update')->name('roles.update');
+        Route::delete('roles/{role}', [AdminRoleController::class, 'destroy'])->middleware('can:roles.delete')->name('roles.destroy');
+        Route::post('roles/{role}/duplicate', [AdminRoleController::class, 'duplicate'])->middleware('can:roles.create')->name('roles.duplicate');
+
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('can:audit_logs.view')->name('audit-logs.index');
+    });
+
     Route::prefix('accounting')->name('accounting.')->group(function (): void {
         Route::get('journals', [JournalController::class, 'index'])->middleware('can:journals.view')->name('journals.index');
         Route::get('journals/create', [JournalController::class, 'create'])->middleware('can:journals.create')->name('journals.create');

@@ -147,14 +147,42 @@ final class AccessGuard
 
         $role = Role::query()->where('name', self::SUPER_ADMIN_ROLE)->lockForUpdate()->firstOrFail();
 
-        $otherActive = $role->users()
+        if (! $this->hasOtherActiveMember($role, $target)) {
+            throw new BusinessRuleException('Tidak dapat mengubah Super Administrator aktif yang terakhir.', 422, 'form');
+        }
+    }
+
+    /**
+     * Read-only variant for screens; the write path relies on assertNotLastActiveSuperAdmin.
+     */
+    public function isLastActiveSuperAdmin(User $target): bool
+    {
+        if (! $this->isSuperAdmin($target) || ! $target->is_active) {
+            return false;
+        }
+
+        $role = Role::query()->where('name', self::SUPER_ADMIN_ROLE)->firstOrFail();
+
+        return ! $this->hasOtherActiveMember($role, $target);
+    }
+
+    public function canManageUser(User $actor, User $target): bool
+    {
+        try {
+            $this->assertCanManageUser($actor, $target);
+
+            return true;
+        } catch (BusinessRuleException) {
+            return false;
+        }
+    }
+
+    private function hasOtherActiveMember(Role $role, User $target): bool
+    {
+        return $role->users()
             ->where('users.is_active', true)
             ->whereKeyNot($target->id)
             ->exists();
-
-        if (! $otherActive) {
-            throw new BusinessRuleException('Tidak dapat mengubah Super Administrator aktif yang terakhir.', 422, 'form');
-        }
     }
 
     /**
