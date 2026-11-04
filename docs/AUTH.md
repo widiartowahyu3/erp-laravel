@@ -129,7 +129,7 @@ Layanan `AuditLogger` menerapkan penahanan (*deduplication*) menggunakan cache:
 
 ---
 
-## 4. Katalog Lengkap 98 Permissions
+## 4. Katalog Lengkap 99 Permissions
 
 Format penamaan permission mengikuti standar `<resource>.<aksi>` (huruf kecil, *snake_case*). Modul resmi: `administration`, `master_data`, `purchasing`, `inventory`, `sales`, `finance`, `reporting`.
 
@@ -229,12 +229,13 @@ Format penamaan permission mengikuti standar `<resource>.<aksi>` (huruf kecil, *
 | **finance** | `journals.update` | Mengubah draft jurnal umum |
 | **finance** | `journals.post` | Memposting jurnal umum ke buku besar |
 | **finance** | `journals.void` | Membatalkan jurnal umum |
+| **finance** | `journals.reverse` | Membalik jurnal yang sudah diposting |
 | **reporting** | `reports.view_sales` | Melihat laporan performa dan analisis penjualan |
 | **reporting** | `reports.view_purchasing`| Melihat laporan pembelian dan analisa pemasok |
 | **reporting** | `reports.view_inventory` | Melihat laporan valuasi dan mutasi inventori |
 | **reporting** | `reports.view_finance` | Melihat laporan neraca, laba rugi, dan arus kas |
 
-*Total: Tepat 98 Hak Akses (Permissions).*
+*Total: Tepat 99 Hak Akses (Permissions).*
 
 ---
 
@@ -243,7 +244,7 @@ Format penamaan permission mengikuti standar `<resource>.<aksi>` (huruf kecil, *
 Sistem ERP Distribusi/Trading dilengkapi 7 peran bawaan (*built-in system roles*):
 
 1. **`super_admin` (99 Permissions)**:
-   Akses penuh tanpa kecuali ke seluruh 98 hak akses sistem.
+   Akses penuh tanpa kecuali ke seluruh 99 hak akses sistem.
 2. **`admin` (59 Permissions)**:
    Pengelolaan master data, pengguna, peran, konfigurasi sistem, dan log audit, serta hak melihat (view) seluruh dokumen transaksi dan laporan. Dilarang melakukan operasi mutasi transaksi keuangan tingkat lanjut (*approve*, *post*, *void* dokumen keuangan).
 3. **`purchasing` (18 Permissions)**:
@@ -360,13 +361,13 @@ Perintah ini melakukan sinkronisasi *idempoten* (upsert data baru dan membersihk
 1. **Tanpa Otentikasi Dua Faktor (2FA / MFA)**:
    Fitur 2FA (TOTP via Google Authenticator) sengaja ditangguhkan dan dijadwalkan pada Fase 12 (Hardening Enterprise Lanjutan) untuk menjaga fokus fase fondasi.
 2. **Tanpa Reset Kata Sandi via Email**:
-   Sistem tidak mengaktifkan alur lupa kata sandi via email publik guna menghindari risiko kebocoran data (*account enumeration*) dan penyalahgunaan infrastruktur mail server yang belum dikonfigurasi. Reset dilakukan oleh Super Admin melalui CLI atau secara mandiri saat pengguna masuk.
+   Sistem tidak mengaktifkan alur lupa kata sandi via email publik guna menghindari risiko kebocoran data (*account enumeration*) dan penyalahgunaan infrastruktur mail server yang belum dikonfigurasi. Reset dilakukan oleh administrator lewat halaman Pengguna atau CLI, atau secara mandiri saat pengguna masuk.
 3. **Tanpa Registrasi Publik**:
    Sistem ERP adalah aplikasi internal tertutup (*enterprise boundary*). Tidak ada endpoint registrasi publik (`/register`).
 4. **Tanpa Cookie "Remember Me"**:
    Fitur *Remember Me* jangka panjang dinonaktifkan secara sengaja. Seluruh sesi dibatasi strictly dengan batas maksimum 480 menit (8 jam) demi postur keamanan kerja harian.
-5. **Tanpa Antarmuka CRUD Pengguna di UI**:
-   Manajemen pembuatan pengguna dan pemetaan peran via web interface akan diimplementasikan pada Fase 6 (Modul Administrasi). Pada Fase 3, pengelolaan akun dilakukan melalui Artisan CLI yang terlindungi.
+5. **Tanpa Wajib Ganti Kata Sandi Saat Login Pertama**:
+   Skema belum memiliki penanda untuk hal ini. Administrator menetapkan kata sandi awal, lalu pengguna dianjurkan menggantinya sendiri di halaman akun. Pengelolaan pengguna dan peran lewat web dijelaskan di [`docs/ADMINISTRATION.md`](ADMINISTRATION.md); perintah Artisan tetap tersedia dan memakai layanan yang sama.
 
 
 ---

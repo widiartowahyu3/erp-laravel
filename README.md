@@ -79,6 +79,12 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
 - **Jurnal terkait**: halaman detail GR, DO, dan penyesuaian stok menampilkan jurnal dari dokumen tersebut.
 - Rincian ada di [`docs/ACCOUNTING.md`](docs/ACCOUNTING.md).
 
+### G. Administrasi
+- **Pengguna (`/admin/users`)**: tambah, ubah, atur peran, reset kata sandi, serta aktifkan dan nonaktifkan akun. Tidak ada penghapusan pengguna.
+- **Peran & Hak Akses (`/admin/roles`)**: peran kustom dengan matriks izin per modul, sumber, dan aksi. Peran bawaan terkunci dan dapat diduplikasi.
+- **Log Audit (`/admin/audit-logs`)**: penampil hanya baca dengan filter tanggal, pengguna, event, dan tipe objek.
+- Rincian ada di [`docs/ADMINISTRATION.md`](docs/ADMINISTRATION.md).
+
 ---
 
 ## 3. Arsitektur Monolitik & Standar Teknis
@@ -314,5 +320,5 @@ Secara transparan dan jujur, implementasi saat ini memiliki batasan arsitektural
 2. **Satuan Dasar Tunggal per Produk**: Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Konversi multi-satuan dinamis bertingkat (*UOM conversion*) belum diimplementasikan di tingkat transaksi.
 3. **Tanpa Dokumen Mutasi Antar-Gudang Langsung**: Fitur transfer persediaan antar-gudang saat ini ditangani secara manual melalui kombinasi dokumen Penyesuaian Keluar (`adjustment_out`) pada gudang asal dan Penyesuaian Masuk (`adjustment_in`) pada gudang tujuan.
 4. **Modul Hilir Belum Tersedia**: Faktur Penjualan dan Pembelian, Piutang Usaha, Hutang Usaha, Pembayaran Kas/Bank, Buku Kas/Bank, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
-5. **Antarmuka Pengguna Administrasi Terbatas**: Manajemen akun pengguna, pengaturan peran RBAC, dan penampil log audit (`audit_logs`) saat ini dikelola melalui database seeder dan perintah Artisan konsol, belum memiliki antarmuka visual (GUI).
+5. **Batasan Administrasi yang Disengaja**: Tanpa 2FA, tanpa alur lupa kata sandi lewat email, tanpa wajib ganti kata sandi saat login pertama, tanpa ekspor log audit, dan peran bawaan tidak dapat diubah lewat antarmuka.
 6. **Deploy Otomatis ke Server**: Image production sudah dibangun, diuji, dan dirilis ke GHCR, tetapi deploy ke server masih dijalankan manual lewat `scripts/deploy.sh` karena belum ada server tetap.

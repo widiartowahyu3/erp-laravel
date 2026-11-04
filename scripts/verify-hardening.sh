@@ -1719,6 +1719,128 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 29. Verifikasi Keamanan Rute & Otorisasi Administrasi (/admin/*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 29: Verifikasi Keamanan Rute & Otorisasi Administrasi (/admin/*) ---"
+info "Memeriksa seluruh rute /admin/* terhadap autentikasi, can: spesifik, dan throttle:erp-write..."
+
+ADMIN_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $total = 0;
+    $unprotected = 0;
+    $missingCan = 0;
+    $missingThrottle = 0;
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        if (!str_starts_with($route->uri(), "admin/")) {
+            continue;
+        }
+        $total++;
+        $middleware = array_filter($route->gatherMiddleware(), "is_string");
+        if (!in_array("auth", $middleware, true)) {
+            $unprotected++;
+        }
+        if (count(preg_grep("/^can:(users\.(view|create|update|delete)|roles\.(view|create|update|delete)|audit_logs\.view)$/", $middleware)) !== 1) {
+            $missingCan++;
+        }
+        $isMutation = count(array_intersect($route->methods(), ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+        if ($isMutation && !in_array("throttle:erp-write", $middleware, true)) {
+            $missingThrottle++;
+        }
+    }
+
+    echo $total . ":" . $unprotected . ":" . $missingCan . ":" . $missingThrottle;
+' 2>/dev/null || echo "0:1:1:1")
+
+IFS=':' read -r TOTAL_ADMIN UNPROT_ADMIN MISSING_CAN_ADMIN MISSING_THROTTLE_ADMIN <<< "$ADMIN_ROUTE_CHECK"
+
+if [ "$TOTAL_ADMIN" -eq 17 ]; then
+    pass "Ditemukan 17 rute modul administrasi (/admin/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute modul administrasi tidak sesuai ekspektasi (harus 17, ditemukan: $TOTAL_ADMIN)"
+fi
+
+if [ "$UNPROT_ADMIN" -eq 0 ]; then
+    pass "Seluruh rute /admin/* terlindungi oleh middleware 'auth' (0 rute tanpa autentikasi)"
+else
+    fail "Ditemukan $UNPROT_ADMIN rute /admin/* yang tidak memiliki middleware 'auth'"
+fi
+
+if [ "$MISSING_CAN_ADMIN" -eq 0 ]; then
+    pass "Seluruh rute /admin/* memiliki tepat satu middleware 'can:' spesifik (users.*, roles.*, audit_logs.view)"
+else
+    fail "Ditemukan $MISSING_CAN_ADMIN rute /admin/* tanpa middleware 'can:' spesifik"
+fi
+
+if [ "$MISSING_THROTTLE_ADMIN" -eq 0 ]; then
+    pass "Seluruh aksi mutasi /admin/* terlindungi oleh rate limiter 'throttle:erp-write'"
+else
+    fail "Ditemukan $MISSING_THROTTLE_ADMIN rute mutasi /admin/* tanpa 'throttle:erp-write'"
+fi
+
+for ADMIN_GUEST_PATH in /admin/users /admin/roles /admin/audit-logs; do
+    GUEST_ADMIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}${ADMIN_GUEST_PATH}" || true)
+    if [ "$GUEST_ADMIN_CODE" = "302" ]; then
+        pass "Akses guest tanpa sesi ke ${ADMIN_GUEST_PATH} berhasil dialihkan (HTTP 302 ke halaman login)"
+    else
+        fail "Akses guest tanpa sesi ke ${ADMIN_GUEST_PATH} mengembalikan status HTTP $GUEST_ADMIN_CODE (harus 302)"
+    fi
+done
+
+# The probe user and models exist only in memory, so nothing is written to the database and no account is created.
+info "Memeriksa bahwa setiap rute /admin/* menjawab 403 untuk pengguna tanpa izin..."
+
+ADMIN_FORBIDDEN_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+    config(["session.driver" => "array"]);
+    Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::except(["*"]);
+
+    $router = $app["router"];
+    $router->bind("user", fn () => new App\Models\User);
+    $router->bind("role", fn () => new App\Models\Role);
+
+    $probe = new App\Models\User;
+    $probe->forceFill(["id" => PHP_INT_MAX, "is_active" => true]);
+    $probe->setRelation("roles", new Illuminate\Database\Eloquent\Collection);
+    $app["auth"]->guard("web")->setUser($probe);
+
+    $http = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    $checked = 0;
+    $wrong = [];
+
+    foreach ($router->getRoutes() as $route) {
+        if (!str_starts_with($route->uri(), "admin/")) {
+            continue;
+        }
+        $method = array_values(array_diff($route->methods(), ["HEAD"]))[0];
+        $uri = "/" . preg_replace("/\{[a-z_]+\}/", "1", $route->uri());
+        $status = $http->handle(Illuminate\Http\Request::create($uri, $method))->getStatusCode();
+        $checked++;
+        if ($status !== 403) {
+            $wrong[] = $method . " " . $uri . "=" . $status;
+        }
+    }
+
+    echo $checked . ":" . count($wrong) . ":" . implode(",", $wrong);
+' 2>/dev/null || echo "0:1:gagal-dijalankan")
+
+IFS=':' read -r ADMIN_FORBIDDEN_TOTAL ADMIN_FORBIDDEN_WRONG ADMIN_FORBIDDEN_LIST <<< "$ADMIN_FORBIDDEN_CHECK"
+
+if [ "$ADMIN_FORBIDDEN_TOTAL" -eq 17 ] && [ "$ADMIN_FORBIDDEN_WRONG" -eq 0 ]; then
+    pass "Seluruh 17 rute /admin/* menjawab HTTP 403 untuk pengguna tanpa izin"
+else
+    fail "Rute /admin/* tidak menjawab 403 untuk pengguna tanpa izin (diperiksa: $ADMIN_FORBIDDEN_TOTAL, keliru: $ADMIN_FORBIDDEN_WRONG; $ADMIN_FORBIDDEN_LIST)"
+fi
+
+# ------------------------------------------------------------------------------
 # Ringkasan Akhir
 # ------------------------------------------------------------------------------
 echo ""

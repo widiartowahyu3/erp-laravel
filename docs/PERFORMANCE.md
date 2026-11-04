@@ -85,3 +85,9 @@ Seluruh angka waktu dan statistik pembacaan halaman dikutip langsung dari berkas
 - **Tabel**: `products`
 - **Rekomendasi Indeks**: `FULLTEXT INDEX idx_products_search (sku, name, barcode)`
 - **Manfaat**: Diperlukan apabila volume produk melampaui 50.000 SKU guna menggantikan klausa `LIKE '%...%'` dengan operator `MATCH(...) AGAINST(...)` dalam mode boolean.
+
+### Usulan 4: Indeks untuk Filter Event pada `audit_logs` (Belum Diterapkan)
+- **Tabel**: `audit_logs` (Fase ADM tidak boleh menambah migrasi).
+- **Hasil EXPLAIN** pada data pengembangan 1.551 baris (`review/fadm1-5-explain.txt`): daftar bawaan dan rentang tanggal memakai `audit_logs_created_at_index`; filter pengguna memakai `audit_logs_user_id_created_at_index`; filter event dan tipe objek berjalan dengan menelusuri `audit_logs_created_at_index` lalu `Using where`.
+- **Dampak**: filter event atau tipe objek yang jarang cocok dapat menelusuri banyak baris saat tabel membesar, karena kedua kolom itu tidak punya indeks untuk urutan terbaru dulu.
+- **Rekomendasi Indeks**: `INDEX idx_audit_logs_event_created (event, created_at)`. Filter tipe objek memakai pencarian di tengah teks sehingga indeks biasa tidak membantu; bila perlu, ubah menjadi pilihan nilai persis dan pakai `INDEX idx_audit_logs_type_created (auditable_type, created_at)`.
