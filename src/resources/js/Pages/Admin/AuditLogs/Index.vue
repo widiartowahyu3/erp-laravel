@@ -133,7 +133,7 @@ const selected = ref(null);
         <Head title="Log Audit" />
 
         <div class="space-y-6">
-            <PageHeader title="Log Audit" description="Catatan aktivitas sistem. Hanya dapat dibaca." />
+            <PageHeader title="Log Audit" description="Catatan aktivitas sistem 7 hari terakhir. Hanya dapat dibaca." />
 
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-200 dark:border-slate-800">
                 <div class="flex flex-wrap items-center gap-2.5">
