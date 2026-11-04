@@ -179,6 +179,8 @@ Pengujian keamanan statis ditegakkan melalui dua mekanisme pelengkap:
 2. **Trigger Integritas Ledger Append-Only:**
    - Tabel `audit_logs` dan `stock_movements` dilindungi oleh trigger database tingkat mesin (`BEFORE UPDATE` dan `BEFORE DELETE`) yang mengeksekusi `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '<tabel> is append-only'`.
    - Trigger ini berlaku untuk SEMUA user, termasuk `erp_migrator` dan user aplikasi, menjamin riwayat mutasi stok dan jejak audit tidak dapat diubah atau dimanipulasi secara retrospektif oleh siapa pun.
+   - **Pengecualian retensi `audit_logs` (keputusan pemilik, 4 November 2026):** `tr_audit_logs_before_delete` kini mengizinkan `DELETE` atas baris yang berumur lebih dari 7 hari. Trigger memakai `SYSDATE()`, bukan `NOW()`, karena `NOW()` mengikuti `SET timestamp` yang dapat diubah oleh sesi mana pun. `UPDATE` tetap selalu ditolak sehingga umur baris tidak dapat dimanipulasi.
+   - **Risiko yang diterima:** riwayat audit di database hanya mencakup 7 hari, dan penyerang yang menguasai `erp_app` dapat menghapus baris yang sudah melewati 7 hari. Riwayat yang lebih lama hanya tersedia di berkas backup. Baris yang berumur 7 hari atau kurang tetap tidak dapat dihapus, dan `stock_movements` tidak terpengaruh.
 3. **Kebijakan TRUSTED_PROXIES & Pencegahan Spoofing IP (Revisi Fase 3.1):**
    - **Analisis Kerentanan & Akar Masalah**:
      Pada Fase 3 awal, `bootstrap/app.php` mempercayai subnet IP privat RFC 1918 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) dan loopback `127.0.0.1`. Dalam arsitektur container Docker (bridge network), Nginx terhubung ke PHP-FPM melalui alamat gateway privat (rentang `172.x.x.x`). Akibatnya, Laravel menganggap Nginx sebagai reverse proxy tepercaya dan secara membabi-buta membaca header `X-Forwarded-For` yang dikirimkan oleh klien luar/penyerang. Hal ini memungkinkan penyerang melewati pembatasan laju login secara total dengan memalsukan header `X-Forwarded-For` acak pada tiap permintaan.
@@ -269,7 +271,7 @@ Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
 - [x] Rate limiting login berbasis database (5 percobaan/menit, percobaan ke-6 HTTP 429).
 - [x] Session timeouts terpasang: idle 120 menit dan absolute lifetime 480 menit (`EnforceSessionTimeouts`).
 - [x] Otorisasi `Gate::before` terintegrasi in-memory caching pada model `User` bebas dari issue N+1 query.
-- [x] Layanan `AuditLogger` mencatat peristiwa keamanan secara aman ke tabel `audit_logs` (*append-only*).
+- [x] Layanan `AuditLogger` mencatat peristiwa keamanan secara aman ke tabel `audit_logs` (tidak dapat diubah; dihapus otomatis setelah 7 hari).
 - [x] Halaman login (`Login.vue`) dan ganti kata sandi (`Password.vue`) mematuhi CSP, bebas inline style/script, WCAG AA.
 - [x] Perintah Artisan aman: `erp:admin:create`, `erp:user:reset-password`, `erp:user:set-active`, `erp:permissions:sync`.
 - [x] Seluruh tes otomatis Pest lulus 100% (`make test`).

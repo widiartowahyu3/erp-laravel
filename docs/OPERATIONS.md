@@ -105,7 +105,28 @@ Untuk operasional produksi, disarankan memasang jadwal berkala (misal via Cron p
 
 ---
 
-## 5. Peringatan Keamanan & Batasan Operasional
+## 5. Retensi Log Audit
+
+Log audit yang berumur lebih dari 7 hari dihapus otomatis. Ini keputusan pemilik pada 4 November 2026 untuk semua jenis event, termasuk perubahan transaksi dan hak akses.
+
+- **Jadwal**: `erp:audit:prune` berjalan setiap pukul 01.00 WIB di container `scheduler` (`php artisan schedule:work`), sebelum jadwal backup pukul 02.00 UTC yang disarankan di atas.
+- **Cara kerja**: baris dihapus per 1.000. Setiap kelompok dicatat sebagai event `audit_log.pruned` dalam transaksi yang sama, sehingga bila pencatatan gagal, penghapusan kelompok itu dibatalkan.
+- **Batas di database**: trigger `tr_audit_logs_before_delete` menolak penghapusan baris yang berumur 7 hari atau kurang. Mengubah masa simpan berarti membuat migrasi trigger baru dan mengubah `AuditRetentionService`.
+- **Riwayat lama**: baris yang sudah terhapus hanya dapat dipulihkan dari backup. Masa simpan backup di bagian 4 menjadi satu-satunya arsip jejak audit yang lebih tua dari 7 hari, jadi pastikan arsip itu benar-benar dijalankan.
+- **Restore-check**: `make restore-check` membandingkan isi `audit_logs` dengan database aktif, sehingga jalankan segera setelah `make backup`. Penghapusan atau penulisan log di antara keduanya menimbulkan ketidakcocokan checksum.
+- **Pemeriksaan**:
+
+```bash
+docker compose exec scheduler php artisan schedule:list
+```
+
+```bash
+docker compose logs --tail=20 scheduler
+```
+
+---
+
+## 6. Peringatan Keamanan & Batasan Operasional
 
 > [!CAUTION] Perlindungan Kerahasiaan Data
 > Berkas dump database memuat informasi bisnis sensitif, data pelanggan, pemasok, transaksi, dan jejak audit. Dilarang keras mengunggah atau membagikan berkas dump mentah tanpa enkripsi.

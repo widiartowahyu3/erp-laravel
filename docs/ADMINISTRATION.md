@@ -86,6 +86,7 @@ Setiap operasi dicatat lewat `AuditLogger` dalam transaksi yang sama dengan `str
 - Filter: rentang tanggal, pengguna, awalan event, dan tipe objek. Urutan terbaru lebih dulu, maksimal 100 baris per halaman.
 - Nilai JSON ditampilkan sebagai teks yang di-escape.
 - Log menampilkan nama pelaku apa adanya, termasuk Super Administrator, agar catatan audit tetap utuh. Karena itu `audit_logs.view` sebaiknya hanya diberikan kepada pihak yang memang berhak.
+- **Retensi 7 hari:** log yang berumur lebih dari 7 hari dihapus otomatis setiap pukul 01.00, sehingga halaman ini hanya menampilkan 7 hari terakhir. Rinciannya ada di [Panduan Operasional](OPERATIONS.md).
 
 ## 8. Antarmuka
 

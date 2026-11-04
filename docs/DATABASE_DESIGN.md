@@ -74,11 +74,11 @@ Dokumen ini mendefinisikan standar teknis, konvensi arsitektur data, kamus data 
 5. **`permission_role`**
    - **Tujuan:** Pivot relasi many-to-many role dan permission.
    - **Kolom Kunci:** Composite PK (`permission_id`, `role_id`), FK CASCADE.
-6. **`audit_logs` (Append-Only)**
-   - **Tujuan:** Jejak audit kepatuhan (*immutable audit trail*) atas perubahan data sistem.
+6. **`audit_logs` (Append-Only dengan Retensi 7 Hari)**
+   - **Tujuan:** Jejak audit atas perubahan data sistem selama 7 hari terakhir.
    - **Kolom Kunci:** `id`, `user_id` (FK nullable), `event(50)`, `auditable_type(100)`, `auditable_id(unsigned bigint)`, `old_values(json)`, `new_values(json)`, `ip_address(45)`, `user_agent(255)`, `created_at`.
    - **Indeks:** `(auditable_type, auditable_id)`, `(user_id, created_at)`, `(created_at)`.
-   - **Trigger:** Dilindungi trigger database anti-mutasi (UPDATE & DELETE ditolak).
+   - **Trigger:** `UPDATE` selalu ditolak. `DELETE` hanya diizinkan untuk baris yang berumur lebih dari 7 hari.
 7. **`document_sequences`**
    - **Tujuan:** Pengendali counter nomor dokumen transaksi bebas celah (*gapless sequence*).
    - **Kolom Kunci:** `id`, `doc_type(30)`, `period(6)` (YYYYMM), `prefix(10)`, `last_number(unsigned bigint)`, timestamps.

@@ -278,7 +278,7 @@ Exception bisnis menggunakan trait `RendersAsFormError`:
   - `AuditLogger::sanitizePayload()` secara otomatis membuang kunci yang memuat substring sensitif seperti `password`, `secret`, `token`, serta `key`.
   - Hal ini menimbulkan batasan teknis: kolom bisnis sah yang bernama `key` (misalnya pada tabel `settings` dengan pasangan `key`-`value`) akan ikut terbuang dari payload audit.
   - **Solusi yang Direkomendasikan**: Diimplementasikan pada fase modul administrasi berupa mekanisme daftar putih per model (*per-model whitelist* atau atribut model `$auditPreservedKeys = ['key']`) agar kolom non-rahasia bernama `key` tetap tercatat utuh.
-- **Immutabilitas Basis Data**: Tabel `audit_logs` dilindungi oleh trigger MariaDB `trg_audit_logs_prevent_update` dan `trg_audit_logs_prevent_delete` (append-only strictly).
+- **Immutabilitas Basis Data**: Tabel `audit_logs` dilindungi oleh trigger MariaDB `tr_audit_logs_before_update` (menolak semua `UPDATE`) dan `tr_audit_logs_before_delete` (menolak `DELETE` atas baris yang berumur 7 hari atau kurang).
 
 ---
 

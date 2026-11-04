@@ -46,7 +46,7 @@ Semua interaksi dengan Docker distandarisasi melalui kakas `make`:
 | Perintah | Deskripsi Fungsi |
 |---|---|
 | `make hooks` | Mengaktifkan hook keamanan Git lokal ke `.githooks` (Gitleaks, filter rahasia, conventional commits) |
-| `make up` | Menjalankan seluruh layanan (`web`, `php`, `db`) di latar belakang (`-d`) |
+| `make up` | Menjalankan seluruh layanan (`web`, `php`, `scheduler`, `db`) di latar belakang (`-d`) |
 | `make down` | Menghentikan seluruh container yang berjalan tanpa menghapus volume data |
 | `make build` | Membangun ulang image Docker lokal (`php:dev` dan `node:24-dev`) |
 | `make logs` | Menampilkan dan mengikuti log gabungan seluruh container (`docker compose logs -f`) |

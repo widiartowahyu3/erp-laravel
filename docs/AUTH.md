@@ -11,7 +11,7 @@ Fase 3 mengimplementasikan sistem autentikasi dan otorisasi monolitik bawaan (na
 - **Kredensial Aman**: Algoritma hashing Argon2id (`HASH_DRIVER=argon2id`, `memory_cost=65536`, `time_cost=4`, `threads=1`).
 - **Pemisahan Peran (RBAC)**: Otorisasi berbasis hak akses granular (*permissions*) yang dipetakan ke dalam peran sistem (*roles*) melalui skema relasional `roles`, `permissions`, `role_user`, dan `permission_role`.
 - **Zero Trust Session**: Sesi terenkripsi di database dengan proteksi ganda *idle timeout* (120 menit) dan *absolute timeout* (480 menit / 8 jam).
-- **Audit Logging Otomatis**: Setiap peristiwa login (sukses/gagal), logout, kadaluwarsa sesi, perubahan password, dan penolakan hak akses (403) dicatat secara persisten dan terlindungi di tabel `audit_logs` (*append-only*).
+- **Audit Logging Otomatis**: Setiap peristiwa login (sukses/gagal), logout, kadaluwarsa sesi, perubahan password, dan penolakan hak akses (403) dicatat dan terlindungi di tabel `audit_logs`, lalu dihapus otomatis setelah 7 hari.
 
 ---
 
@@ -299,7 +299,7 @@ Komponen antarmuka `AppLayout.vue` dan konfigurasi navigasi `navigation.js` seca
 ## 7. Audit Logging Keamanan
 
 Setiap peristiwa keamanan dicatat melalui layanan `App\Services\Audit\AuditLogger` ke tabel `audit_logs`:
-- **Integritas Immutabilitas**: Tabel `audit_logs` dilindungi trigger basis data MariaDB (`tr_audit_logs_before_update` dan `tr_audit_logs_before_delete`) yang membatalkan upaya `UPDATE` atau `DELETE` (*append-only*).
+- **Integritas Immutabilitas**: Tabel `audit_logs` dilindungi trigger basis data MariaDB. `tr_audit_logs_before_update` membatalkan semua `UPDATE`; `tr_audit_logs_before_delete` membatalkan `DELETE` atas baris yang berumur 7 hari atau kurang.
 - **Sanitasi Kredensial**:
   - Kolom `new_values` dan `old_values` secara otomatis memindai kunci payload dengan ekspresi reguler `/password|token|secret|key/i` dan mengganti nilainya dengan string `[REDACTED]`.
   - Pemindaian sanitasi bekerja secara rekursif terhadap struktur *nested array*.
