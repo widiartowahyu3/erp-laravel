@@ -120,3 +120,10 @@ test('trusted proxy behavioral resolution respects config and rejects spoofed he
         ->get('/login');
     expect(request()->ip())->toBe('198.51.100.7');
 });
+
+test('session config forces encryption and secure cookies in production', function () {
+    $sessionConfig = (string) file_get_contents(config_path('session.php'));
+
+    expect($sessionConfig)->toContain("'encrypt' => env('APP_ENV') === 'production' ? true :")
+        ->and($sessionConfig)->toContain("'secure' => env('APP_ENV') === 'production' ? true :");
+});
