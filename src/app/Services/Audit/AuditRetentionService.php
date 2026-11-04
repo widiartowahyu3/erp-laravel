@@ -35,6 +35,7 @@ final class AuditRetentionService
                     ->whereRaw('created_at < NOW() - INTERVAL 7 DAY')
                     ->orderBy('created_at')
                     ->limit(self::BATCH_SIZE)
+                    // @audit-bypass: recorded below as audit_log.pruned in the same transaction
                     ->delete();
 
                 if ($deleted > 0) {
