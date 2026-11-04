@@ -351,9 +351,17 @@ Sistem membedakan secara tegas penanganan kegagalan pencatatan log audit:
 Proyek ini secara sadar membatasi cakupan fungsional untuk menjaga kualitas dan fokus arsitektur:
 1. **Mata Uang Tunggal**: Transaksi moneter hanya menggunakan mata uang Rupiah (IDR).
 2. **Satuan Dasar Tunggal**: Inventori dikelola berdasarkan satuan dasar terkecil tanpa konversi bertingkat di level transaksi saat ini.
-3. **Tanpa Mutasi Antar-Gudang**: Perpindahan barang antar-gudang (transfer) belum didukung; pergerakan stok hanya bersumber dari Penerimaan Barang (GR) dan Penyesuaian Stok (SA).
-4. **Modul Hilir Terpisah**: Modul Penjualan (SO, DO, Faktur Penjualan), Piutang, Hutang, Pembayaran, Kas & Bank, Jurnal Akuntansi, dan Laporan Keuangan dialokasikan pada roadmap berikutnya.
+3. **Tanpa Mutasi Antar-Gudang**: Perpindahan barang antar-gudang (transfer) belum didukung; pergerakan stok hanya bersumber dari Penerimaan Barang (GR), Surat Jalan (DO), dan Penyesuaian Stok (SA).
+4. **Modul Hilir Terpisah**: Faktur Penjualan, Piutang, Hutang, Pembayaran, Kas & Bank, Jurnal Akuntansi, dan Laporan Keuangan dialokasikan pada roadmap berikutnya.
 5. **Manajemen Pengguna & Log Viewer**: Saat ini dikelola melalui akun seeding dan database seeder; antarmuka GUI untuk audit log viewer dan role manager akan ditambahkan di fase lanjutan.
 
+---
 
+## 6. Hardening Stack Production
 
+Stack `compose.prod.yaml` memakai image hasil rilis (lihat `docs/DEPLOYMENT.md`) dan diuji oleh `make prod-smoke`:
+- **Image tanpa alat pengembangan**: image `php` tidak memuat Composer, Node, `tests/`, `.env`, maupun dependensi dev. Kode dimiliki root sehingga proses aplikasi tidak bisa mengubahnya.
+- **Root filesystem read-only**: hanya direktori tmpfs yang bisa ditulis, termasuk `storage/` dan `bootstrap/cache/`.
+- **Isolasi jaringan**: hanya `web` yang terhubung ke jaringan publik. `php` dan `db` berada di jaringan `internal` tanpa rute ke internet.
+- **HTTPS langsung di nginx**: TLS 1.2 dan 1.3, HTTP dialihkan ke HTTPS. Aturan keamanan nginx dipakai bersama dengan stack pengembangan lewat `docker/nginx/snippets/` agar tidak bisa berbeda.
+- **Kredensial migrator terpisah**: hanya disuntikkan ke container migrasi sekali pakai, tidak pernah ke `web` atau `php` yang sedang berjalan.

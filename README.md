@@ -146,8 +146,9 @@ Proyek ini menerapkan standar mutu berkelanjutan yang dapat diverifikasi secara 
 - **Skrip Verifikasi Hardening**: Skrip `scripts/verify-hardening.sh` menguji 27 butir hardening infrastruktur, database privileges, dan isolasi rahasia.
 - **Pemindaian Rahasia Gitleaks**: Git hooks lokal dan CI workflow memeriksa seluruh commit dari potensi kebocoran token atau kunci rahasia.
 - **Audit Dependensi**: Pemindaian kerentanan berkala menggunakan `composer audit` dan `npm audit`.
-- **Continuous Integration (GitHub Actions)**: Workflow `.github/workflows/ci.yml` menjalankan seluruh gerbang kualitas secara otomatis pada pull request dan push ke cabang utama.
-- **Dependabot**: Konfigurasi `.github/dependabot.yml` memantau pembaruan rutin untuk Composer, NPM, GitHub Actions, dan Docker Compose.
+- **Continuous Integration (GitHub Actions)**: Workflow `.github/workflows/ci.yml` menjalankan seluruh gerbang kualitas, `make verify`, dan uji asap image production (`make prod-smoke`) pada pull request dan push ke cabang utama.
+- **Rilis Image**: Tag `vX.Y.Z` memicu `.github/workflows/release.yml` yang mendorong image teruji ke GHCR. Panduan lengkap ada di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+- **Dependabot**: Konfigurasi `.github/dependabot.yml` memantau pembaruan rutin untuk Composer, NPM, GitHub Actions, Docker, dan Docker Compose.
 
 ---
 
@@ -305,7 +306,6 @@ Secara transparan dan jujur, implementasi saat ini memiliki batasan arsitektural
 1. **Mata Uang Tunggal (Single Currency - IDR)**: Seluruh transaksi beroperasi eksklusif dalam Rupiah Indonesia tanpa konversi valuta asing.
 2. **Satuan Dasar Tunggal per Produk**: Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Konversi multi-satuan dinamis bertingkat (*UOM conversion*) belum diimplementasikan di tingkat transaksi.
 3. **Tanpa Dokumen Mutasi Antar-Gudang Langsung**: Fitur transfer persediaan antar-gudang saat ini ditangani secara manual melalui kombinasi dokumen Penyesuaian Keluar (`adjustment_out`) pada gudang asal dan Penyesuaian Masuk (`adjustment_in`) pada gudang tujuan.
-4. **Modul Hilir Belum Tersedia**: Modul Penjualan (Pesanan Penjualan/SO, Surat Jalan/DO, Faktur Penjualan), Piutang Usaha, Hutang Usaha, Pembayaran Kas/Bank, Buku Kas/Bank, Jurnal Akuntansi Umum, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
+4. **Modul Hilir Belum Tersedia**: Faktur Penjualan dan Pembelian, Piutang Usaha, Hutang Usaha, Pembayaran Kas/Bank, Buku Kas/Bank, Jurnal Akuntansi Umum, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
 5. **Antarmuka Pengguna Administrasi Terbatas**: Manajemen akun pengguna, pengaturan peran RBAC, dan penampil log audit (`audit_logs`) saat ini dikelola melalui database seeder dan perintah Artisan konsol, belum memiliki antarmuka visual (GUI).
-6. **Target Multi-Stage Docker `prod`**: Target `prod` pada `docker/php/Dockerfile` belum mengemas kode aplikasi ke dalam image dan belum digunakan untuk alur rilis produksi aktif (alur kerja saat ini menggunakan target `dev` terisolasi).
-7. **Status CI GitHub Actions**: Konfigurasi `.github/workflows/ci.yml` telah tervalidasi secara sintaks dan struktur, namun status kelulusan badge CI di repositori jarak jauh bergantung pada proses push yang dijalankan oleh pemilik repositori.
+6. **Deploy Otomatis ke Server**: Image production sudah dibangun, diuji, dan dirilis ke GHCR, tetapi deploy ke server masih dijalankan manual lewat `scripts/deploy.sh` karena belum ada server tetap.

@@ -86,8 +86,8 @@ Semua interaksi dengan Docker distandarisasi melalui kakas `make`:
 ## 4. Catatan Target Multi-Stage Build & Operasional (Fase 7.5)
 
 1. **Target `prod` pada `docker/php/Dockerfile`**:
-   - Berkas `docker/php/Dockerfile` mendefinisikan target multi-stage `base`, `dev`, dan `prod`.
-   - **Status Saat Ini**: Target `prod` disiapkan sebagai blueprint kontainerisasi mandiri untuk masa mendatang. Saat ini, target `prod` **belum mengemas kode sumber aplikasi** (tidak menyalin `src/` ke dalam image) dan belum digunakan untuk proses deploy produksi aktif. Seluruh alur pengujian dan eksekusi berjalan di atas container target `dev` dengan bind mount `src/` yang terisolasi.
+   - Berkas `docker/php/Dockerfile` mendefinisikan target `dev` untuk pengembangan, serta `prod` dan `web` untuk production.
+   - **Status Saat Ini**: Target `prod` (PHP-FPM) dan `web` (nginx) sudah mengemas kode aplikasi dan aset frontend, dan diuji oleh `make prod-smoke`. Panduan rilis dan deploy ada di [DEPLOYMENT.md](DEPLOYMENT.md).
 
 2. **Prosedur Pencadangan & Pemulihan Operasional**:
    - Prosedur backup dan verifikasi restore otomatis tersedia melalui `make backup` dan `make restore-check`.
