@@ -56,6 +56,10 @@ id_ed25519*
 # OS files
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
+
+# Local archives
+*.zip
 
 # Keluaran mentah untuk review pengawas
 /review/
