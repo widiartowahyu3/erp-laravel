@@ -181,18 +181,18 @@ export const navigationGroups = [
         items: [
             {
                 name: 'Bagan Akun (COA)',
-                href: '#',
+                href: '/accounting/accounts',
                 icon: 'ListTree',
                 permission: 'chart_of_accounts.view',
-                available: false,
+                available: true,
                 description: 'Daftar kode akun akuntansi buku besar.',
             },
             {
                 name: 'Jurnal Akuntansi',
-                href: '#',
+                href: '/accounting/journals',
                 icon: 'BookOpen',
                 permission: 'journals.view',
-                available: false,
+                available: true,
                 description: 'Pencatatan ayat jurnal umum dan transaksi berpasangan.',
             },
             {
