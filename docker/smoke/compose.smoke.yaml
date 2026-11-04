@@ -1,0 +1,8 @@
+# Throwaway database for scripts/prod-smoke.sh: no named volume, nothing survives the run.
+services:
+  db:
+    volumes: !override
+      - ./docker/mariadb/conf.d/hardening.cnf:/etc/mysql/conf.d/hardening.cnf:ro
+      - ./docker/mariadb/init/01-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    tmpfs:
+      - /var/lib/mysql:rw,size=768m,uid=999,gid=999,mode=700

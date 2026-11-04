@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo seed-demo-tx seed-demo-catalog backup restore-check test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo seed-demo-tx seed-demo-catalog backup restore-check prod-smoke test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -30,6 +30,7 @@ help:
 	@echo "  make check         - Run all quality checks (lint, analyse, test, test-js, lint-js)"
 	@echo "  make dev           - Start development environment"
 	@echo "  make verify        - Run the hardening verification script"
+	@echo "  make prod-smoke    - Build production images and smoke test them on a throwaway stack"
 	@echo "  make fresh         - Destroy containers and volumes (requires confirmation)"
 
 hooks:
@@ -127,6 +128,9 @@ verify:
 
 test-hooks:
 	bash scripts/test-hooks.sh
+
+prod-smoke:
+	bash scripts/prod-smoke.sh
 
 fresh:
 	@echo "WARNING: This will destroy all containers and volumes (database data will be lost)!"
