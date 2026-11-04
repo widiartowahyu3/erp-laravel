@@ -8,11 +8,8 @@ use App\Enums\DeliveryOrderStatus;
 use App\Enums\GoodsReceiptStatus;
 use App\Enums\JournalStatus;
 use App\Enums\StockAdjustmentStatus;
-use App\Enums\StockMovementType;
 use App\Exceptions\BusinessRuleException;
 use App\Exceptions\InvalidStateTransitionException;
-use App\Models\DeliveryOrder;
-use App\Models\GoodsReceipt;
 use App\Models\Journal;
 use App\Models\StockAdjustment;
 use App\Models\StockBalance;
@@ -20,79 +17,17 @@ use App\Models\User;
 use App\Services\Inventory\StockAdjustmentService;
 use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
-use App\Services\Purchasing\PurchaseOrderService;
 use App\Services\Sales\DeliveryOrderService;
-use App\Services\Sales\SalesOrderService;
 use App\Support\Decimal;
 use Database\Seeders\ChartOfAccountSeeder;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\AccountingFixtures;
 use Tests\Support\TestDataFactory;
 
 beforeEach(function (): void {
     (new ChartOfAccountSeeder)->run();
     $this->actingAs(User::factory()->create());
 });
-
-/**
- * @param  list<array{product: int, quantity: string, cost: string}>  $lines
- */
-function draftReceipt(array $lines, ?int $warehouseId = null): GoodsReceipt
-{
-    $supplierId = TestDataFactory::createSupplier();
-    $warehouseId ??= TestDataFactory::createWarehouse();
-    $poService = new PurchaseOrderService;
-
-    $po = $poService->create([
-        'supplier_id' => $supplierId,
-        'warehouse_id' => $warehouseId,
-        'order_date' => '2026-10-20',
-        'items' => array_map(fn (array $l): array => [
-            'product_id' => $l['product'], 'quantity' => $l['quantity'], 'unit_price' => $l['cost'],
-        ], $lines),
-    ]);
-    $poService->approve($po);
-
-    return (new GoodsReceiptService(new StockService))->create([
-        'purchase_order_id' => $po->id,
-        'supplier_id' => $supplierId,
-        'warehouse_id' => $warehouseId,
-        'receipt_date' => '2026-10-25',
-        'items' => $po->items()->get()->map(fn ($item): array => [
-            'purchase_order_item_id' => $item->id, 'product_id' => $item->product_id, 'quantity' => $item->quantity,
-        ])->all(),
-    ]);
-}
-
-function seedStock(int $productId, int $warehouseId, string $quantity, string $cost): void
-{
-    DB::transaction(fn () => (new StockService)->increase(
-        $productId, $warehouseId, $quantity, $cost,
-        StockMovementType::ADJUSTMENT_IN, StockService::SOURCE_STOCK_ADJUSTMENT, 1
-    ));
-}
-
-function draftDelivery(int $productId, int $warehouseId, string $quantity, string $price): DeliveryOrder
-{
-    $customerId = TestDataFactory::createCustomer();
-    $soService = new SalesOrderService;
-
-    $so = $soService->create([
-        'customer_id' => $customerId,
-        'warehouse_id' => $warehouseId,
-        'order_date' => '2026-10-20',
-        'items' => [['product_id' => $productId, 'quantity' => $quantity, 'unit_price' => $price]],
-    ]);
-    $soService->approve($so);
-    $soItem = $so->items()->firstOrFail();
-
-    return (new DeliveryOrderService(new StockService))->create([
-        'sales_order_id' => $so->id,
-        'customer_id' => $customerId,
-        'warehouse_id' => $warehouseId,
-        'delivery_date' => '2026-10-26',
-        'items' => [['sales_order_item_id' => $soItem->id, 'product_id' => $productId, 'quantity' => $quantity]],
-    ]);
-}
 
 /**
  * Net debit minus credit per account code, across every posted journal of a source.
@@ -128,7 +63,7 @@ function journalLineValues(Journal $journal): array
 }
 
 test('posting a goods receipt journals inventory against grir at exact values', function (): void {
-    $gr = draftReceipt([
+    $gr = AccountingFixtures::draftReceipt([
         ['product' => TestDataFactory::createProduct(), 'quantity' => '10.0000', 'cost' => '950.0000'],
         ['product' => TestDataFactory::createProduct(), 'quantity' => '4.0000', 'cost' => '250.0000'],
     ]);
@@ -149,7 +84,7 @@ test('posting a goods receipt journals inventory against grir at exact values', 
 
 test('voiding a posted goods receipt reverses its journal and neutralizes the accounts', function (): void {
     $service = new GoodsReceiptService(new StockService);
-    $gr = $service->post(draftReceipt([
+    $gr = $service->post(AccountingFixtures::draftReceipt([
         ['product' => TestDataFactory::createProduct(), 'quantity' => '10.0000', 'cost' => '950.0000'],
     ]));
 
@@ -172,8 +107,8 @@ test('voiding a goods receipt keeps the stock value equal to the inventory accou
     $productId = TestDataFactory::createProduct();
     $warehouseId = TestDataFactory::createWarehouse();
 
-    $first = $service->post(draftReceipt([['product' => $productId, 'quantity' => '10.0000', 'cost' => '100.0000']], $warehouseId));
-    $second = $service->post(draftReceipt([['product' => $productId, 'quantity' => '10.0000', 'cost' => '200.0000']], $warehouseId));
+    $first = $service->post(AccountingFixtures::draftReceipt([['product' => $productId, 'quantity' => '10.0000', 'cost' => '100.0000']], $warehouseId));
+    $second = $service->post(AccountingFixtures::draftReceipt([['product' => $productId, 'quantity' => '10.0000', 'cost' => '200.0000']], $warehouseId));
     $service->void($second, 'Harga salah');
 
     $balance = StockBalance::where('product_id', $productId)->where('warehouse_id', $warehouseId)->firstOrFail();
@@ -188,7 +123,7 @@ test('voiding a goods receipt keeps the stock value equal to the inventory accou
 
 test('voiding a draft goods receipt creates no journal', function (): void {
     $service = new GoodsReceiptService(new StockService);
-    $gr = draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]);
+    $gr = AccountingFixtures::draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]);
 
     $service->void($gr, 'Tidak jadi');
 
@@ -197,7 +132,7 @@ test('voiding a draft goods receipt creates no journal', function (): void {
 
 test('a zero value goods receipt posts without a journal', function (): void {
     $gr = (new GoodsReceiptService(new StockService))->post(
-        draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '5.0000', 'cost' => '0']])
+        AccountingFixtures::draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '5.0000', 'cost' => '0']])
     );
 
     expect($gr->status)->toBe(GoodsReceiptStatus::POSTED)
@@ -207,7 +142,7 @@ test('a zero value goods receipt posts without a journal', function (): void {
 test('journal failure rolls back the whole goods receipt posting; active account control succeeds', function (): void {
     $productId = TestDataFactory::createProduct();
     $warehouseId = TestDataFactory::createWarehouse();
-    $gr = draftReceipt([['product' => $productId, 'quantity' => '10.0000', 'cost' => '950.0000']], $warehouseId);
+    $gr = AccountingFixtures::draftReceipt([['product' => $productId, 'quantity' => '10.0000', 'cost' => '950.0000']], $warehouseId);
     $journalsBefore = Journal::count();
 
     DB::table('chart_of_accounts')->where('code', '2103')->update(['is_active' => false]);
@@ -226,14 +161,14 @@ test('journal failure rolls back the whole goods receipt posting; active account
 
 test('posting a goods receipt twice does not duplicate its journal', function (): void {
     $service = new GoodsReceiptService(new StockService);
-    $gr = $service->post(draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]));
+    $gr = $service->post(AccountingFixtures::draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]));
 
     expect(fn () => $service->post($gr))->toThrow(InvalidStateTransitionException::class);
     expect(Journal::where('source_id', $gr->id)->where('source_type', 'goods_receipt')->count())->toBe(1);
 });
 
 test('the journal is written after the source document and stock balance are locked', function (): void {
-    $gr = draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]);
+    $gr = AccountingFixtures::draftReceipt([['product' => TestDataFactory::createProduct(), 'quantity' => '1.0000', 'cost' => '10.0000']]);
 
     $queries = [];
     DB::listen(function ($query) use (&$queries): void {
@@ -264,9 +199,9 @@ test('the journal is written after the source document and stock balance are loc
 test('posting a delivery order journals cost of goods sold at the snapshot cost, not the selling price', function (): void {
     $productId = TestDataFactory::createProduct();
     $warehouseId = TestDataFactory::createWarehouse();
-    seedStock($productId, $warehouseId, '10.0000', '950.0000');
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '950.0000');
 
-    $do = draftDelivery($productId, $warehouseId, '3.0000', '2000.0000');
+    $do = AccountingFixtures::draftDelivery($productId, $warehouseId, '3.0000', '2000.0000');
     (new DeliveryOrderService(new StockService))->post($do);
 
     $journal = Journal::where('source_type', 'delivery_order')->where('source_id', $do->id)->firstOrFail();
@@ -282,10 +217,10 @@ test('posting a delivery order journals cost of goods sold at the snapshot cost,
 test('voiding a posted delivery order reverses its journal', function (): void {
     $productId = TestDataFactory::createProduct();
     $warehouseId = TestDataFactory::createWarehouse();
-    seedStock($productId, $warehouseId, '10.0000', '950.0000');
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '950.0000');
 
     $service = new DeliveryOrderService(new StockService);
-    $do = $service->post(draftDelivery($productId, $warehouseId, '3.0000', '2000.0000'));
+    $do = $service->post(AccountingFixtures::draftDelivery($productId, $warehouseId, '3.0000', '2000.0000'));
     $service->void($do, 'Pelanggan menolak');
 
     expect(netBySource('delivery_order', $do->id))->toBe(['1301' => '0.00', '5101' => '0.00'])
@@ -295,8 +230,8 @@ test('voiding a posted delivery order reverses its journal', function (): void {
 test('journal failure rolls back the whole delivery order posting; active account control succeeds', function (): void {
     $productId = TestDataFactory::createProduct();
     $warehouseId = TestDataFactory::createWarehouse();
-    seedStock($productId, $warehouseId, '10.0000', '950.0000');
-    $do = draftDelivery($productId, $warehouseId, '3.0000', '2000.0000');
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '950.0000');
+    $do = AccountingFixtures::draftDelivery($productId, $warehouseId, '3.0000', '2000.0000');
     $journalsBefore = Journal::count();
 
     DB::table('chart_of_accounts')->where('code', '5101')->update(['is_active' => false]);
@@ -317,8 +252,8 @@ test('posting a stock adjustment with surplus and shortage in one document creat
     $warehouseId = TestDataFactory::createWarehouse();
     $surplusProduct = TestDataFactory::createProduct();
     $shortageProduct = TestDataFactory::createProduct();
-    seedStock($surplusProduct, $warehouseId, '10.0000', '100.0000');
-    seedStock($shortageProduct, $warehouseId, '10.0000', '200.0000');
+    AccountingFixtures::seedStock($surplusProduct, $warehouseId, '10.0000', '100.0000');
+    AccountingFixtures::seedStock($shortageProduct, $warehouseId, '10.0000', '200.0000');
 
     $service = new StockAdjustmentService(new StockService);
     $adjustment = $service->post($service->create([
@@ -346,7 +281,7 @@ test('posting a stock adjustment with surplus and shortage in one document creat
 test('voiding a posted stock adjustment reverses its journal', function (): void {
     $warehouseId = TestDataFactory::createWarehouse();
     $productId = TestDataFactory::createProduct();
-    seedStock($productId, $warehouseId, '10.0000', '200.0000');
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '200.0000');
 
     $service = new StockAdjustmentService(new StockService);
     $adjustment = $service->post($service->create([
@@ -365,7 +300,7 @@ test('voiding a posted stock adjustment reverses its journal', function (): void
 test('a stock adjustment with no difference posts without a journal', function (): void {
     $warehouseId = TestDataFactory::createWarehouse();
     $productId = TestDataFactory::createProduct();
-    seedStock($productId, $warehouseId, '10.0000', '200.0000');
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '200.0000');
 
     $service = new StockAdjustmentService(new StockService);
     $adjustment = $service->post($service->create([
@@ -382,7 +317,7 @@ test('a stock adjustment with no difference posts without a journal', function (
 test('journal failure rolls back the whole stock adjustment posting', function (): void {
     $warehouseId = TestDataFactory::createWarehouse();
     $productId = TestDataFactory::createProduct();
-    seedStock($productId, $warehouseId, '10.0000', '200.0000');
+    AccountingFixtures::seedStock($productId, $warehouseId, '10.0000', '200.0000');
 
     $service = new StockAdjustmentService(new StockService);
     $adjustment = $service->create([
