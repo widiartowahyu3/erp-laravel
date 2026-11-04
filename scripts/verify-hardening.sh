@@ -119,8 +119,8 @@ fi
 docker compose --profile tools up -d node >/dev/null 2>&1
 
 # Wait for healthy services
-info "Waiting for healthy status on web, php, db..."
-for s in web php db; do
+info "Waiting for healthy status on web, php, db, scheduler..."
+for s in web php db scheduler; do
     retries=30
     until [ "$retries" -le 0 ]; do
         status=$(docker inspect "erp-trading-${s}" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' 2>/dev/null || true)
@@ -160,13 +160,20 @@ else
     fail "Container node berjalan sebagai root atau gagal (UID=$NODE_UID)"
 fi
 
+SCHEDULER_UID=$(docker compose exec -T scheduler id -u 2>/dev/null | tr -d '\r')
+if [ "$SCHEDULER_UID" != "0" ] && [ -n "$SCHEDULER_UID" ]; then
+    pass "Container scheduler berjalan sebagai non-root (UID=$SCHEDULER_UID)"
+else
+    fail "Container scheduler berjalan sebagai root atau gagal (UID=$SCHEDULER_UID)"
+fi
+
 # ------------------------------------------------------------------------------
 # 2. docker inspect: ReadonlyRootfs=true, no-new-privileges, CapDrop ALL
 # ------------------------------------------------------------------------------
 echo ""
 echo "--- Butir 2: Verifikasi ReadonlyRootfs, no-new-privileges, CapDrop ALL ---"
 
-for svc in web php db node; do
+for svc in web php db node scheduler; do
     container_name="erp-trading-${svc}"
     ro=$(docker inspect "$container_name" --format '{{.HostConfig.ReadonlyRootfs}}' 2>/dev/null || true)
     nnp=$(docker inspect "$container_name" --format '{{json .HostConfig.SecurityOpt}}' 2>/dev/null || true)
@@ -557,7 +564,7 @@ echo "--- Butir 9: Verifikasi Kebocoran Rahasia & Isolasi Direktori PHP ---"
 
 # Periksa apakah password root muncul di docker inspect
 LEAK_INSPECT=false
-for svc in web php db node; do
+for svc in web php db node scheduler; do
     container_name="erp-trading-${svc}"
     if docker inspect "$container_name" | grep -q "$DB_ROOT_SECRET"; then
         fail "String password root MariaDB BOCOR di docker inspect $container_name!"
@@ -1838,6 +1845,70 @@ if [ "$ADMIN_FORBIDDEN_TOTAL" -eq 17 ] && [ "$ADMIN_FORBIDDEN_WRONG" -eq 0 ]; th
     pass "Seluruh 17 rute /admin/* menjawab HTTP 403 untuk pengguna tanpa izin"
 else
     fail "Rute /admin/* tidak menjawab 403 untuk pengguna tanpa izin (diperiksa: $ADMIN_FORBIDDEN_TOTAL, keliru: $ADMIN_FORBIDDEN_WRONG; $ADMIN_FORBIDDEN_LIST)"
+fi
+
+# ------------------------------------------------------------------------------
+# 30. Retensi log audit dan container penjadwal
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 30: Verifikasi Retensi Log Audit dan Container Penjadwal ---"
+
+# SYSDATE, not NOW: NOW follows SET timestamp, which any session can change.
+AUDIT_DELETE_TRIGGER=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT ACTION_STATEMENT FROM information_schema.TRIGGERS
+    WHERE TRIGGER_SCHEMA = 'erp_trading' AND TRIGGER_NAME = 'tr_audit_logs_before_delete';
+" 2>/dev/null)
+
+if echo "$AUDIT_DELETE_TRIGGER" | grep -q "OLD.created_at >= SYSDATE() - INTERVAL 7 DAY"; then
+    pass "Trigger hapus audit_logs menolak baris berumur kurang dari 7 hari berdasarkan SYSDATE()"
+else
+    fail "Trigger hapus audit_logs tidak memakai batas SYSDATE() 7 hari"
+fi
+
+AUDIT_UPDATE_TRIGGER=$(docker compose exec -T -e MYSQL_PWD="$DB_ROOT_SECRET" db mariadb -u root -N -e "
+    SELECT ACTION_STATEMENT FROM information_schema.TRIGGERS
+    WHERE TRIGGER_SCHEMA = 'erp_trading' AND TRIGGER_NAME = 'tr_audit_logs_before_update';
+" 2>/dev/null)
+
+if echo "$AUDIT_UPDATE_TRIGGER" | grep -q "SIGNAL" && ! echo "$AUDIT_UPDATE_TRIGGER" | grep -q "IF "; then
+    pass "Trigger ubah audit_logs tetap menolak semua UPDATE tanpa syarat"
+else
+    fail "Trigger ubah audit_logs tidak lagi menolak semua UPDATE"
+fi
+
+SCHEDULE_LIST=$(docker compose exec -T scheduler php artisan schedule:list 2>/dev/null)
+if echo "$SCHEDULE_LIST" | grep -q "erp:audit:prune"; then
+    pass "Penghapusan log audit terjadwal pada container scheduler"
+else
+    fail "Penghapusan log audit tidak terjadwal pada container scheduler"
+fi
+
+SCHEDULER_ENV=$(docker compose exec -T scheduler env 2>/dev/null)
+if echo "$SCHEDULER_ENV" | grep -qE "MIGRATOR|ROOT_PASSWORD"; then
+    fail "Container scheduler memuat kredensial migrator atau root di environment"
+else
+    pass "Container scheduler tidak memuat kredensial migrator atau root di environment"
+fi
+
+SCHEDULER_NETWORKS=$(docker inspect erp-trading-scheduler --format '{{range $name, $conf := .NetworkSettings.Networks}}{{$name}} {{end}}' 2>/dev/null | xargs)
+if [[ "$SCHEDULER_NETWORKS" =~ ^[a-zA-Z0-9_.-]*_backend$ ]]; then
+    pass "Container scheduler hanya terhubung ke jaringan backend ($SCHEDULER_NETWORKS)"
+else
+    fail "Container scheduler terhubung ke jaringan lain ($SCHEDULER_NETWORKS)"
+fi
+
+SCHEDULER_PORTS=$(docker inspect erp-trading-scheduler --format '{{range $p, $conf := .NetworkSettings.Ports}}{{range $conf}}{{.HostIp}}:{{.HostPort}} {{end}}{{end}}' 2>/dev/null | xargs)
+if [ -z "$SCHEDULER_PORTS" ]; then
+    pass "Container scheduler tidak mempublikasikan port ke host"
+else
+    fail "Container scheduler mempublikasikan port ke host ($SCHEDULER_PORTS)"
+fi
+
+# The image declares EXPOSE 9000 for FPM; this container must not actually run FPM.
+if docker compose exec -T scheduler nc -z 127.0.0.1 9000 >/dev/null 2>&1; then
+    fail "Container scheduler menjalankan layanan pada port 9000"
+else
+    pass "Container scheduler tidak menjalankan layanan pada port 9000"
 fi
 
 # ------------------------------------------------------------------------------

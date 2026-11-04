@@ -114,7 +114,7 @@ sed -e "s|^APP_KEY=.*|APP_KEY=base64:$(openssl rand -base64 32)|" \
 
 echo "==> Deploy pertama"
 if ! bash scripts/deploy.sh "$TAG"; then
-    docker compose logs --no-color --tail=60 web php
+    docker compose logs --no-color --tail=60 web php scheduler
     exit 1
 fi
 check "Versi aktif tercatat setelah deploy" "$TAG" "$(cat "$WORK_DIR/state/current-tag")"
@@ -187,6 +187,19 @@ for needed in /var/www/html/vendor/autoload.php /var/www/html/public/build/manif
     check "Image php memuat ${needed}" "0" "$?"
 done
 
+echo "==> Penjadwal"
+SCHEDULER_ENV="$(docker compose exec -T scheduler env)"
+check_absent "Kredensial migrator tidak ada di container scheduler" "MIGRATOR" "$SCHEDULER_ENV"
+check_absent "Kata sandi root tidak ada di container scheduler" "ROOT_PASSWORD" "$SCHEDULER_ENV"
+check "Proses scheduler bukan root" "1000" "$(docker compose exec -T scheduler id -u | tr -d '\r')"
+docker compose exec -T scheduler php -r 'exit(@fsockopen("1.1.1.1", 443, $e, $s, 3) ? 0 : 1);' >/dev/null 2>&1
+check "Container scheduler tanpa akses internet" "1" "$?"
+docker compose exec -T scheduler php -r 'exit(@fsockopen("web", 8443, $e, $s, 3) ? 0 : 1);' >/dev/null 2>&1
+check "Container scheduler tidak terhubung ke web" "1" "$?"
+check_contains "Penghapusan log audit terjadwal" "erp:audit:prune" "$(docker compose exec -T scheduler php artisan schedule:list)"
+docker compose exec -T scheduler php artisan erp:audit:prune >/dev/null 2>&1
+check "Perintah penghapusan log audit berjalan" "0" "$?"
+
 echo "==> Deploy ulang dengan backup"
 bash scripts/deploy.sh "$TAG" >/dev/null 2>&1
 check "Deploy kedua berhasil" "0" "$?"
@@ -201,7 +214,7 @@ check "Versi aktif tidak berubah" "$TAG" "$(cat "$WORK_DIR/state/current-tag")"
 echo "================================================================="
 if [ "$FAILURES" -gt 0 ]; then
     echo "HASIL UJI ASAP: ${FAILURES} GAGAL"
-    docker compose logs --no-color --tail=40 web php
+    docker compose logs --no-color --tail=40 web php scheduler
     exit 1
 fi
 echo "HASIL UJI ASAP: SEMUA LULUS"

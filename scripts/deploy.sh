@@ -67,7 +67,7 @@ docker compose run --rm -T --no-deps \
     -e DB_MIGRATOR_USERNAME -e DB_MIGRATOR_PASSWORD \
     --entrypoint php php artisan migrate --database=mariadb_migrator --force < /dev/null
 
-if docker compose up -d --wait --wait-timeout 180 web php && health_check; then
+if docker compose up -d --wait --wait-timeout 180 web php scheduler && health_check; then
     mkdir -p "$(dirname "$STATE_FILE")"
     printf '%s\n' "$TAG" > "$STATE_FILE"
     echo "[PASS] Versi '${TAG}' aktif."
@@ -76,7 +76,7 @@ fi
 
 echo "[ERROR] Versi '${TAG}' gagal uji kesehatan." >&2
 if [ -n "$PREVIOUS_TAG" ]; then
-    ERP_IMAGE_TAG="$PREVIOUS_TAG" docker compose up -d --wait --wait-timeout 180 web php
+    ERP_IMAGE_TAG="$PREVIOUS_TAG" docker compose up -d --wait --wait-timeout 180 web php scheduler
     echo "[INFO] Container dikembalikan ke '${PREVIOUS_TAG}'. Migrasi tidak dibatalkan." >&2
 fi
 exit 1

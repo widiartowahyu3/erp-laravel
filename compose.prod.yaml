@@ -76,6 +76,38 @@ services:
       retries: 3
       start_period: 15s
 
+  # Runs scheduled artisan commands. Only needs the database, so it stays off the app network.
+  scheduler:
+    image: ${ERP_PHP_IMAGE:-ghcr.io/widiartowahyu3/erp-laravel-php}:${ERP_IMAGE_TAG:?ERP_IMAGE_TAG wajib diisi}
+    user: "1000:1000"
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,size=64m,mode=1777
+      - /var/www/html/bootstrap/cache:rw,size=16m,uid=1000,gid=1000,mode=700
+      - /var/www/html/storage/app:rw,size=16m,uid=1000,gid=1000,mode=700
+      - /var/www/html/storage/framework/cache:rw,size=16m,uid=1000,gid=1000,mode=700
+      - /var/www/html/storage/framework/sessions:rw,size=16m,uid=1000,gid=1000,mode=700
+      - /var/www/html/storage/framework/views:rw,size=16m,uid=1000,gid=1000,mode=700
+      - /var/www/html/storage/logs:rw,size=16m,uid=1000,gid=1000,mode=700
+    env_file:
+      - ${APP_ENV_FILE:-./.env.app}
+    environment:
+      APP_URL: https://${APP_DOMAIN:?APP_DOMAIN wajib diisi}
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+    pids_limit: 50
+    mem_limit: 256m
+    logging: *logging
+
   db:
     image: mariadb:12.3.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
     restart: unless-stopped

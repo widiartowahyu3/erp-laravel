@@ -33,7 +33,7 @@ services:
       start_period: 5s
 
   php:
-    build:
+    build: &php-build
       context: .
       dockerfile: docker/php/Dockerfile
       target: dev
@@ -71,6 +71,31 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+  # Runs scheduled artisan commands. Only needs the database, so it stays off the frontend network.
+  scheduler:
+    build: *php-build
+    image: erp-trading-php:dev
+    container_name: erp-trading-scheduler
+    user: "${UID:-1000}:${GID:-1000}"
+    command: ["php", "artisan", "schedule:work"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,size=64m,mode=1777
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+    pids_limit: 50
+    mem_limit: 256m
 
   db:
     image: mariadb:12.3.3@sha256:99c125f103f5d081ebbc9ffe064e63daf7f688ac33a5f7f29af2d7260a96debf
