@@ -1,0 +1,63 @@
+name: Release
+
+'on':
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: Quality Gates
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish Images
+    needs: gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+    env:
+      PHP_IMAGE: ghcr.io/${{ github.repository_owner }}/erp-laravel-php
+      WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/erp-laravel-web
+      TAG: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Build production images and smoke test the stack
+        run: make prod-smoke
+
+      - name: Log in to GitHub Container Registry
+        env:
+          ACTOR: ${{ github.actor }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+
+      # Publish the exact images the smoke test just exercised
+      - name: Push images
+        run: |
+          docker tag erp-smoke-php:smoke "$PHP_IMAGE:$TAG"
+          docker tag erp-smoke-web:smoke "$WEB_IMAGE:$TAG"
+          docker push "$PHP_IMAGE:$TAG"
+          docker push "$WEB_IMAGE:$TAG"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PHP_DIGEST=$(docker inspect --format '{{index .RepoDigests 0}}' "$PHP_IMAGE:$TAG")
+          WEB_DIGEST=$(docker inspect --format '{{index .RepoDigests 0}}' "$WEB_IMAGE:$TAG")
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes \
+            --notes "Image: \`$PHP_DIGEST\`, \`$WEB_DIGEST\`"
+
+      - name: Log out of GitHub Container Registry
+        if: always()
+        run: docker logout ghcr.io
