@@ -10,7 +10,6 @@ use App\Services\Administration\RoleService;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function (): void {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     $this->superAdmin = User::factory()->create();
     $this->superAdmin->roles()->attach(Role::where('name', 'super_admin')->value('id'), ['created_at' => now()]);
     $this->custom = (new RoleService)->create($this->superAdmin, ['display_name' => 'Peran Kustom', 'permissions' => ['products.view']]);

@@ -206,3 +206,20 @@ Penjumlahan dan pengurangan uang di browser memakai `addMoney`, `subtractMoney`,
 
 Editor baris ada di `Pages/Accounting/Journals/Form.vue`. Setiap baris hanya boleh terisi satu sisi, dan minimal dua baris selalu tersisa. Kesalahan server ditampilkan per baris lewat kunci `lines.<indeks>.<kolom>`.
 
+## Halaman Administrasi
+
+- `Components/admin/PermissionMatrix.vue` menampilkan matriks izin. Aturan centangnya ada di `Support/permissionMatrix.js` sebagai fungsi murni agar mudah diuji. Server tetap menegakkan aturan yang sama.
+- Aksi yang diblokir aturan bisnis tetap ditampilkan dalam keadaan nonaktif dengan alasan tertulis, sedangkan aksi tanpa izin disembunyikan dengan `Can`.
+- Nilai JSON log audit ditampilkan lewat interpolasi teks di dalam `<pre>`, tanpa `v-html`.
+
+## Urutan Heading
+
+- Satu `<h1>` dari `PageHeader`. Judul `Card`, `EmptyState`, `ErrorState`, dan `Modal` memakai `<h2>`.
+- `<h3>` hanya untuk judul yang benar-benar bersarang di bawah `<h2>`.
+- Tes axe halaman menyertakan aturan `heading-order`, dan `static-compliance.test.js` memeriksa judul di `#header` Card.
+
+## Kontrak `DataTable` dan `FilterBar`
+
+- `DataTable` menerima baris lewat `:data`. Tidak ada prop `rows` atau `empty`; keadaan kosong muncul sendiri saat `data` kosong.
+- Filter tambahan `FilterBar` berada di slot bawaan, dan teks petunjuk pencarian memakai `search-placeholder`.
+- `data-table-compliance.test.js` memeriksa kedua kontrak ini pada semua halaman.

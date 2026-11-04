@@ -44,7 +44,6 @@ test('operational system roles get 403 on every administration route', function 
     $user->roles()->attach(Role::where('name', $roleName)->value('id'), ['created_at' => now()]);
     $targetUser = User::factory()->create();
     $targetRole = Role::where('name', 'viewer')->value('id');
-    config(['inertia.testing.ensure_pages_exist' => false]);
 
     $routes = [
         ['get', '/admin/users'],
@@ -86,7 +85,6 @@ test('writes under /admin are rate limited per user', function (): void {
 test('the admin system role can open every administration page', function (): void {
     $user = User::factory()->create();
     $user->roles()->attach(Role::where('name', 'admin')->value('id'), ['created_at' => now()]);
-    config(['inertia.testing.ensure_pages_exist' => false]);
 
     foreach (['/admin/users', '/admin/users/create', '/admin/roles', '/admin/roles/create', '/admin/audit-logs'] as $uri) {
         $this->actingAs(User::findOrFail($user->id))->get($uri)->assertStatus(200);

@@ -87,7 +87,29 @@ Setiap operasi dicatat lewat `AuditLogger` dalam transaksi yang sama dengan `str
 - Nilai JSON ditampilkan sebagai teks yang di-escape.
 - Log menampilkan nama pelaku apa adanya, termasuk Super Administrator, agar catatan audit tetap utuh. Karena itu `audit_logs.view` sebaiknya hanya diberikan kepada pihak yang memang berhak.
 
-## 8. Contoh: membuat "Staf Master Data (Lihat Saja)"
+## 8. Antarmuka
+
+Menu **Administrasi** menampilkan Pengguna, Peran & Hak Akses, dan Log Audit menurut izin masing-masing. Pengaturan Sistem belum tersedia.
+
+- **Pengguna**: daftar dengan pencarian nama atau email serta filter status dan peran. Formulir memakai kotak centang peran; peran di luar plafon tampil nonaktif beserta alasannya.
+- **Detail pengguna**: tombol Ubah, Reset Kata Sandi, dan Nonaktifkan atau Aktifkan. Aksi yang tidak boleh dilakukan tetap terlihat dalam keadaan nonaktif, dengan alasan tertulis di halaman.
+- **Peran**: daftar dengan jumlah izin dan pengguna. Peran bawaan tampil hanya baca dengan tombol Duplikat. Tombol Hapus nonaktif selama peran dipakai pengguna.
+- **Matriks izin**: satu kartu per modul, baris per sumber, kolom per aksi, dengan tombol Pilih Semua dan Kosongkan per modul. Mencentang aksi selain Lihat ikut mencentang Lihat; membatalkan Lihat membatalkan aksi lain pada sumber itu. Kotak di luar plafon nonaktif.
+- **Log Audit**: tabel dengan filter, dan dialog detail yang menampilkan nilai lama dan baru sebagai teks.
+
+Semua aksi tulis memakai `useSubmitLock`. Kata sandi tidak pernah ditampilkan kembali setelah dikirim.
+
+## 9. Batasan yang disengaja
+
+- Tanpa 2FA.
+- Tanpa alur lupa kata sandi lewat email.
+- Tanpa wajib ganti kata sandi saat login pertama.
+- Tanpa ekspor, ubah, atau hapus log audit.
+- Peran bawaan terkunci di antarmuka.
+- Tanpa penghapusan pengguna.
+- Tanpa halaman Pengaturan Sistem.
+
+## 10. Contoh: membuat "Staf Master Data (Lihat Saja)"
 
 1. Masuk sebagai Super Administrator, buka **Peran & Hak Akses**, lalu **Tambah Peran**.
 2. Isi nama `Staf Master Data (Lihat Saja)`.
@@ -95,9 +117,10 @@ Setiap operasi dicatat lewat `AuditLogger` dalam transaksi yang sama dengan `str
 4. Buka **Pengguna**, tambah atau ubah staf tersebut, dan centang peran baru.
 5. Pada permintaan berikutnya, staf hanya melihat menu Data Master dan tidak melihat tombol tambah, ubah, atau hapus.
 
-## 9. Pengujian
+## 11. Pengujian
 
 - `tests/Feature/AccessGuardTest.php`: aturan eskalasi, plafon, dan perlindungan akun.
 - `tests/Feature/RoleServiceTest.php`, `tests/Feature/UserServiceTest.php`: layanan, audit, dan berlakunya perubahan izin.
 - `tests/Feature/AdminRouteGuardTest.php`, `tests/Feature/AdminUserHttpTest.php`, `tests/Feature/AdminRoleHttpTest.php`, `tests/Feature/AuditLogHttpTest.php`: lapisan HTTP.
+- `resources/js/test/admin-user-pages.test.js`, `admin-role-pages.test.js`, `admin-audit-log-page.test.js`: halaman dengan komponen asli dan axe-core.
 - `scripts/verify-hardening.sh` Butir 29: rute, autentikasi, izin, pembatas laju, dan jawaban 403.

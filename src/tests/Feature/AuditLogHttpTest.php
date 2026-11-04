@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function (): void {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     $this->viewer = userWithPermissions(['audit_logs.view']);
     DB::table('audit_logs')->insert([
         ['user_id' => $this->viewer->id, 'event' => 'uji.pertama', 'auditable_type' => 'App\\Models\\Role', 'auditable_id' => 1, 'old_values' => json_encode(['a' => 1]), 'new_values' => json_encode(['b' => '<script>x</script>']), 'created_at' => '2026-01-10 10:00:00'],

@@ -13,7 +13,6 @@ use Inertia\Testing\AssertableInertia as Assert;
 const ADMIN_HTTP_PASSWORD = 'Valid#Password2026';
 
 beforeEach(function (): void {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     $this->superRoleId = (int) Role::where('name', 'super_admin')->value('id');
     $this->viewerRoleId = (int) Role::where('name', 'viewer')->value('id');
     $this->superAdmin = User::factory()->create(['name' => 'Akar']);
