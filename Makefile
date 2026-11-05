@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo seed-demo-tx seed-demo-catalog backup restore-check prod-smoke test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
+.PHONY: up down build logs ps shell db composer npm artisan migrate migrate-test test-db-reset seed seed-demo seed-demo-full seed-demo-tx seed-demo-catalog backup restore-check prod-smoke test test-js lint lint-js analyse check dev verify test-hooks fresh hooks help
 
 help:
 	@echo "Available commands:"
@@ -20,6 +20,7 @@ help:
 	@echo "  make seed-demo     - Run demo master data seeder (non-production only)"
 	@echo "  make seed-demo-tx  - Run demo transactions seeder (non-production only)"
 	@echo "  make seed-demo-catalog - Run Indonesian goods catalog seeder (non-production only)"
+	@echo "  make seed-demo-full - Run full demo trading and accounting cycle through services (non-production only)"
 	@echo "  make backup        - Backup erp_trading database to backups/ directory"
 	@echo "  make restore-check - Verify latest backup integrity against temporary database"
 	@echo "  make test          - Run PHP test suite (auto migrates test database)"
@@ -92,6 +93,9 @@ seed-demo:
 
 seed-demo-tx:
 	docker compose run --rm -T php php artisan db:seed --class=Database\\Seeders\\DemoTransactionSeeder --force < /dev/null
+
+seed-demo-full:
+	docker compose run --rm -T php php artisan db:seed --class=Database\\Seeders\\DemoAccountingCycleSeeder --force < /dev/null
 
 seed-demo-catalog:
 	docker compose run --rm -T php php artisan db:seed --class=Database\\Seeders\\DemoCatalogSeeder --force < /dev/null
