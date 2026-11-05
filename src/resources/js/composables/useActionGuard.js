@@ -11,6 +11,8 @@ import {
     salesOrderPermissions,
     deliveryOrderStatusConfig,
     deliveryOrderPermissions,
+    salesInvoiceStatusConfig,
+    salesInvoicePermissions,
 } from '@/config/sales';
 
 export function useActionGuard(customCan = null) {
@@ -68,6 +70,11 @@ export function useActionGuard(customCan = null) {
         return canPerform(action, docOrStatus, deliveryOrderStatusConfig, deliveryOrderPermissions);
     }
 
+    // Sales Invoices
+    function canPerformSalesInvoice(action, docOrStatus) {
+        return canPerform(action, docOrStatus, salesInvoiceStatusConfig, salesInvoicePermissions);
+    }
+
     return {
         canPerform,
 
@@ -104,5 +111,9 @@ export function useActionGuard(customCan = null) {
         canEditDeliveryOrder: (docOrStatus) => canPerformDeliveryOrder('edit', docOrStatus),
         canPostDeliveryOrder: (docOrStatus) => canPerformDeliveryOrder('post', docOrStatus),
         canVoidDeliveryOrder: (docOrStatus) => canPerformDeliveryOrder('void', docOrStatus),
+        canPerformSalesInvoice,
+        canEditSalesInvoice: (docOrStatus) => canPerformSalesInvoice('edit', docOrStatus),
+        canPostSalesInvoice: (docOrStatus) => canPerformSalesInvoice('post', docOrStatus),
+        canVoidSalesInvoice: (docOrStatus) => canPerformSalesInvoice('void', docOrStatus),
     };
 }

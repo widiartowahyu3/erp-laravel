@@ -50,3 +50,30 @@ export const deliveryOrderPermissions = {
     post: 'delivery_orders.post',
     void: 'delivery_orders.void',
 };
+
+export const salesInvoiceStatusConfig = {
+    draft: {
+        allowedActions: ['edit', 'post', 'void'],
+    },
+    posted: {
+        allowedActions: ['void'],
+    },
+    partially_paid: {
+        allowedActions: ['void'],
+    },
+    paid: {
+        allowedActions: ['void'],
+    },
+    void: {
+        allowedActions: [],
+    },
+};
+
+export const salesInvoicePermissions = {
+    view: 'sales_invoices.view',
+    create: 'sales_invoices.create',
+    edit: 'sales_invoices.update',
+    update: 'sales_invoices.update',
+    post: 'sales_invoices.post',
+    void: 'sales_invoices.void',
+};

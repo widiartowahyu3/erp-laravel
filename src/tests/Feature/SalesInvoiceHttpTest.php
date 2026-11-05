@@ -17,7 +17,6 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\SalesInvoiceFixtures;
 
 beforeEach(function (): void {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     (new ChartOfAccountSeeder)->run();
     (new RoleSeeder)->run();
     $this->finance = userWithRole('finance');
