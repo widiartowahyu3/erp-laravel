@@ -2146,6 +2146,18 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 36. Tautan dokumentasi
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 36: Verifikasi Tautan Relatif Dokumentasi ---"
+
+if DOC_LINK_OUTPUT=$(bash scripts/check-doc-links.sh 2>&1); then
+    pass "Tidak ada tautan relatif mati di README dan docs ($(echo "$DOC_LINK_OUTPUT" | tail -1))"
+else
+    fail "Ditemukan tautan relatif mati: $DOC_LINK_OUTPUT"
+fi
+
+# ------------------------------------------------------------------------------
 # 30. Retensi log audit dan container penjadwal
 # ------------------------------------------------------------------------------
 echo ""
