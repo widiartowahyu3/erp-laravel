@@ -199,3 +199,46 @@ Penerapan urutan kunci deterministik (PO $\rightarrow$ GR $\rightarrow$ PO Items
   - Peran `warehouse`: Menguasai `goods_receipts.*` dan hanya memiliki hak intip `purchase_orders.view`.
   - Peran `admin`: Hanya memiliki hak intip `*.view`.
 - **Rate Limiting**: Seluruh endpoint transaksi mutasi (`POST /purchasing/purchase-orders`, `PUT ...`, `POST .../approve`, `POST .../close`, `POST .../void`, `POST /purchasing/goods-receipts`, `PUT ...`, `POST .../post`, `POST .../void`) terikat middleware `throttle:erp-write`.
+
+---
+
+## 6. Faktur Pembelian (Fase 11)
+
+Rute `/purchasing/invoices`. Satu faktur memuat satu pemasok dan satu PO, dan barisnya berasal dari baris GR berstatus `posted` milik PO itu, boleh dari beberapa GR.
+
+### A. Alur
+```text
+PO disetujui -> GR diposting -> Faktur draf -> Faktur diposting -> Dibayar
+                                     |               |
+                                     v               v
+                                 Dibatalkan      Dibatalkan (bila belum ada pembayaran, dengan jurnal pembalik)
+```
+
+PO harus berstatus `approved`, `partially_received`, `received`, atau `closed`, dan pemasok harus aktif saat faktur dibuat maupun diposting.
+
+### B. Pencocokan tiga arah
+Harga, diskon, dan pajak selalu berasal dari baris PO, dan kuantitas dibatasi sisa baris GR. Pengguna hanya mengisi baris, kuantitas, nomor faktur pemasok, tanggal, jatuh tempo, dan catatan.
+
+`sisa = kuantitas baris GR - jumlah kuantitas pada faktur diposting (posted, partially_paid, paid) yang merujuk baris itu`. Draf tidak mereservasi, sehingga sisa dan nilainya dihitung ulang di bawah kunci saat posting.
+
+### C. Nomor faktur pemasok
+Wajib, 1 sampai 50 karakter, dan unik per pemasok. Keunikan ini berlaku di database untuk semua status, jadi nomor pada faktur yang sudah dibatalkan **tidak dapat dipakai lagi**. Gunakan penanda seperti akhiran `-R` bila pemasok menerbitkan ulang dengan nomor yang sama.
+
+### D. Nilai GR yang diakui
+GR dijurnal sebesar `V(kuantitas x biaya satuan)` per baris, dan faktur membersihkannya dari akun 2103:
+
+- Penagihan biasa mengakui `V(kuantitas x biaya satuan)`.
+- Penagihan yang menggenapi baris GR mengambil sisa nilainya, sehingga saldo 2103 tepat nol setelah semua kuantitas ditagih.
+- Selisih antara nilai bersih faktur dan nilai GR yang diakui masuk ke akun 5201, karena biaya satuan GR dibulatkan 4 desimal.
+
+**Batas selisih** (keputusan pemilik): per baris `0,01 + kuantitas x 0,00005`, yaitu pembulatan terbesar yang mungkin terjadi. Baris yang menggenapi baris PO atau GR memikul residu penagihan sebelumnya, sehingga batasnya `0,01 x (jumlah penagihan sebelumnya + 1) + kuantitas kumulatif x 0,00005`. Di atas batas, faktur ditolak.
+
+### E. Pembatalan
+Alasan wajib, 1 sampai 255 karakter. Draf dibatalkan tanpa jurnal. Faktur diposting hanya dapat dibatalkan bila `paid_amount = 0` (selain itu 409 pada `status`) dan menghasilkan jurnal pembalik.
+
+Faktur yang penagihannya sudah digenapi faktur lain harus menunggu faktur penggenapnya dibatalkan lebih dulu (409 pada `status`, pesan menyebut nomornya). Nilai yang diakui per baris tidak disimpan, dan aturan ini menjaga saldo 2103 tetap tepat nol.
+
+GR yang barisnya dirujuk faktur selain `void`, termasuk draf, tidak dapat dibatalkan (409 pada `status`).
+
+### F. Penguncian
+PO, GR, baris PO, baris GR, faktur, nomor dokumen, lalu jurnal. Pembuatan, pengubahan, posting, dan pembatalan GR kini juga mengunci PO sebelum GR, sehingga tidak bisa deadlock dengan posting faktur.

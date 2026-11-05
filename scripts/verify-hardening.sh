@@ -1413,10 +1413,10 @@ PURCH_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_PURCH UNPROT_PURCH MISSING_CAN_PURCH MISSING_THROTTLE_PURCH <<< "$PURCH_ROUTE_CHECK"
 
-if [ "$TOTAL_PURCH" -eq 17 ]; then
-    pass "Ditemukan 17 rute modul purchasing (/purchasing/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_PURCH" -eq 25 ]; then
+    pass "Ditemukan 25 rute modul purchasing (/purchasing/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul purchasing tidak sesuai ekspektasi (harus 17, ditemukan: $TOTAL_PURCH)"
+    fail "Jumlah rute modul purchasing tidak sesuai ekspektasi (harus 25, ditemukan: $TOTAL_PURCH)"
 fi
 
 if [ "$UNPROT_PURCH" -eq 0 ]; then
@@ -2009,6 +2009,70 @@ if [ "$GUEST_PAYMENT_CODE" = "302" ]; then
     pass "Akses guest ke /accounting/payments dialihkan ke halaman login (HTTP 302)"
 else
     fail "Akses guest ke /accounting/payments mengembalikan HTTP $GUEST_PAYMENT_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
+# 34. Keamanan rute faktur pembelian (/purchasing/invoices*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 34: Verifikasi Keamanan Rute & Otorisasi Faktur Pembelian (/purchasing/invoices*) ---"
+
+PURCHASE_INVOICE_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $total = 0;
+    $bad = [];
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        $uri = $route->uri();
+
+        if ($uri !== "purchasing/invoices" && !str_starts_with($uri, "purchasing/invoices/")) {
+            continue;
+        }
+
+        $total++;
+        $methods = $route->methods();
+        $middleware = $route->gatherMiddleware();
+        $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+
+        if (!in_array("auth", $middleware, true)) {
+            $bad[] = "auth " . $uri;
+        }
+
+        if (count(preg_grep("/^can:purchase_invoices\.(view|create|update|post|void)$/", $middleware)) !== 1) {
+            $bad[] = "can " . implode("|", $methods) . " " . $uri;
+        }
+
+        if ($isMutation && !in_array("throttle:erp-write", $middleware, true)) {
+            $bad[] = "throttle " . implode("|", $methods) . " " . $uri;
+        }
+    }
+
+    echo $total . ":" . count($bad) . ":" . implode(",", $bad);
+' 2>/dev/null || echo "0:1:gagal-dijalankan")
+
+IFS=':' read -r PURCHASE_INVOICE_ROUTE_TOTAL PURCHASE_INVOICE_ROUTE_BAD PURCHASE_INVOICE_ROUTE_LIST <<< "$PURCHASE_INVOICE_ROUTE_CHECK"
+
+if [ "$PURCHASE_INVOICE_ROUTE_TOTAL" -eq 8 ]; then
+    pass "Ditemukan 8 rute faktur pembelian (/purchasing/invoices*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute faktur pembelian tidak sesuai ekspektasi (harus 8, ditemukan: $PURCHASE_INVOICE_ROUTE_TOTAL)"
+fi
+
+if [ "$PURCHASE_INVOICE_ROUTE_BAD" -eq 0 ]; then
+    pass "Seluruh rute /purchasing/invoices* memiliki auth, satu 'can:purchase_invoices.*', dan throttle:erp-write pada mutasi"
+else
+    fail "Rute /purchasing/invoices* tidak memenuhi syarat ($PURCHASE_INVOICE_ROUTE_BAD: $PURCHASE_INVOICE_ROUTE_LIST)"
+fi
+
+GUEST_PURCHASE_INVOICE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/purchasing/invoices" || true)
+if [ "$GUEST_PURCHASE_INVOICE_CODE" = "302" ]; then
+    pass "Akses guest ke /purchasing/invoices dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke /purchasing/invoices mengembalikan HTTP $GUEST_PURCHASE_INVOICE_CODE (harus 302)"
 fi
 
 # ------------------------------------------------------------------------------

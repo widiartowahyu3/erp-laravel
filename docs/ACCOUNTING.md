@@ -1,6 +1,6 @@
 # Modul Akuntansi: Bagan Akun & Jurnal
 
-Dokumen ini menjelaskan mesin jurnal: pemetaan akun, jurnal otomatis, pembalik, backfill, dan batasannya. Faktur penjualan tersedia sejak Fase 9 ([rincian](SALES.md)) dan penerimaan pembayaran sejak Fase 10. Pengeluaran ke pemasok dan laporan keuangan dibangun pada fase berikutnya.
+Dokumen ini menjelaskan mesin jurnal: pemetaan akun, jurnal otomatis, pembalik, backfill, dan batasannya. Faktur penjualan tersedia sejak Fase 9 ([rincian](SALES.md)), penerimaan pembayaran sejak Fase 10, serta faktur pembelian ([rincian](PURCHASING.md)) dan pengeluaran ke pemasok sejak Fase 11. Laporan keuangan dibangun pada fase berikutnya.
 
 ---
 
@@ -38,6 +38,8 @@ Akun kas/bank untuk pembayaran: 1101 dan 1102. Seeder `ChartOfAccountSeeder` ber
 | JT-SA | Posting penyesuaian stok | Selisih lebih: `inventory`; selisih kurang: `inventory_adjustment` | Selisih lebih: `inventory_adjustment`; selisih kurang: `inventory` | `stock_adjustment` |
 | JT-SI | Posting faktur penjualan | `receivable` = total; `sales_discount` = jumlah diskon | `sales` = subtotal; `vat_output` = jumlah pajak | `sales_invoice` |
 | JT-PAYR | Posting penerimaan pembayaran | Akun kas/bank pada pembayaran = jumlah | `receivable` = jumlah | `payment` |
+| JT-PI | Posting faktur pembelian | `grir` = nilai GR yang diakui; `vat_input` = jumlah pajak; `inventory_adjustment` = selisih bila nilai bersih lebih besar | `payable` = total; `inventory_adjustment` = selisih bila nilai bersih lebih kecil | `purchase_invoice` |
+| JT-PAYD | Posting pembayaran ke pemasok | `payable` = jumlah | Akun kas/bank pada pembayaran = jumlah | `payment` |
 
 - `journal_date` memakai tanggal dokumen.
 - Baris bernilai nol tidak dibuat. Bila semua nol, tidak ada jurnal dan peristiwa `journal.skipped` dicatat di audit.
@@ -73,7 +75,7 @@ Wajib sama di semua layanan untuk mencegah deadlock:
 
 Posting faktur penjualan mengikuti urutan itu: SO, DO, baris SO, baris DO, faktur, nomor dokumen, jurnal. Karena semua penulisan untuk satu SO mengambil kunci SO lebih dulu, faktur dan pembatalan DO pada SO yang sama berjalan bergantian. Pembatalan faktur hanya mengunci faktur, dan persetujuan SO mengunci pelanggan lalu SO.
 
-Posting dan pembatalan pembayaran mengunci pembayaran, lalu fakturnya menurut `id` menaik, lalu menulis jurnal. Pembatalan faktur tidak bisa menyalip pembayaran yang sedang diposting: bila pembayaran lebih dulu memegang kunci faktur, pembatalan melihat `paid_amount` sudah terisi dan ditolak.
+Posting faktur pembelian mengikuti pola yang sama dengan PO dan GR, dan pembatalannya mengunci PO lalu faktur karena bergantung pada penagihan lain di PO itu. Posting dan pembatalan pembayaran mengunci pembayaran, lalu fakturnya menurut `id` menaik, lalu menulis jurnal. Pembatalan faktur tidak bisa menyalip pembayaran yang sedang diposting: bila pembayaran lebih dulu memegang kunci faktur, pembatalan melihat `paid_amount` sudah terisi dan ditolak.
 
 ## 7. Backfill
 
@@ -140,7 +142,14 @@ Alur: draf, alokasi ke faktur, posting. Satu pembayaran boleh melunasi beberapa 
 - **Pembatalan:** alasan wajib, 1 sampai 255 karakter. Draf dibatalkan tanpa efek. Pembayaran diposting mengembalikan `paid_amount`, menghitung ulang status faktur (`paid` ke `partially_paid`, atau ke `posted` bila nol), dan membuat jurnal pembalik.
 - **Faktur yang sudah dibayar** tidak dapat dibatalkan sebelum pembayarannya dibatalkan.
 - **Batas kredit:** piutang beredar otomatis turun saat pembayaran diposting dan naik lagi saat dibatalkan.
-- **Pengeluaran ke pemasok** ditolak (422 pada `payment_type`) sampai Fase 11.
+
+### Pembayaran ke pemasok
+
+Aturannya sama, memakai pemasok dan faktur pembelian: draf, alokasi, posting, dan pembatalan pada rute dan izin `payments.*` yang sama. `payment_type` menentukan pihak dan jenis faktur yang boleh dialokasikan, sehingga penerimaan tidak dapat dialokasikan ke faktur pembelian dan sebaliknya. Faktur pembelian yang sudah dibayar tidak dapat dibatalkan sebelum pembayarannya dibatalkan.
+
+### Akun Barang Diterima Belum Ditagih (2103)
+
+Posting GR mengkreditkan 2103 dan posting faktur pembelian mendebitnya. Saldo kredit yang tersisa adalah barang yang sudah diterima tetapi belum ditagih pemasok, dan menjadi tepat nol setelah semua kuantitas GR ditagih.
 
 ## 11. Batasan yang Disengaja
 
