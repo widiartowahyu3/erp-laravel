@@ -17,10 +17,18 @@ const props = defineProps({
 const href = computed(() => {
     const params = new URLSearchParams();
 
-    for (const [key, value] of Object.entries(props.query)) {
-        if (value !== null && value !== undefined && value !== '' && value !== false) {
+    const add = (key, value) => {
+        if (value !== null && typeof value === 'object') {
+            for (const [inner, innerValue] of Object.entries(value)) {
+                add(`${key}[${inner}]`, innerValue);
+            }
+        } else if (value !== null && value !== undefined && value !== '' && value !== false) {
             params.set(key, value === true ? '1' : String(value));
         }
+    };
+
+    for (const [key, value] of Object.entries(props.query)) {
+        add(key, value);
     }
 
     params.set('export', 'csv');

@@ -2191,6 +2191,19 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 38. Ekspor daftar
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 38: Verifikasi Ekspor CSV Daftar ---"
+
+GUEST_LIST_EXPORT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/master/customers?export=csv" || true)
+if [ "$GUEST_LIST_EXPORT_CODE" = "302" ]; then
+    pass "Akses guest ke ekspor CSV daftar dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke ekspor CSV daftar mengembalikan HTTP $GUEST_LIST_EXPORT_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
 # 36. Tautan dokumentasi
 # ------------------------------------------------------------------------------
 echo ""

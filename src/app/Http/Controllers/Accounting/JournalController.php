@@ -13,6 +13,7 @@ use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Services\Accounting\JournalService;
 use App\Services\Accounting\JournalSourceResolver;
+use App\Services\Reports\ListExports;
 use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -22,6 +23,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class JournalController extends Controller
 {
@@ -29,9 +31,9 @@ final class JournalController extends Controller
         private readonly JournalService $journalService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(Journal::query()->withExists('reversal'))
+        $list = ListQuery::for(Journal::query()->withExists('reversal'))
             ->searchable(['number', 'description'])
             ->sortable(['id', 'number', 'journal_date', 'status', 'total_debit', 'created_at'])
             ->filterable([
@@ -50,8 +52,13 @@ final class JournalController extends Controller
                     $query->where('journal_date', '<=', $value);
                 },
             ])
-            ->defaultSort('journal_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('journal_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->journals($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Accounting/Journals/Index', [
             'items' => Paginated::from($paginator, fn (Journal $journal): array => [

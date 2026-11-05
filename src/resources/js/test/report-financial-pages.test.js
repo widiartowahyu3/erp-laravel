@@ -265,3 +265,23 @@ describe('balance sheet', () => {
         await expectNoViolations(mountPage(BalanceSheet, sheetProps()).element);
     });
 });
+
+describe('export button on a list page', () => {
+    it('carries search, sort and nested filters', () => {
+        const wrapper = mount(ExportButton, {
+            props: {
+                url: '/master/customers',
+                query: { search: 'Maju', sort: 'code', direction: 'asc', filter: { is_active: '1', payment_term_id: '', other: null } },
+            },
+        });
+        const href = decodeURIComponent(wrapper.find('a').attributes('href'));
+
+        expect(href).toBe('/master/customers?search=Maju&sort=code&direction=asc&filter[is_active]=1&export=csv');
+    });
+
+    it('keeps a filter of zero, which is a real choice', () => {
+        const wrapper = mount(ExportButton, { props: { url: '/x', query: { filter: { is_active: 0 } } } });
+
+        expect(decodeURIComponent(wrapper.find('a').attributes('href'))).toBe('/x?filter[is_active]=0&export=csv');
+    });
+});

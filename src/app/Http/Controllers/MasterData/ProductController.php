@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Unit;
 use App\Services\MasterData\ProductService;
+use App\Services\Reports\ListExports;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ProductController extends Controller
 {
@@ -29,17 +31,22 @@ final class ProductController extends Controller
         private readonly ProductService $productService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(Product::with(['category', 'baseUnit']))
+        $list = ListQuery::for(Product::with(['category', 'baseUnit']))
             ->searchable(['sku', 'name', 'barcode'])
             ->sortable(['id', 'sku', 'name', 'selling_price', 'min_stock', 'track_stock', 'is_active', 'created_at'])
             ->filterable([
                 'category_id' => 'category_id',
                 'is_active' => 'is_active',
             ])
-            ->defaultSort('name', 'asc')
-            ->paginate($request, 25);
+            ->defaultSort('name', 'asc');
+
+        if (ListExports::requested($request)) {
+            return $exports->products($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('MasterData/Products/Index', [
             'items' => Paginated::from($paginator, null, $request),

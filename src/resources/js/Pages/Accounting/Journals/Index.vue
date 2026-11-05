@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -78,6 +79,7 @@ const columns = [
         <div class="space-y-6">
             <PageHeader title="Jurnal" description="Jurnal manual dan jurnal otomatis dari dokumen operasional.">
                 <template #actions>
+                    <ExportButton url="/accounting/journals" :query="items.query ?? {}" />
                     <Can permission="journals.create">
                         <Link href="/accounting/journals/create">
                             <Button variant="primary">

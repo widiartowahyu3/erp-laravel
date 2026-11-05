@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Plus, Eye, Edit } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -103,6 +104,7 @@ const hasActiveFilters = computed(() => Boolean(
                 description="Tagihan pemasok yang dicocokkan dengan penerimaan barang yang sudah diposting."
             >
                 <template #actions>
+                    <ExportButton url="/purchasing/invoices" :query="items.query ?? {}" />
                     <Can permission="purchase_invoices.create">
                         <Link href="/purchasing/invoices/create">
                             <Button variant="primary">

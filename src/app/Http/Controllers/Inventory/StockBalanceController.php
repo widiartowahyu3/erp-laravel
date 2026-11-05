@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\StockBalance;
 use App\Models\Warehouse;
+use App\Services\Reports\ListExports;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -15,12 +16,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class StockBalanceController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(StockBalance::with(['product.baseUnit', 'product.category', 'warehouse']))
+        $list = ListQuery::for(StockBalance::with(['product.baseUnit', 'product.category', 'warehouse']))
             ->sortable(['quantity', 'avg_cost', 'updated_at'])
             ->filterable([
                 'warehouse_id' => 'warehouse_id',
@@ -36,8 +38,13 @@ final class StockBalanceController extends Controller
                     });
                 },
             ])
-            ->defaultSort('updated_at', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('updated_at', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->stockBalances($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Inventory/StockBalances/Index', [
             'items' => Paginated::from($paginator, function (StockBalance $balance): array {

@@ -18,6 +18,7 @@ use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
 use App\Services\Purchasing\PurchaseInvoiceService;
+use App\Services\Reports\ListExports;
 use App\Support\Decimal;
 use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
@@ -26,6 +27,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GoodsReceiptController extends Controller
 {
@@ -33,9 +35,9 @@ class GoodsReceiptController extends Controller
         private readonly GoodsReceiptService $grService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(GoodsReceipt::with(['purchaseOrder:id,number', 'supplier:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
+        $list = ListQuery::for(GoodsReceipt::with(['purchaseOrder:id,number', 'supplier:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
             ->searchable(['number', 'notes'])
             ->sortable(['id', 'number', 'receipt_date', 'status', 'created_at'])
             ->filterable([
@@ -49,8 +51,13 @@ class GoodsReceiptController extends Controller
                     $query->where('receipt_date', '<=', $value);
                 },
             ])
-            ->defaultSort('receipt_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('receipt_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->goodsReceipts($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Purchasing/GoodsReceipts/Index', [
             'items' => Paginated::from($paginator, null, $request),

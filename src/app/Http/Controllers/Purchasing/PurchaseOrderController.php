@@ -17,6 +17,7 @@ use App\Models\TaxRate;
 use App\Models\Warehouse;
 use App\Services\Purchasing\PurchaseInvoiceService;
 use App\Services\Purchasing\PurchaseOrderService;
+use App\Services\Reports\ListExports;
 use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -24,6 +25,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PurchaseOrderController extends Controller
 {
@@ -31,9 +33,9 @@ class PurchaseOrderController extends Controller
         private readonly PurchaseOrderService $poService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(PurchaseOrder::with(['supplier:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
+        $list = ListQuery::for(PurchaseOrder::with(['supplier:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
             ->searchable(['number', 'notes'])
             ->sortable(['id', 'number', 'order_date', 'status', 'total', 'created_at'])
             ->filterable([
@@ -47,8 +49,13 @@ class PurchaseOrderController extends Controller
                     $query->where('order_date', '<=', $value);
                 },
             ])
-            ->defaultSort('order_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('order_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->purchaseOrders($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Purchasing/PurchaseOrders/Index', [
             'items' => Paginated::from($paginator, null, $request),

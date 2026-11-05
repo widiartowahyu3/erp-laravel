@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
+use App\Services\Reports\ListExports;
 use App\Support\Inertia\Paginated;
 use App\Support\Inventory\StockMovementSources;
 use App\Support\Query\ListQuery;
@@ -16,19 +17,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class StockMovementController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(StockMovement::with(['product', 'warehouse', 'creator']))
+        $list = ListQuery::for(StockMovement::with(['product', 'warehouse', 'creator']))
             ->filterable([
                 'warehouse_id' => 'warehouse_id',
                 'product_id' => 'product_id',
                 'movement_type' => 'movement_type',
             ])
-            ->defaultSort('movement_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('movement_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->stockMovements($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         $sourceNumbers = StockMovementSources::numbers($paginator->items());
 

@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\SalesOrder;
 use App\Models\TaxRate;
 use App\Models\Warehouse;
+use App\Services\Reports\ListExports;
 use App\Services\Sales\CreditExposureService;
 use App\Services\Sales\SalesInvoiceService;
 use App\Services\Sales\SalesOrderService;
@@ -25,6 +26,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesOrderController extends Controller
 {
@@ -33,9 +35,9 @@ class SalesOrderController extends Controller
         private readonly CreditExposureService $credit
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(SalesOrder::with(['customer:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
+        $list = ListQuery::for(SalesOrder::with(['customer:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
             ->searchable(['number', 'notes'])
             ->sortable(['id', 'number', 'order_date', 'status', 'total', 'created_at'])
             ->filterable([
@@ -49,8 +51,13 @@ class SalesOrderController extends Controller
                     $query->where('order_date', '<=', $value);
                 },
             ])
-            ->defaultSort('order_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('order_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->salesOrders($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Sales/SalesOrders/Index', [
             'items' => Paginated::from($paginator, null, $request),

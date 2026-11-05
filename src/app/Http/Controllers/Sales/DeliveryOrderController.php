@@ -16,6 +16,7 @@ use App\Models\SalesOrder;
 use App\Models\Warehouse;
 use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Inventory\StockService;
+use App\Services\Reports\ListExports;
 use App\Services\Sales\DeliveryOrderService;
 use App\Services\Sales\SalesInvoiceService;
 use App\Support\Decimal;
@@ -26,6 +27,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DeliveryOrderController extends Controller
 {
@@ -33,9 +35,9 @@ class DeliveryOrderController extends Controller
         private readonly DeliveryOrderService $doService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(DeliveryOrder::with(['salesOrder:id,number', 'customer:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
+        $list = ListQuery::for(DeliveryOrder::with(['salesOrder:id,number', 'customer:id,code,name', 'warehouse:id,code,name', 'creator:id,name']))
             ->searchable(['number', 'notes'])
             ->sortable(['id', 'number', 'delivery_date', 'status', 'created_at'])
             ->filterable([
@@ -49,8 +51,13 @@ class DeliveryOrderController extends Controller
                     $query->where('delivery_date', '<=', $value);
                 },
             ])
-            ->defaultSort('delivery_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('delivery_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->deliveryOrders($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Sales/DeliveryOrders/Index', [
             'items' => Paginated::from($paginator, null, $request),

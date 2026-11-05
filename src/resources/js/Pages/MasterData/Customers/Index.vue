@@ -4,6 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { Plus, Edit, Trash2 } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -85,6 +86,7 @@ async function handleDelete(item) {
                 description="Kelola mitra pembeli retail dan grosir beserta batas kredit transaksi."
             >
                 <template #actions>
+                    <ExportButton url="/master/customers" :query="items.query ?? {}" />
                     <Can permission="customers.create">
                         <Link href="/master/customers/create">
                             <Button variant="primary">

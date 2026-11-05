@@ -12,6 +12,7 @@ use App\Http\Requests\MasterData\SupplierUpdateRequest;
 use App\Models\PaymentTerm;
 use App\Models\Supplier;
 use App\Services\MasterData\SupplierService;
+use App\Services\Reports\ListExports;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class SupplierController extends Controller
 {
@@ -28,16 +30,21 @@ final class SupplierController extends Controller
         private readonly SupplierService $supplierService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(Supplier::with('paymentTerm'))
+        $list = ListQuery::for(Supplier::with('paymentTerm'))
             ->searchable(['code', 'name', 'contact_name', 'phone', 'email', 'tax_id'])
             ->sortable(['id', 'code', 'name', 'is_active', 'created_at'])
             ->filterable([
                 'is_active' => 'is_active',
             ])
-            ->defaultSort('name', 'asc')
-            ->paginate($request, 25);
+            ->defaultSort('name', 'asc');
+
+        if (ListExports::requested($request)) {
+            return $exports->suppliers($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('MasterData/Suppliers/Index', [
             'items' => Paginated::from($paginator, null, $request),

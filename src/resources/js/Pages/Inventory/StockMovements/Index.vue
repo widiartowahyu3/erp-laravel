@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -90,7 +91,11 @@ const hasActiveFilters = computed(() => {
             <PageHeader
                 title="Mutasi Stok"
                 description="Buku jurnal mutasi persediaan barang masuk, keluar, dan penyesuaian fisik secara kronologis."
-            />
+            >
+                <template #actions>
+                    <ExportButton url="/inventory/stock-movements" :query="items.query ?? {}" />
+                </template>
+            </PageHeader>
 
             <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
                 <FilterBar

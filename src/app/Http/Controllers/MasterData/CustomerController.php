@@ -12,6 +12,7 @@ use App\Http\Requests\MasterData\CustomerUpdateRequest;
 use App\Models\Customer;
 use App\Models\PaymentTerm;
 use App\Services\MasterData\CustomerService;
+use App\Services\Reports\ListExports;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class CustomerController extends Controller
 {
@@ -28,16 +30,21 @@ final class CustomerController extends Controller
         private readonly CustomerService $customerService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(Customer::with('paymentTerm'))
+        $list = ListQuery::for(Customer::with('paymentTerm'))
             ->searchable(['code', 'name', 'contact_name', 'phone', 'email', 'tax_id'])
             ->sortable(['id', 'code', 'name', 'credit_limit', 'is_active', 'created_at'])
             ->filterable([
                 'is_active' => 'is_active',
             ])
-            ->defaultSort('name', 'asc')
-            ->paginate($request, 25);
+            ->defaultSort('name', 'asc');
+
+        if (ListExports::requested($request)) {
+            return $exports->customers($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('MasterData/Customers/Index', [
             'items' => Paginated::from($paginator, null, $request),

@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Plus, Eye, Edit } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -109,6 +110,7 @@ const hasActiveFilters = computed(() => {
                 description="Pencatatan penerimaan fisik barang dari pesanan pembelian dan pembaruan saldo persediaan gudang."
             >
                 <template #actions>
+                    <ExportButton url="/purchasing/goods-receipts" :query="items.query ?? {}" />
                     <Can permission="goods_receipts.create">
                         <Link
                             href="/purchasing/purchase-orders?status=approved"

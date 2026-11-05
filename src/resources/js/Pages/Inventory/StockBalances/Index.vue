@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { BookOpen } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -68,7 +69,11 @@ const hasActiveFilters = computed(() => {
             <PageHeader
                 title="Saldo Stok"
                 description="Informasi kuantitas fisik dan nilai saldo persediaan per gudang secara waktu nyata."
-            />
+            >
+                <template #actions>
+                    <ExportButton url="/inventory/stock-balances" :query="items.query ?? {}" />
+                </template>
+            </PageHeader>
 
             <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
                 <FilterBar

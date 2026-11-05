@@ -15,6 +15,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Purchasing\PurchaseInvoiceService;
+use App\Services\Reports\ListExports;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -23,6 +24,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PurchaseInvoiceController extends Controller
 {
@@ -32,9 +34,9 @@ final class PurchaseInvoiceController extends Controller
         private readonly PurchaseInvoiceService $invoiceService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(PurchaseInvoice::query()->with(['supplier:id,code,name', 'purchaseOrder:id,number']))
+        $list = ListQuery::for(PurchaseInvoice::query()->with(['supplier:id,code,name', 'purchaseOrder:id,number']))
             ->searchable(['number', 'supplier_invoice_number'])
             ->sortable(['id', 'number', 'invoice_date', 'due_date', 'status', 'total', 'created_at'])
             ->filterable([
@@ -54,8 +56,13 @@ final class PurchaseInvoiceController extends Controller
                     }
                 },
             ])
-            ->defaultSort('invoice_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('invoice_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->purchaseInvoices($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Purchasing/Invoices/Index', [
             'items' => Paginated::from($paginator, fn (PurchaseInvoice $invoice): array => [

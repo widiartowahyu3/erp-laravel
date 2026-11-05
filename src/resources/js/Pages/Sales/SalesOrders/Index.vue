@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Plus, Eye, Edit } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import ExportButton from '@/Components/reports/ExportButton.vue';
 import DataTable from '@/Components/ui/DataTable.vue';
 import FilterBar from '@/Components/ui/FilterBar.vue';
 import Pagination from '@/Components/ui/Pagination.vue';
@@ -109,6 +110,7 @@ const hasActiveFilters = computed(() => {
                 description="Kelola pesanan penjualan dari pelanggan, persetujuan pesanan, dan pemantauan pengiriman."
             >
                 <template #actions>
+                    <ExportButton url="/sales/sales-orders" :query="items.query ?? {}" />
                     <Can permission="sales_orders.create">
                         <Link href="/sales/sales-orders/create">
                             <Button variant="primary">

@@ -18,6 +18,7 @@ use App\Models\PaymentAllocation;
 use App\Models\Supplier;
 use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Accounting\PaymentService;
+use App\Services\Reports\ListExports;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +26,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class PaymentController extends Controller
 {
@@ -32,9 +34,9 @@ final class PaymentController extends Controller
         private readonly PaymentService $paymentService
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request, ListExports $exports): Response|StreamedResponse
     {
-        $paginator = ListQuery::for(Payment::query()->with(['customer:id,code,name', 'supplier:id,code,name', 'account:id,code,name']))
+        $list = ListQuery::for(Payment::query()->with(['customer:id,code,name', 'supplier:id,code,name', 'account:id,code,name']))
             ->searchable(['number', 'reference'])
             ->sortable(['id', 'number', 'payment_date', 'status', 'amount', 'created_at'])
             ->filterable([
@@ -50,8 +52,13 @@ final class PaymentController extends Controller
                     $query->where('payment_date', '<=', $value);
                 },
             ])
-            ->defaultSort('payment_date', 'desc')
-            ->paginate($request, 25);
+            ->defaultSort('payment_date', 'desc');
+
+        if (ListExports::requested($request)) {
+            return $exports->payments($list->apply($request));
+        }
+
+        $paginator = $list->paginate($request, 25);
 
         return Inertia::render('Accounting/Payments/Index', [
             'items' => Paginated::from($paginator, fn (Payment $payment): array => [
