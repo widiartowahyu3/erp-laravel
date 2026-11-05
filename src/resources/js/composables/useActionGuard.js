@@ -14,6 +14,7 @@ import {
     salesInvoiceStatusConfig,
     salesInvoicePermissions,
 } from '@/config/sales';
+import { paymentStatusConfig, paymentPermissions } from '@/config/payments';
 
 export function useActionGuard(customCan = null) {
     const permissionHook = customCan ? { can: customCan } : usePermission();
@@ -75,6 +76,11 @@ export function useActionGuard(customCan = null) {
         return canPerform(action, docOrStatus, salesInvoiceStatusConfig, salesInvoicePermissions);
     }
 
+    // Payments
+    function canPerformPayment(action, docOrStatus) {
+        return canPerform(action, docOrStatus, paymentStatusConfig, paymentPermissions);
+    }
+
     return {
         canPerform,
 
@@ -115,5 +121,9 @@ export function useActionGuard(customCan = null) {
         canEditSalesInvoice: (docOrStatus) => canPerformSalesInvoice('edit', docOrStatus),
         canPostSalesInvoice: (docOrStatus) => canPerformSalesInvoice('post', docOrStatus),
         canVoidSalesInvoice: (docOrStatus) => canPerformSalesInvoice('void', docOrStatus),
+        canPerformPayment,
+        canEditPayment: (docOrStatus) => canPerformPayment('edit', docOrStatus),
+        canPostPayment: (docOrStatus) => canPerformPayment('post', docOrStatus),
+        canVoidPayment: (docOrStatus) => canPerformPayment('void', docOrStatus),
     };
 }
