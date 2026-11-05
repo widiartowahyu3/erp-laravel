@@ -231,6 +231,17 @@ Berikut adalah keputusan arsitektural dan batasan desain yang ditetapkan pada mo
    - `Edit.vue`: Formulir pengubahan draf surat jalan.
    - `Show.vue`: Rincian surat jalan dengan penyembunyian informasi HPP (`unit_cost`) pada status draf/batal dan menampilkan HPP hanya saat dokumen berstatus `posted`. Dilengkapi tombol *Posting DO* (dengan peringatan pemotongan stok gudang) dan *Batalkan DO* (dengan modal alasan pembatalan).
 
+3. **Faktur Penjualan (`Pages/Sales/Invoices/`)**:
+   - `Index.vue`: daftar dengan filter status, pelanggan, rentang tanggal, dan jatuh tempo lewat (`filter[overdue]=1`).
+   - `Create.vue`: tanpa `sales_order_id` menampilkan pilihan SO yang masih bisa ditagih; dengan parameter itu menampilkan `Form.vue`.
+   - `Edit.vue`: pengubahan draf lewat `Form.vue`.
+   - `Show.vue`: rincian, ringkasan, jurnal terkait, alokasi pembayaran, serta aksi Cetak, Ubah, Posting, dan Batalkan menurut status dan izin. Tombol Batalkan nonaktif bila sudah ada pembayaran.
+   - `Print.vue`: tampilan cetak tanpa menu di `/sales/invoices/{id}/print`. Kop memakai nama generik karena data perusahaan belum ada di konfigurasi.
+4. **Pintasan dan informasi terkait:**
+   - Form SO menampilkan batas kredit, piutang beredar, dan sisa batas pelanggan terpilih, dengan peringatan bila pesanan akan melampaui batas. Ini hanya informasi; server menegakkannya saat SO disetujui, dan penolakannya tampil di halaman detail SO.
+   - Detail SO dan DO menampilkan tombol **Buat Faktur** bagi pemegang `sales_invoices.create` selama masih ada sisa tertagih.
+   - Dashboard menampilkan kartu **Piutang Beredar** dan **Faktur Jatuh Tempo** bagi pemegang `sales_invoices.view`.
+
 ### B. Batasan Ruang Lingkup Saat Ini
 Fitur berikut belum tersedia dan dialokasikan untuk fase berikutnya:
 1. **Penerimaan Pembayaran Piutang (*Customer Payments*)**: Fase 10. Tanpa uang muka dan tanpa kelebihan bayar.

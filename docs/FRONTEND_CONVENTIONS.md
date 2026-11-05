@@ -223,3 +223,12 @@ Editor baris ada di `Pages/Accounting/Journals/Form.vue`. Setiap baris hanya bol
 - `DataTable` menerima baris lewat `:data`. Tidak ada prop `rows` atau `empty`; keadaan kosong muncul sendiri saat `data` kosong.
 - Filter tambahan `FilterBar` berada di slot bawaan, dan teks petunjuk pencarian memakai `search-placeholder`.
 - `data-table-compliance.test.js` memeriksa kedua kontrak ini pada semua halaman.
+
+## Halaman Faktur Penjualan
+
+`Pages/Sales/Invoices/` memakai props camelCase dan nilai uang berupa string.
+
+- **Formulir:** hanya meminta kuantitas, tanggal, jatuh tempo, dan catatan. Tidak ada input harga, diskon, atau pajak karena server yang menghitung. Baris dengan kuantitas kosong tidak dikirim, sehingga galat server per baris dicocokkan lewat `delivery_order_item_id`, bukan posisi baris.
+- **Pilih pesanan:** `create` tanpa `sales_order_id` menampilkan daftar SO yang masih punya sisa tertagih, maksimal 50 baris dengan pencarian.
+- **Cetak:** `Print.vue` memakai `Layouts/PrintLayout.vue` tanpa menu. Tombol memanggil `window.print()` lewat handler agar patuh CSP, dan tampilan cetak diatur dengan kelas `print:` Tailwind. Faktur draf dan dibatalkan menampilkan statusnya pada kop.
+- **Label formulir:** `Textarea` membungkus elemennya dengan `div`, sehingga `aria-label` pada komponen ini jatuh ke `div`. Hubungkan labelnya lewat `id` dari slot `FormField`.

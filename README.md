@@ -70,6 +70,7 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
   - Ditagih dari surat jalan yang sudah diposting; harga, diskon, dan pajak dihitung server dari SO.
   - Posting membuat jurnal piutang otomatis; pembatalan membuat jurnal pembalik selama belum ada pembayaran.
   - Surat jalan yang sudah ditagih tidak dapat dibatalkan, dan batas kredit pelanggan ditegakkan saat SO disetujui.
+  - Faktur dapat dicetak dari halaman detailnya, dan dashboard menampilkan piutang beredar serta faktur jatuh tempo.
 - **Surat Jalan / DO (`/sales/delivery-orders`)**:
   - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `void`.
   - Diterbitkan dari Pesanan Penjualan yang telah disetujui (`approved` atau `partially_delivered`).
