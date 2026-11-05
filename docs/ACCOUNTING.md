@@ -1,6 +1,6 @@
 # Modul Akuntansi: Bagan Akun & Jurnal
 
-Dokumen ini menjelaskan mesin jurnal: pemetaan akun, jurnal otomatis, pembalik, backfill, dan batasannya. Faktur penjualan tersedia sejak Fase 9 ([rincian](SALES.md)); pembayaran dan laporan keuangan dibangun pada fase berikutnya.
+Dokumen ini menjelaskan mesin jurnal: pemetaan akun, jurnal otomatis, pembalik, backfill, dan batasannya. Faktur penjualan tersedia sejak Fase 9 ([rincian](SALES.md)) dan penerimaan pembayaran sejak Fase 10. Pengeluaran ke pemasok dan laporan keuangan dibangun pada fase berikutnya.
 
 ---
 
@@ -37,6 +37,7 @@ Akun kas/bank untuk pembayaran: 1101 dan 1102. Seeder `ChartOfAccountSeeder` ber
 | JT-DO | Posting surat jalan | `cogs` = Σ qty × `unit_cost` snapshot | `inventory` | `delivery_order` |
 | JT-SA | Posting penyesuaian stok | Selisih lebih: `inventory`; selisih kurang: `inventory_adjustment` | Selisih lebih: `inventory_adjustment`; selisih kurang: `inventory` | `stock_adjustment` |
 | JT-SI | Posting faktur penjualan | `receivable` = total; `sales_discount` = jumlah diskon | `sales` = subtotal; `vat_output` = jumlah pajak | `sales_invoice` |
+| JT-PAYR | Posting penerimaan pembayaran | Akun kas/bank pada pembayaran = jumlah | `receivable` = jumlah | `payment` |
 
 - `journal_date` memakai tanggal dokumen.
 - Baris bernilai nol tidak dibuat. Bila semua nol, tidak ada jurnal dan peristiwa `journal.skipped` dicatat di audit.
@@ -72,6 +73,8 @@ Wajib sama di semua layanan untuk mencegah deadlock:
 
 Posting faktur penjualan mengikuti urutan itu: SO, DO, baris SO, baris DO, faktur, nomor dokumen, jurnal. Karena semua penulisan untuk satu SO mengambil kunci SO lebih dulu, faktur dan pembatalan DO pada SO yang sama berjalan bergantian. Pembatalan faktur hanya mengunci faktur, dan persetujuan SO mengunci pelanggan lalu SO.
 
+Posting dan pembatalan pembayaran mengunci pembayaran, lalu fakturnya menurut `id` menaik, lalu menulis jurnal. Pembatalan faktur tidak bisa menyalip pembayaran yang sedang diposting: bila pembayaran lebih dulu memegang kunci faktur, pembatalan melihat `paid_amount` sudah terisi dan ditolak.
+
 ## 7. Backfill
 
 Dokumen yang diposting sebelum modul ini ada dibuatkan jurnalnya dengan:
@@ -105,6 +108,18 @@ Perintah ini idempoten, memproses GR, DO, dan penyesuaian stok berstatus `posted
 - Akun yang dipetakan di `config/accounting.php` tidak boleh dinonaktifkan, diganti kodenya, diubah menjadi header, atau dihapus.
 - Hapus (*soft delete*) hanya untuk akun tanpa baris jurnal dan tanpa anak.
 
+### Rute pembayaran
+
+| Rute | Izin |
+|---|---|
+| `GET /accounting/payments`, `GET /accounting/payments/{id}` | `payments.view` |
+| `GET /accounting/payments/create`, `POST /accounting/payments` | `payments.create` |
+| `GET /accounting/payments/{id}/edit`, `PUT /accounting/payments/{id}` | `payments.update` |
+| `POST /accounting/payments/{id}/post` | `payments.post` |
+| `POST /accounting/payments/{id}/void` | `payments.void` |
+
+Formulir mendapat faktur terbuka milik pelanggan terpilih dengan memuat ulang rute `create` atau `edit` memakai `customer_id` sebagai kunjungan parsial Inertia, sehingga izinnya sama dengan rute itu.
+
 ## 9. Antarmuka
 
 - **Bagan Akun:** daftar pohon dengan indentasi per level, filter tipe dan status, serta kolom terkunci yang tampil nonaktif beserta keterangannya.
@@ -112,7 +127,20 @@ Perintah ini idempoten, memproses GR, DO, dan penyesuaian stok berstatus `posted
 - **Editor baris:** mengisi debit mengosongkan kredit pada baris yang sama, dan sebaliknya. Indikator total dan selisih memakai `Support/money.js`. Tombol "Simpan dan Posting" hanya aktif saat seimbang. Tombol "Simpan Draf" tetap bisa ditekan, tetapi server menolak draf yang tidak seimbang.
 - **Jurnal terkait:** halaman detail GR, DO, dan penyesuaian stok menampilkan nomor dan status jurnalnya bagi pengguna yang punya izin `journals.view`.
 
-## 10. Batasan yang Disengaja
+## 10. Penerimaan Pembayaran
+
+Alur: draf, alokasi ke faktur, posting. Satu pembayaran boleh melunasi beberapa faktur milik pelanggan yang sama.
+
+- **Akun:** hanya kode pada `cash_bank` di `config/accounting.php` (1101, 1102) yang aktif dan dapat diposting.
+- **Draf:** tidak mereservasi sisa faktur. Boleh disimpan dengan alokasi kurang dari jumlah pembayaran, bahkan tanpa alokasi, tetapi tidak boleh melebihinya.
+- **Posting:** semua aturan diperiksa ulang di bawah kunci. Jumlah alokasi harus sama persis dengan jumlah pembayaran, karena uang muka dan kelebihan bayar tidak didukung. Tiap alokasi harus lebih dari 0, tidak melebihi sisa faktur, dan fakturnya harus berstatus `posted` atau `partially_paid` milik pelanggan yang sama. Bila dua draf bersaing, posting yang kedua ditolak (422 pada `allocations`) tanpa mengubah apa pun.
+- **Efek pada faktur:** `paid_amount` bertambah, dan status menjadi `partially_paid` atau `paid`. Logikanya hanya ada di `InvoiceSettlement`.
+- **Pembatalan:** alasan wajib, 1 sampai 255 karakter. Draf dibatalkan tanpa efek. Pembayaran diposting mengembalikan `paid_amount`, menghitung ulang status faktur (`paid` ke `partially_paid`, atau ke `posted` bila nol), dan membuat jurnal pembalik.
+- **Faktur yang sudah dibayar** tidak dapat dibatalkan sebelum pembayarannya dibatalkan.
+- **Batas kredit:** piutang beredar otomatis turun saat pembayaran diposting dan naik lagi saat dibatalkan.
+- **Pengeluaran ke pemasok** ditolak (422 pada `payment_type`) sampai Fase 11.
+
+## 11. Batasan yang Disengaja
 
 Tanpa tutup buku/periode terkunci, tanpa nota retur/kredit, tanpa uang muka/kelebihan bayar, tanpa multi-mata-uang, tanpa penyusutan/aset tetap, tanpa gabungan faktur lintas SO/PO, kredit pelanggan hanya dicek saat menyetujui SO, dan laporan umur piutang/utang hanya posisi hari ini.
 

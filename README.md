@@ -71,6 +71,9 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
   - Posting membuat jurnal piutang otomatis; pembatalan membuat jurnal pembalik selama belum ada pembayaran.
   - Surat jalan yang sudah ditagih tidak dapat dibatalkan, dan batas kredit pelanggan ditegakkan saat SO disetujui.
   - Faktur dapat dicetak dari halaman detailnya, dan dashboard menampilkan piutang beredar serta faktur jatuh tempo.
+- **Penerimaan Pembayaran (`/accounting/payments`)**:
+  - Satu pembayaran dapat dialokasikan ke beberapa faktur pelanggan yang sama, dengan jumlah alokasi harus sama persis saat diposting.
+  - Posting memperbarui sisa dan status faktur serta membuat jurnal kas/bank terhadap piutang; pembatalan mengembalikan semuanya lewat jurnal pembalik.
 - **Surat Jalan / DO (`/sales/delivery-orders`)**:
   - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `void`.
   - Diterbitkan dari Pesanan Penjualan yang telah disetujui (`approved` atau `partially_delivered`).
@@ -324,6 +327,6 @@ Secara transparan dan jujur, implementasi saat ini memiliki batasan arsitektural
 1. **Mata Uang Tunggal (Single Currency - IDR)**: Seluruh transaksi beroperasi eksklusif dalam Rupiah Indonesia tanpa konversi valuta asing.
 2. **Satuan Dasar Tunggal per Produk**: Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Konversi multi-satuan dinamis bertingkat (*UOM conversion*) belum diimplementasikan di tingkat transaksi.
 3. **Tanpa Dokumen Mutasi Antar-Gudang Langsung**: Fitur transfer persediaan antar-gudang saat ini ditangani secara manual melalui kombinasi dokumen Penyesuaian Keluar (`adjustment_out`) pada gudang asal dan Penyesuaian Masuk (`adjustment_in`) pada gudang tujuan.
-4. **Modul Hilir Belum Tersedia**: Faktur Pembelian, Hutang Usaha, Pembayaran Kas/Bank, Buku Kas/Bank, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
+4. **Modul Hilir Belum Tersedia**: Faktur Pembelian, Hutang Usaha, Pengeluaran Kas/Bank, Buku Kas/Bank, dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
 5. **Batasan Administrasi yang Disengaja**: Tanpa 2FA, tanpa alur lupa kata sandi lewat email, tanpa wajib ganti kata sandi saat login pertama, tanpa ekspor log audit, dan peran bawaan tidak dapat diubah lewat antarmuka.
 6. **Deploy Otomatis ke Server**: Image production sudah dibangun, diuji, dan dirilis ke GHCR, tetapi deploy ke server masih dijalankan manual lewat `scripts/deploy.sh` karena belum ada server tetap.

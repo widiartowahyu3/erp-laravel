@@ -1687,10 +1687,10 @@ ACCOUNTING_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_ACCOUNTING UNPROT_ACCOUNTING MISSING_CAN_ACCOUNTING MISSING_THROTTLE_ACCOUNTING <<< "$ACCOUNTING_ROUTE_CHECK"
 
-if [ "$TOTAL_ACCOUNTING" -eq 16 ]; then
-    pass "Ditemukan 16 rute modul akuntansi (/accounting/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_ACCOUNTING" -eq 24 ]; then
+    pass "Ditemukan 24 rute modul akuntansi (/accounting/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul akuntansi tidak sesuai ekspektasi (harus 16, ditemukan: $TOTAL_ACCOUNTING)"
+    fail "Jumlah rute modul akuntansi tidak sesuai ekspektasi (harus 24, ditemukan: $TOTAL_ACCOUNTING)"
 fi
 
 if [ "$UNPROT_ACCOUNTING" -eq 0 ]; then
@@ -1945,6 +1945,70 @@ if [ "$GUEST_INVOICE_PRINT_CODE" = "302" ]; then
     pass "Akses guest ke rute cetak faktur dialihkan ke halaman login (HTTP 302)"
 else
     fail "Akses guest ke rute cetak faktur mengembalikan HTTP $GUEST_INVOICE_PRINT_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
+# 33. Keamanan rute pembayaran (/accounting/payments*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 33: Verifikasi Keamanan Rute & Otorisasi Pembayaran (/accounting/payments*) ---"
+
+PAYMENT_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $total = 0;
+    $bad = [];
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        $uri = $route->uri();
+
+        if ($uri !== "accounting/payments" && !str_starts_with($uri, "accounting/payments/")) {
+            continue;
+        }
+
+        $total++;
+        $methods = $route->methods();
+        $middleware = $route->gatherMiddleware();
+        $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+
+        if (!in_array("auth", $middleware, true)) {
+            $bad[] = "auth " . $uri;
+        }
+
+        if (count(preg_grep("/^can:payments\.(view|create|update|post|void)$/", $middleware)) !== 1) {
+            $bad[] = "can " . implode("|", $methods) . " " . $uri;
+        }
+
+        if ($isMutation && !in_array("throttle:erp-write", $middleware, true)) {
+            $bad[] = "throttle " . implode("|", $methods) . " " . $uri;
+        }
+    }
+
+    echo $total . ":" . count($bad) . ":" . implode(",", $bad);
+' 2>/dev/null || echo "0:1:gagal-dijalankan")
+
+IFS=':' read -r PAYMENT_ROUTE_TOTAL PAYMENT_ROUTE_BAD PAYMENT_ROUTE_LIST <<< "$PAYMENT_ROUTE_CHECK"
+
+if [ "$PAYMENT_ROUTE_TOTAL" -eq 8 ]; then
+    pass "Ditemukan 8 rute pembayaran (/accounting/payments*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute pembayaran tidak sesuai ekspektasi (harus 8, ditemukan: $PAYMENT_ROUTE_TOTAL)"
+fi
+
+if [ "$PAYMENT_ROUTE_BAD" -eq 0 ]; then
+    pass "Seluruh rute /accounting/payments* memiliki auth, satu 'can:payments.*', dan throttle:erp-write pada mutasi"
+else
+    fail "Rute /accounting/payments* tidak memenuhi syarat ($PAYMENT_ROUTE_BAD: $PAYMENT_ROUTE_LIST)"
+fi
+
+GUEST_PAYMENT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/accounting/payments" || true)
+if [ "$GUEST_PAYMENT_CODE" = "302" ]; then
+    pass "Akses guest ke /accounting/payments dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke /accounting/payments mengembalikan HTTP $GUEST_PAYMENT_CODE (harus 302)"
 fi
 
 # ------------------------------------------------------------------------------
