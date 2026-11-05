@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonImmutable|null $updated_at
  * @property-read Payment $payment
  * @property-read SalesInvoice|null $salesInvoice
+ * @property-read PurchaseInvoice|null $purchaseInvoice
  */
 class PaymentAllocation extends Model
 {
@@ -55,5 +56,13 @@ class PaymentAllocation extends Model
     public function salesInvoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class);
+    }
+
+    /**
+     * @return BelongsTo<PurchaseInvoice, $this>
+     */
+    public function purchaseInvoice(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseInvoice::class);
     }
 }

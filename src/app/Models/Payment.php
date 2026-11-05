@@ -39,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Customer|null $customer
+ * @property-read Supplier|null $supplier
  * @property-read ChartOfAccount $account
  * @property-read Journal|null $journal
  * @property-read Collection<int, PaymentAllocation> $allocations
@@ -105,6 +106,14 @@ class Payment extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     /**

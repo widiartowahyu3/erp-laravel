@@ -8,7 +8,6 @@ use App\Enums\DocumentType;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
-use App\Enums\SalesInvoiceStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Exceptions\DocumentNotEditableException;
 use App\Exceptions\InvalidStateTransitionException;
@@ -16,7 +15,9 @@ use App\Models\ChartOfAccount;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
+use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
+use App\Models\Supplier;
 use App\Services\Accounting\Builders\PaymentJournalBuilder;
 use App\Services\Audit\AuditLogger;
 use App\Services\Documents\DocumentNumberService;
@@ -24,12 +25,14 @@ use App\Services\Documents\DocumentStateMachine;
 use App\Services\Sales\InvoiceSettlement;
 use App\Support\Decimal;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Customer receipts and their allocation to sales invoices. Authorization lives in the routes and requests.
+ * Customer receipts allocated to sales invoices and supplier disbursements allocated to purchase invoices.
+ * Authorization lives in the routes and requests.
  *
  * Lock order (docs/ACCOUNTING.md): payment, invoices by ascending id, document sequence, journal.
  * Drafts reserve nothing, so every rule is checked again under lock when posting.
@@ -37,11 +40,13 @@ use Illuminate\Support\Facades\DB;
 class PaymentService
 {
     /**
-     * @var list<SalesInvoiceStatus>
+     * Invoice statuses that can still take money, the same values on both kinds of invoice.
+     *
+     * @var list<string>
      */
     private const array PAYABLE_INVOICE_STATUSES = [
-        SalesInvoiceStatus::POSTED,
-        SalesInvoiceStatus::PARTIALLY_PAID,
+        'posted',
+        'partially_paid',
     ];
 
     public function __construct(
@@ -72,25 +77,32 @@ class PaymentService
             $effectiveUserId = $userId ?? Auth::id();
 
             if (($data['payment_type'] ?? PaymentType::RECEIPT->value) !== PaymentType::RECEIPT->value) {
-                throw $this->onlyReceipts();
+                throw $this->wrongType(PaymentType::RECEIPT);
             }
 
-            $fields = $this->validatedFields($data);
-            $allocations = $this->validatedAllocations($fields['customer_id'], $data['allocations'] ?? [], $fields['amount']);
-
-            $payment = Payment::create([
-                'number' => DocumentNumberService::generate(DocumentType::PAY, $fields['payment_date']),
-                'payment_type' => PaymentType::RECEIPT,
-                'status' => PaymentStatus::DRAFT,
-                ...$fields,
-                'created_by' => $effectiveUserId,
-                'updated_by' => $effectiveUserId,
-            ]);
-
-            $this->writeAllocations($payment, $allocations);
-
-            return $payment->load('allocations');
+            return $this->createDraft(PaymentType::RECEIPT, $data, $effectiveUserId);
         });
+    }
+
+    /**
+     * The supplier counterpart of createReceipt, with the same rules.
+     *
+     * @param array{
+     *     supplier_id: int|string,
+     *     payment_date: string,
+     *     method: string,
+     *     account_id: int|string,
+     *     amount: string,
+     *     reference?: string|null,
+     *     notes?: string|null,
+     *     allocations?: list<array{purchase_invoice_id: int|string, amount: string}>
+     * } $data
+     *
+     * @throws BusinessRuleException
+     */
+    public function createDisbursement(array $data, ?int $userId = null): Payment
+    {
+        return DB::transaction(fn (): Payment => $this->createDraft(PaymentType::DISBURSEMENT, $data, $userId ?? Auth::id()));
     }
 
     /**
@@ -112,38 +124,33 @@ class PaymentService
      */
     public function updateReceipt(Payment $payment, array $data, ?int $userId = null): Payment
     {
-        return DB::transaction(function () use ($payment, $data, $userId): Payment {
-            $effectiveUserId = $userId ?? Auth::id();
-            $locked = $this->lockPayment($payment);
-
-            $this->assertReceipt($locked);
-
-            if (! $locked->isEditable()) {
-                throw new DocumentNotEditableException('Hanya draf pembayaran yang dapat diubah.');
-            }
-
-            $fields = $this->validatedFields($data);
-            $allocations = $this->validatedAllocations($fields['customer_id'], $data['allocations'] ?? [], $fields['amount']);
-
-            $locked->fill($fields);
-
-            if ($effectiveUserId !== null) {
-                $locked->updated_by = $effectiveUserId;
-            }
-
-            $locked->save();
-
-            // @audit-bypass: payment_allocations has no audit columns; the new lines are audited explicitly in writeAllocations
-            PaymentAllocation::query()->where('payment_id', $locked->id)->delete();
-
-            $this->writeAllocations($locked, $allocations);
-
-            return $locked->load('allocations');
-        });
+        return $this->updateDraft(PaymentType::RECEIPT, $payment, $data, $userId);
     }
 
     /**
-     * Post a draft: settles its invoices and writes journal JT-PAYR, all or nothing.
+     * The supplier counterpart of updateReceipt.
+     *
+     * @param array{
+     *     supplier_id: int|string,
+     *     payment_date: string,
+     *     method: string,
+     *     account_id: int|string,
+     *     amount: string,
+     *     reference?: string|null,
+     *     notes?: string|null,
+     *     allocations?: list<array{purchase_invoice_id: int|string, amount: string}>
+     * } $data
+     *
+     * @throws BusinessRuleException
+     * @throws DocumentNotEditableException
+     */
+    public function updateDisbursement(Payment $payment, array $data, ?int $userId = null): Payment
+    {
+        return $this->updateDraft(PaymentType::DISBURSEMENT, $payment, $data, $userId);
+    }
+
+    /**
+     * Post a draft: settles its invoices and writes journal JT-PAYR or JT-PAYD, all or nothing.
      *
      * @throws BusinessRuleException
      * @throws InvalidStateTransitionException
@@ -153,22 +160,21 @@ class PaymentService
         return DB::transaction(function () use ($payment, $userId): Payment {
             $effectiveUserId = $userId ?? Auth::id();
             $locked = $this->lockPayment($payment);
+            $type = $locked->payment_type;
 
-            $this->assertReceipt($locked);
             DocumentStateMachine::assertTransition($locked->status, PaymentStatus::POSTED);
 
-            $this->assertCustomerActive((int) $locked->customer_id);
+            $partyId = $this->partyIdOf($locked);
+            $this->assertPartyActive($type, $partyId);
             $account = $this->assertCashBankAccount($locked->account_id);
 
             $allocations = PaymentAllocation::query()->where('payment_id', $locked->id)->orderBy('id')->get();
-            $invoices = $this->lockInvoices($allocations);
+            $invoices = $this->lockInvoices($type, $allocations);
 
             $total = '0.00';
 
             foreach ($allocations as $allocation) {
-                $invoice = $invoices->get((int) $allocation->sales_invoice_id);
-
-                $this->assertAllocatable($invoice, (int) $locked->customer_id, $allocation->amount);
+                $this->assertAllocatable($type, $invoices->get($this->invoiceIdOf($type, $allocation)), $partyId, $allocation->amount);
                 $total = Decimal::add($total, $allocation->amount);
             }
 
@@ -177,11 +183,13 @@ class PaymentService
             }
 
             foreach ($allocations as $allocation) {
-                $this->settlement->apply($invoices->firstOrFail('id', (int) $allocation->sales_invoice_id), $allocation->amount);
+                $this->settlement->apply($invoices->firstOrFail('id', $this->invoiceIdOf($type, $allocation)), $allocation->amount);
             }
 
             $journal = $this->journals->postAutomatic(
-                PaymentJournalBuilder::receipt($locked, $account->code),
+                $type === PaymentType::RECEIPT
+                    ? PaymentJournalBuilder::receipt($locked, $account->code)
+                    : PaymentJournalBuilder::disbursement($locked, $account->code),
                 Payment::JOURNAL_SOURCE,
                 $locked->id,
                 CarbonImmutable::parse($locked->payment_date)
@@ -213,8 +221,8 @@ class PaymentService
         return DB::transaction(function () use ($payment, $reason, $userId): Payment {
             $effectiveUserId = $userId ?? Auth::id();
             $locked = $this->lockPayment($payment);
+            $type = $locked->payment_type;
 
-            $this->assertReceipt($locked);
             DocumentStateMachine::assertTransition($locked->status, PaymentStatus::VOID);
 
             $trimmedReason = trim($reason);
@@ -229,10 +237,10 @@ class PaymentService
 
             if ($locked->status === PaymentStatus::POSTED) {
                 $allocations = PaymentAllocation::query()->where('payment_id', $locked->id)->orderBy('id')->get();
-                $invoices = $this->lockInvoices($allocations);
+                $invoices = $this->lockInvoices($type, $allocations);
 
                 foreach ($allocations as $allocation) {
-                    $this->settlement->revert($invoices->firstOrFail('id', (int) $allocation->sales_invoice_id), $allocation->amount);
+                    $this->settlement->revert($invoices->firstOrFail('id', $this->invoiceIdOf($type, $allocation)), $allocation->amount);
                 }
 
                 $this->journals->reverseAutomatic(Payment::JOURNAL_SOURCE, $locked->id, now());
@@ -289,6 +297,43 @@ class PaymentService
     }
 
     /**
+     * Purchase invoices still owed to the supplier, oldest due date first.
+     *
+     * @return list<array{
+     *     id: int,
+     *     number: string,
+     *     supplier_invoice_number: string,
+     *     invoice_date: string,
+     *     due_date: string,
+     *     total: string,
+     *     paid_amount: string,
+     *     outstanding: string
+     * }>
+     */
+    public function outstandingPurchaseInvoices(Supplier $supplier): array
+    {
+        return PurchaseInvoice::query()
+            ->where('supplier_id', $supplier->id)
+            ->whereIn('status', self::PAYABLE_INVOICE_STATUSES)
+            ->whereColumn('total', '>', 'paid_amount')
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (PurchaseInvoice $invoice): array => [
+                'id' => $invoice->id,
+                'number' => $invoice->number,
+                'supplier_invoice_number' => $invoice->supplier_invoice_number,
+                'invoice_date' => $invoice->invoice_date->toDateString(),
+                'due_date' => $invoice->due_date->toDateString(),
+                'total' => $invoice->total,
+                'paid_amount' => $invoice->paid_amount,
+                'outstanding' => $invoice->outstanding(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Cash and bank accounts a payment may use.
      *
      * @return Collection<int, ChartOfAccount>
@@ -304,6 +349,70 @@ class PaymentService
             ->get();
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     *
+     * @throws BusinessRuleException
+     */
+    private function createDraft(PaymentType $type, array $data, ?int $effectiveUserId): Payment
+    {
+        $fields = $this->validatedFields($type, $data);
+        $allocations = $this->validatedAllocations($type, $this->partyIdFromFields($fields), $data['allocations'] ?? [], $fields['amount']);
+
+        $payment = Payment::create([
+            'number' => DocumentNumberService::generate(DocumentType::PAY, $fields['payment_date']),
+            'payment_type' => $type,
+            'status' => PaymentStatus::DRAFT,
+            ...$fields,
+            'created_by' => $effectiveUserId,
+            'updated_by' => $effectiveUserId,
+        ]);
+
+        $this->writeAllocations($payment, $allocations);
+
+        return $payment->load('allocations');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     *
+     * @throws BusinessRuleException
+     * @throws DocumentNotEditableException
+     */
+    private function updateDraft(PaymentType $type, Payment $payment, array $data, ?int $userId): Payment
+    {
+        return DB::transaction(function () use ($type, $payment, $data, $userId): Payment {
+            $effectiveUserId = $userId ?? Auth::id();
+            $locked = $this->lockPayment($payment);
+
+            if ($locked->payment_type !== $type) {
+                throw $this->wrongType($type);
+            }
+
+            if (! $locked->isEditable()) {
+                throw new DocumentNotEditableException('Hanya draf pembayaran yang dapat diubah.');
+            }
+
+            $fields = $this->validatedFields($type, $data);
+            $allocations = $this->validatedAllocations($type, $this->partyIdFromFields($fields), $data['allocations'] ?? [], $fields['amount']);
+
+            $locked->fill($fields);
+
+            if ($effectiveUserId !== null) {
+                $locked->updated_by = $effectiveUserId;
+            }
+
+            $locked->save();
+
+            // @audit-bypass: payment_allocations has no audit columns; the new lines are audited explicitly in writeAllocations
+            PaymentAllocation::query()->where('payment_id', $locked->id)->delete();
+
+            $this->writeAllocations($locked, $allocations);
+
+            return $locked->load('allocations');
+        });
+    }
+
     private function lockPayment(Payment $payment): Payment
     {
         return Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
@@ -311,12 +420,14 @@ class PaymentService
 
     /**
      * @param  Collection<int, PaymentAllocation>  $allocations
-     * @return Collection<int, SalesInvoice>
+     * @return Collection<int, SalesInvoice|PurchaseInvoice>
      */
-    private function lockInvoices(Collection $allocations): Collection
+    private function lockInvoices(PaymentType $type, Collection $allocations): Collection
     {
-        return SalesInvoice::query()
-            ->whereIn('id', $allocations->pluck('sales_invoice_id')->filter()->all())
+        $invoiceIds = $allocations->map(fn (PaymentAllocation $allocation): int => $this->invoiceIdOf($type, $allocation))->all();
+
+        return $this->invoiceQuery($type)
+            ->whereIn('id', $invoiceIds)
             ->orderBy('id')
             ->lockForUpdate()
             ->get()
@@ -324,9 +435,41 @@ class PaymentService
     }
 
     /**
+     * @return Builder<SalesInvoice>|Builder<PurchaseInvoice>
+     */
+    private function invoiceQuery(PaymentType $type)
+    {
+        return $type === PaymentType::RECEIPT ? SalesInvoice::query() : PurchaseInvoice::query();
+    }
+
+    private function invoiceColumn(PaymentType $type): string
+    {
+        return $type === PaymentType::RECEIPT ? 'sales_invoice_id' : 'purchase_invoice_id';
+    }
+
+    private function invoiceIdOf(PaymentType $type, PaymentAllocation $allocation): int
+    {
+        return (int) $allocation->getAttribute($this->invoiceColumn($type));
+    }
+
+    private function partyIdOf(Payment $payment): int
+    {
+        return (int) ($payment->payment_type === PaymentType::RECEIPT ? $payment->customer_id : $payment->supplier_id);
+    }
+
+    /**
+     * @param  array<string, mixed>  $fields
+     */
+    private function partyIdFromFields(array $fields): int
+    {
+        return (int) ($fields['customer_id'] ?? $fields['supplier_id']);
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array{
-     *     customer_id: int,
+     *     customer_id?: int,
+     *     supplier_id?: int,
      *     payment_date: string,
      *     method: PaymentMethod,
      *     account_id: int,
@@ -337,10 +480,11 @@ class PaymentService
      *
      * @throws BusinessRuleException
      */
-    private function validatedFields(array $data): array
+    private function validatedFields(PaymentType $type, array $data): array
     {
-        $customerId = (int) $data['customer_id'];
-        $this->assertCustomerActive($customerId);
+        $partyColumn = $type === PaymentType::RECEIPT ? 'customer_id' : 'supplier_id';
+        $partyId = (int) $data[$partyColumn];
+        $this->assertPartyActive($type, $partyId);
 
         $paymentDate = CarbonImmutable::parse((string) $data['payment_date'])->startOfDay();
 
@@ -370,7 +514,7 @@ class PaymentService
         }
 
         return [
-            'customer_id' => $customerId,
+            $partyColumn => $partyId,
             'payment_date' => $paymentDate->toDateString(),
             'method' => $method,
             'account_id' => $accountId,
@@ -381,18 +525,25 @@ class PaymentService
     }
 
     /**
-     * @param  iterable<int, array{sales_invoice_id: int|string, amount: string}>  $lines
+     * @param  iterable<int, array<string, mixed>>  $lines
      * @return array<int, string> amount per invoice, in request order
      *
      * @throws BusinessRuleException
      */
-    private function validatedAllocations(int $customerId, iterable $lines, string $paymentAmount): array
+    private function validatedAllocations(PaymentType $type, int $partyId, iterable $lines, string $paymentAmount): array
     {
         $allocations = [];
         $total = '0.00';
+        $column = $this->invoiceColumn($type);
 
         foreach ($lines as $line) {
-            $invoiceId = (int) $line['sales_invoice_id'];
+            if (! isset($line[$column])) {
+                throw new BusinessRuleException($type === PaymentType::RECEIPT
+                    ? 'Penerimaan hanya dapat dialokasikan ke faktur penjualan.'
+                    : 'Pembayaran ke pemasok hanya dapat dialokasikan ke faktur pembelian.', 422, 'allocations');
+            }
+
+            $invoiceId = (int) $line[$column];
 
             if (isset($allocations[$invoiceId])) {
                 throw new BusinessRuleException('Satu faktur hanya boleh dialokasikan sekali per pembayaran.', 422, 'allocations');
@@ -407,10 +558,10 @@ class PaymentService
             throw new BusinessRuleException('Jumlah alokasi melebihi jumlah pembayaran.', 422, 'allocations');
         }
 
-        $invoices = SalesInvoice::query()->whereIn('id', array_keys($allocations))->get()->keyBy('id');
+        $invoices = $this->invoiceQuery($type)->whereIn('id', array_keys($allocations))->get()->keyBy('id');
 
         foreach ($allocations as $invoiceId => $amount) {
-            $this->assertAllocatable($invoices->get($invoiceId), $customerId, $amount);
+            $this->assertAllocatable($type, $invoices->get($invoiceId), $partyId, $amount);
         }
 
         return $allocations;
@@ -419,13 +570,21 @@ class PaymentService
     /**
      * @throws BusinessRuleException
      */
-    private function assertAllocatable(?SalesInvoice $invoice, int $customerId, string $amount): void
+    private function assertAllocatable(PaymentType $type, SalesInvoice|PurchaseInvoice|null $invoice, int $partyId, string $amount): void
     {
-        if ($invoice === null || $invoice->customer_id !== $customerId) {
-            throw new BusinessRuleException('Faktur yang dialokasikan harus milik pelanggan pembayaran ini.', 422, 'allocations');
+        $owner = match (true) {
+            $invoice instanceof SalesInvoice => $invoice->customer_id,
+            $invoice instanceof PurchaseInvoice => $invoice->supplier_id,
+            default => null,
+        };
+
+        if ($invoice === null || $owner !== $partyId) {
+            throw new BusinessRuleException($type === PaymentType::RECEIPT
+                ? 'Faktur yang dialokasikan harus milik pelanggan pembayaran ini.'
+                : 'Faktur yang dialokasikan harus milik pemasok pembayaran ini.', 422, 'allocations');
         }
 
-        if (! in_array($invoice->status, self::PAYABLE_INVOICE_STATUSES, true)) {
+        if (! in_array($invoice->status->value, self::PAYABLE_INVOICE_STATUSES, true)) {
             throw new BusinessRuleException("Faktur {$invoice->number} tidak dapat menerima pembayaran pada statusnya saat ini.", 422, 'allocations');
         }
 
@@ -448,10 +607,12 @@ class PaymentService
      */
     private function writeAllocations(Payment $payment, array $allocations): void
     {
+        $column = $this->invoiceColumn($payment->payment_type);
+
         foreach ($allocations as $invoiceId => $amount) {
             PaymentAllocation::create([
                 'payment_id' => $payment->id,
-                'sales_invoice_id' => $invoiceId,
+                $column => $invoiceId,
                 'amount' => $amount,
             ]);
         }
@@ -461,7 +622,7 @@ class PaymentService
             auditableType: Payment::class,
             auditableId: $payment->id,
             new: ['allocations' => array_map(
-                fn (int $invoiceId, string $amount): array => ['sales_invoice_id' => $invoiceId, 'amount' => $amount],
+                fn (int $invoiceId, string $amount): array => [$column => $invoiceId, 'amount' => $amount],
                 array_keys($allocations),
                 array_values($allocations)
             )],
@@ -469,30 +630,32 @@ class PaymentService
         );
     }
 
+    private function wrongType(PaymentType $expected): BusinessRuleException
+    {
+        return new BusinessRuleException(
+            $expected === PaymentType::RECEIPT
+                ? 'Operasi ini hanya untuk penerimaan dari pelanggan.'
+                : 'Operasi ini hanya untuk pembayaran ke pemasok.',
+            422,
+            'payment_type'
+        );
+    }
+
     /**
      * @throws BusinessRuleException
      */
-    private function assertReceipt(Payment $payment): void
+    private function assertPartyActive(PaymentType $type, int $partyId): void
     {
-        if ($payment->payment_type !== PaymentType::RECEIPT) {
-            throw $this->onlyReceipts();
+        if ($type === PaymentType::RECEIPT) {
+            if (! Customer::query()->whereKey($partyId)->where('is_active', true)->exists()) {
+                throw new BusinessRuleException('Pelanggan tidak aktif atau tidak ditemukan.', 422, 'customer_id');
+            }
+
+            return;
         }
-    }
 
-    private function onlyReceipts(): BusinessRuleException
-    {
-        return new BusinessRuleException('Pembayaran pengeluaran ke pemasok belum tersedia.', 422, 'payment_type');
-    }
-
-    /**
-     * @throws BusinessRuleException
-     */
-    private function assertCustomerActive(int $customerId): void
-    {
-        $active = Customer::query()->whereKey($customerId)->where('is_active', true)->exists();
-
-        if (! $active) {
-            throw new BusinessRuleException('Pelanggan tidak aktif atau tidak ditemukan.', 422, 'customer_id');
+        if (! Supplier::query()->whereKey($partyId)->where('is_active', true)->exists()) {
+            throw new BusinessRuleException('Pemasok tidak aktif atau tidak ditemukan.', 422, 'supplier_id');
         }
     }
 

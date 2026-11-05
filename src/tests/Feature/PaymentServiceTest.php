@@ -328,7 +328,7 @@ test('an unknown method and an overlong reference are refused', function (): voi
         ->and(paymentRuleFailure(fn () => $this->service->createReceipt(receiptData($this->customerId, $this->cash, '1.00', [], ['reference' => str_repeat('a', 101)])))['field'])->toBe('reference');
 });
 
-test('disbursements are refused until they exist', function (): void {
+test('the receipt methods refuse disbursements', function (): void {
     $invoice = postedInvoiceOf($this->customerId, '1000.0000');
 
     $failure = paymentRuleFailure(fn () => $this->service->createReceipt(receiptData($this->customerId, $this->cash, '1000.00', [[$invoice, '1000.00']], ['payment_type' => 'disbursement'])));
@@ -349,9 +349,7 @@ test('disbursements are refused until they exist', function (): void {
     ]);
     $disbursement = Payment::findOrFail($id);
 
-    expect(paymentRuleFailure(fn () => $this->service->post($disbursement))['field'])->toBe('payment_type')
-        ->and(paymentRuleFailure(fn () => $this->service->void($disbursement, 'Salah'))['field'])->toBe('payment_type')
-        ->and(paymentRuleFailure(fn () => $this->service->updateReceipt($disbursement, receiptData($this->customerId, $this->cash, '1.00', [])))['field'])->toBe('payment_type');
+    expect(paymentRuleFailure(fn () => $this->service->updateReceipt($disbursement, receiptData($this->customerId, $this->cash, '1.00', [])))['field'])->toBe('payment_type');
 });
 
 test('two drafts competing for the same remainder: the second posting fails and changes nothing', function (): void {
