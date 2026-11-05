@@ -1600,10 +1600,10 @@ SALES_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_SALES UNPROT_SALES MISSING_CAN_SALES MISSING_THROTTLE_SALES <<< "$SALES_ROUTE_CHECK"
 
-if [ "$TOTAL_SALES" -eq 25 ]; then
-    pass "Ditemukan 25 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_SALES" -eq 26 ]; then
+    pass "Ditemukan 26 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 25, ditemukan: $TOTAL_SALES)"
+    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 26, ditemukan: $TOTAL_SALES)"
 fi
 
 if [ "$UNPROT_SALES" -eq 0 ]; then
@@ -1892,10 +1892,10 @@ INVOICE_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r INVOICE_ROUTE_TOTAL INVOICE_ROUTE_BAD INVOICE_ROUTE_LIST <<< "$INVOICE_ROUTE_CHECK"
 
-if [ "$INVOICE_ROUTE_TOTAL" -eq 8 ]; then
-    pass "Ditemukan 8 rute faktur penjualan (/sales/invoices*) terdaftar dalam aplikasi"
+if [ "$INVOICE_ROUTE_TOTAL" -eq 9 ]; then
+    pass "Ditemukan 9 rute faktur penjualan (/sales/invoices*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute faktur penjualan tidak sesuai ekspektasi (harus 8, ditemukan: $INVOICE_ROUTE_TOTAL)"
+    fail "Jumlah rute faktur penjualan tidak sesuai ekspektasi (harus 9, ditemukan: $INVOICE_ROUTE_TOTAL)"
 fi
 
 if [ "$INVOICE_ROUTE_BAD" -eq 0 ]; then
@@ -1909,6 +1909,42 @@ if [ "$GUEST_INVOICE_CODE" = "302" ]; then
     pass "Akses guest ke /sales/invoices dialihkan ke halaman login (HTTP 302)"
 else
     fail "Akses guest ke /sales/invoices mengembalikan HTTP $GUEST_INVOICE_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
+# 32. Tampilan cetak faktur penjualan
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 32: Verifikasi Rute Cetak Faktur Penjualan ---"
+
+INVOICE_PRINT_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        if ($route->uri() === "sales/invoices/{sales_invoice}/print") {
+            $methods = array_values(array_diff($route->methods(), ["HEAD"]));
+            echo implode("|", $methods) . ":" . (in_array("can:sales_invoices.view", $route->gatherMiddleware(), true) ? "ok" : "tanpa-izin");
+            exit(0);
+        }
+    }
+
+    echo "tidak-ada:-";
+' 2>/dev/null || echo "gagal:-")
+
+if [ "$INVOICE_PRINT_CHECK" = "GET:ok" ]; then
+    pass "Rute cetak faktur hanya menerima GET dan dijaga 'can:sales_invoices.view'"
+else
+    fail "Rute cetak faktur tidak sesuai ($INVOICE_PRINT_CHECK)"
+fi
+
+GUEST_INVOICE_PRINT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/sales/invoices/1/print" || true)
+if [ "$GUEST_INVOICE_PRINT_CODE" = "302" ]; then
+    pass "Akses guest ke rute cetak faktur dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke rute cetak faktur mengembalikan HTTP $GUEST_INVOICE_PRINT_CODE (harus 302)"
 fi
 
 # ------------------------------------------------------------------------------

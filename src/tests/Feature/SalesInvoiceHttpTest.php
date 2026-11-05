@@ -444,6 +444,7 @@ test('unknown invoices answer 404 and guests are redirected to login', function 
         ['POST', '/sales/invoices'],
         ['GET', '/sales/invoices/1'],
         ['GET', '/sales/invoices/1/edit'],
+        ['GET', '/sales/invoices/1/print'],
         ['PUT', '/sales/invoices/1'],
         ['POST', '/sales/invoices/1/post'],
         ['POST', '/sales/invoices/1/void'],
@@ -480,6 +481,7 @@ test('every route needs exactly its own permission', function (string $method, s
     'store' => ['POST', '/sales/invoices', 'sales_invoices.create'],
     'show' => ['GET', '/sales/invoices/{id}', 'sales_invoices.view'],
     'edit' => ['GET', '/sales/invoices/{id}/edit', 'sales_invoices.update'],
+    'print' => ['GET', '/sales/invoices/{id}/print', 'sales_invoices.view'],
     'update' => ['PUT', '/sales/invoices/{id}', 'sales_invoices.update'],
     'post' => ['POST', '/sales/invoices/{id}/post', 'sales_invoices.post'],
     'void' => ['POST', '/sales/invoices/{id}/void', 'sales_invoices.void'],
@@ -508,7 +510,7 @@ test('all invoice routes carry auth, can and the write limiter', function (): vo
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route): bool => str_starts_with($route->uri(), 'sales/invoices'));
 
-    expect($routes->count())->toBe(8);
+    expect($routes->count())->toBe(9);
 
     foreach ($routes as $route) {
         $middleware = $route->gatherMiddleware();
@@ -566,4 +568,34 @@ test('the sales order form shows each customer\'s credit position with one query
     $invoiceQueries = array_filter($queries, fn (string $sql): bool => str_contains($sql, 'from `sales_invoices`'));
 
     expect($invoiceQueries)->toHaveCount(1);
+});
+
+test('the print view shows the invoice to viewers and writes nothing', function (): void {
+    $invoice = (new SalesInvoiceService)->post(SalesInvoiceFixtures::draftInvoice($this->order, [$this->delivery]));
+    $invoices = DB::table('sales_invoices')->where('id', $invoice->id)->first();
+    $auditRows = DB::table('audit_logs')->count();
+    $viewer = userWithPermissions(['sales_invoices.view']);
+
+    $this->flushSession();
+    $this->actingAs($viewer)
+        ->get("/sales/invoices/{$invoice->id}/print")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Sales/Invoices/Print')
+            ->where('item.number', $invoice->number)
+            ->where('item.total', '3219.00')
+            ->has('item.items', 1)
+        );
+
+    expect(DB::table('sales_invoices')->where('id', $invoice->id)->first())->toEqual($invoices)
+        ->and(DB::table('audit_logs')->count())->toBe($auditRows);
+
+    $this->flushSession();
+    $this->actingAs(userWithPermissions(['sales_invoices.update']))
+        ->get("/sales/invoices/{$invoice->id}/print")
+        ->assertForbidden();
+});
+
+test('the print view of an unknown invoice is not found', function (): void {
+    $this->get('/sales/invoices/999999999/print')->assertNotFound();
 });

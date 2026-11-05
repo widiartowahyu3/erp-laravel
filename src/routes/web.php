@@ -185,6 +185,7 @@ Route::middleware([
         Route::get('invoices/create', [SalesInvoiceController::class, 'create'])->middleware('can:sales_invoices.create')->name('invoices.create');
         Route::post('invoices', [SalesInvoiceController::class, 'store'])->middleware('can:sales_invoices.create')->name('invoices.store');
         Route::get('invoices/{sales_invoice}', [SalesInvoiceController::class, 'show'])->middleware('can:sales_invoices.view')->name('invoices.show');
+        Route::get('invoices/{sales_invoice}/print', [SalesInvoiceController::class, 'print'])->middleware('can:sales_invoices.view')->name('invoices.print');
         Route::get('invoices/{sales_invoice}/edit', [SalesInvoiceController::class, 'edit'])->middleware('can:sales_invoices.update')->name('invoices.edit');
         Route::put('invoices/{sales_invoice}', [SalesInvoiceController::class, 'update'])->middleware('can:sales_invoices.update')->name('invoices.update');
         Route::post('invoices/{sales_invoice}/post', [SalesInvoiceController::class, 'post'])->middleware('can:sales_invoices.post')->name('invoices.post');

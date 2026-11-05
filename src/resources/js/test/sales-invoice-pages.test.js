@@ -6,6 +6,7 @@ import InvoiceIndex from '../Pages/Sales/Invoices/Index.vue';
 import InvoiceCreate from '../Pages/Sales/Invoices/Create.vue';
 import InvoiceEdit from '../Pages/Sales/Invoices/Edit.vue';
 import InvoiceShow from '../Pages/Sales/Invoices/Show.vue';
+import InvoicePrint from '../Pages/Sales/Invoices/Print.vue';
 
 const ALL_PERMISSIONS = [
     'sales_invoices.view',
@@ -571,6 +572,78 @@ describe('Sales invoice detail', () => {
             attachTo: document.body,
             global: { stubs },
         });
+
+        await expectNoViolations(wrapper.element);
+        wrapper.unmount();
+    });
+});
+
+describe('Sales invoice print view', () => {
+    const mountPrint = (overrides = {}) => mount(InvoicePrint, {
+        props: { item: invoice({ status: 'posted', ...overrides }) },
+        attachTo: document.body,
+    });
+
+    it('renders the bill without the application menu', () => {
+        const wrapper = mountPrint({ notes: 'Tagih bulan ini' });
+        const text = wrapper.text();
+
+        expect(text).toContain('ERP Distribusi/Trading');
+        expect(text).toContain('SI/202611/00007');
+        expect(text).toContain('PT Maju Jaya');
+        expect(text).toContain('Jl. Merdeka');
+        expect(text).toContain('Beras 5 Kg');
+        expect(text).toContain('147.645,55');
+        expect(text).toContain('Tagih bulan ini');
+        expect(wrapper.find('nav').exists()).toBe(false);
+        expect(wrapper.findAll('a').map((a) => a.attributes('href'))).toEqual(['/sales/invoices/7']);
+        wrapper.unmount();
+    });
+
+    it('prints through the handler', async () => {
+        const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+        const wrapper = mountPrint();
+
+        await wrapper.findAll('button').find((b) => b.text().trim() === 'Cetak').trigger('click');
+
+        expect(print).toHaveBeenCalledTimes(1);
+        print.mockRestore();
+        wrapper.unmount();
+    });
+
+    it('keeps its controls out of the printed page', () => {
+        const wrapper = mountPrint();
+        const button = wrapper.findAll('button').find((b) => b.text().trim() === 'Cetak');
+
+        expect(button.element.closest('.print\\:hidden')).not.toBeNull();
+        wrapper.unmount();
+    });
+
+    it.each([
+        ['draft', 'Draf'],
+        ['void', 'Dibatalkan'],
+    ])('stamps a %s invoice so it cannot pass for a valid bill', (status, label) => {
+        const wrapper = mountPrint({ status });
+
+        expect(wrapper.find('header').text()).toContain(label);
+        wrapper.unmount();
+    });
+
+    it('has no stamp on a posted invoice', () => {
+        const wrapper = mountPrint();
+
+        expect(wrapper.find('header').text()).not.toContain('Diposting');
+        wrapper.unmount();
+    });
+
+    it('is reachable from the detail page', () => {
+        const wrapper = mountShow(invoice({ status: 'posted' }));
+
+        expect(wrapper.find('a[href="/sales/invoices/7/print"]').exists()).toBe(true);
+    });
+
+    it('has no accessibility violations', async () => {
+        const wrapper = mountPrint();
 
         await expectNoViolations(wrapper.element);
         wrapper.unmount();

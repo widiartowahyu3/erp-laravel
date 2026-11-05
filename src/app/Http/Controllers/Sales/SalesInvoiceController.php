@@ -138,6 +138,13 @@ final class SalesInvoiceController extends Controller
         ]);
     }
 
+    public function print(SalesInvoice $salesInvoice): Response
+    {
+        return Inertia::render('Sales/Invoices/Print', [
+            'item' => $this->detailProps($salesInvoice),
+        ]);
+    }
+
     public function edit(SalesInvoice $salesInvoice): Response|RedirectResponse
     {
         if (! $salesInvoice->isEditable() || $salesInvoice->sales_order_id === null) {

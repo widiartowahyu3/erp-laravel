@@ -17,7 +17,7 @@ test('all sales routes are protected by authentication, explicit can middleware,
         }
     }
 
-    expect($salesRoutes)->toHaveCount(25);
+    expect($salesRoutes)->toHaveCount(26);
 
     foreach ($salesRoutes as $route) {
         $uri = $route->uri();
