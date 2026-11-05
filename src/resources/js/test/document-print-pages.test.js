@@ -128,6 +128,13 @@ describe.each(Object.keys(documents))('%s print view', (name) => {
 });
 
 describe('warehouse documents', () => {
+    it('sizes the signature columns with classes, because the CSP has no room for inline styles', () => {
+        const signatures = mountDocument('delivery order').find('section[aria-label="Tanda tangan"]');
+
+        expect(signatures.classes()).toContain('grid-cols-3');
+        expect(signatures.attributes('style')).toBeUndefined();
+    });
+
     it.each(['goods receipt', 'delivery order', 'stock adjustment'])('%s shows no money', (name) => {
         const wrapper = mountDocument(name);
 

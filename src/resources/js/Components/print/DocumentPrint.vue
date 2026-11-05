@@ -47,6 +47,8 @@ const props = defineProps({
 
 const companyName = 'ERP Distribusi/Trading';
 
+const signatureColumns = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3' };
+
 // A printed draft or voided document must not pass for a valid one.
 const stamp = computed(() => (['draft', 'void'].includes(props.status) ? statusMap[props.status]?.label : null));
 
@@ -109,8 +111,7 @@ function printPage() {
 
         <section
             v-if="signatures.length > 0"
-            class="mt-12 grid break-inside-avoid gap-6 text-center text-sm"
-            :style="{ gridTemplateColumns: `repeat(${signatures.length}, minmax(0, 1fr))` }"
+            :class="['mt-12 grid break-inside-avoid gap-6 text-center text-sm', signatureColumns[signatures.length]]"
             aria-label="Tanda tangan"
         >
             <div v-for="signature in signatures" :key="signature">
