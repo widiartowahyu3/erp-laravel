@@ -146,6 +146,7 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Pembayaran Kas/Bank');
         expect(availableNames).toContain('Pesanan Pembelian (PO)');
         expect(availableNames).toContain('Penerimaan Barang (GR)');
+        expect(availableNames).toContain('Faktur Pembelian (PI)');
         expect(availableNames).toContain('Pesanan Penjualan (SO)');
         expect(availableNames).toContain('Surat Jalan / Kirim (DO)');
         expect(availableNames).toContain('Faktur Penjualan (SI)');
@@ -153,7 +154,7 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Peran & Hak Akses');
         expect(availableNames).toContain('Log Audit');
         expect(availableNames).not.toContain('Pengaturan Sistem');
-        expect(availableItems.length).toBe(24);
+        expect(availableItems.length).toBe(25);
     });
 
     it('ensures PurchaseOrders/Form.vue renders discount_amount error per item row', () => {

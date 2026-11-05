@@ -15,6 +15,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\TaxRate;
 use App\Models\Warehouse;
+use App\Services\Purchasing\PurchaseInvoiceService;
 use App\Services\Purchasing\PurchaseOrderService;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -105,7 +106,7 @@ class PurchaseOrderController extends Controller
             ->with('success', 'Pesanan pembelian berhasil dibuat.');
     }
 
-    public function show(PurchaseOrder $purchaseOrder): Response
+    public function show(PurchaseOrder $purchaseOrder, PurchaseInvoiceService $invoices): Response
     {
         $purchaseOrder->load([
             'items.product.baseUnit:id,code,name',
@@ -122,6 +123,7 @@ class PurchaseOrderController extends Controller
 
         return Inertia::render('Purchasing/PurchaseOrders/Show', [
             'item' => $purchaseOrder,
+            'hasBillableItems' => $invoices->hasBillableItems($purchaseOrder),
         ]);
     }
 

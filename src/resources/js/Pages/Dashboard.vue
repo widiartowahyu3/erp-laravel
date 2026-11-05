@@ -69,6 +69,10 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    purchaseInvoices: {
+        type: Object,
+        default: null,
+    },
     stockBalances: {
         type: Object,
         default: null,
@@ -90,6 +94,7 @@ const hasAnySummaryPermission = computed(() => {
         props.salesOrders !== null ||
         props.deliveryOrders !== null ||
         props.salesInvoices !== null ||
+        props.purchaseInvoices !== null ||
         props.stockBalances !== null ||
         props.stockMovements !== null
     );
@@ -337,6 +342,63 @@ const movementTypeLabels = {
                                 class="inline-flex items-center text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 rounded"
                             >
                                 <span>Lihat faktur jatuh tempo</span>
+                                <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+                            </Link>
+                        </div>
+                    </Card>
+
+                    <!-- Payables Metric Cards -->
+                    <Card v-if="purchaseInvoices !== null" padding="md" class="border-amber-100 dark:border-amber-900/30">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                    Utang Beredar
+                                </span>
+                                <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                                    <Rupiah :value="purchaseInvoices.outstanding_total" />
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Sisa tagihan faktur pembelian yang sudah diposting
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                <Wallet class="w-5 h-5" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <Link
+                                href="/purchasing/invoices?filter[status]=posted"
+                                class="inline-flex items-center text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 rounded"
+                            >
+                                <span>Lihat faktur pembelian diposting</span>
+                                <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+                            </Link>
+                        </div>
+                    </Card>
+
+                    <Card v-if="purchaseInvoices !== null" padding="md" class="border-rose-100 dark:border-rose-900/30">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                    Faktur Pembelian Jatuh Tempo
+                                </span>
+                                <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                                    {{ purchaseInvoices.overdue_count }} <span class="text-xs font-medium text-slate-500">Faktur</span>
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Sudah lewat tempo dan belum lunas
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                <CalendarClock class="w-5 h-5" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <Link
+                                href="/purchasing/invoices?filter[overdue]=1"
+                                class="inline-flex items-center text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 rounded"
+                            >
+                                <span>Lihat faktur pembelian jatuh tempo</span>
                                 <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
                             </Link>
                         </div>

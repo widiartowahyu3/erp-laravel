@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Ban, ArrowLeft } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Ban, ArrowLeft, Wallet } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
@@ -13,6 +13,7 @@ import DateDisplay from '@/Components/ui/DateDisplay.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Alert from '@/Components/ui/Alert.vue';
+import Can from '@/Components/ui/Can.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
@@ -46,6 +47,8 @@ const breadcrumbs = computed(() => [
 const flashError = computed(() => page.props.flash?.error || null);
 const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
+
+const canPaySupplier = computed(() => ['posted', 'partially_paid'].includes(props.item.status));
 
 const hasPayments = computed(() => compareDecimals(props.item.paidAmount, '0', 2) > 0);
 
@@ -123,6 +126,15 @@ async function handleVoid() {
                                 Kembali
                             </Button>
                         </Link>
+
+                        <Can v-if="canPaySupplier" permission="payments.create">
+                            <Link :href="`/accounting/payments/create?payment_type=disbursement&supplier_id=${item.supplier.id}`">
+                                <Button variant="primary" size="sm">
+                                    <Wallet class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                    Bayar Pemasok
+                                </Button>
+                            </Link>
+                        </Can>
 
                         <Link v-if="canEditPurchaseInvoice(item)" :href="`/purchasing/invoices/${item.id}/edit`">
                             <Button variant="secondary" size="sm">

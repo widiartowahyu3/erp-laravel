@@ -38,6 +38,10 @@ class DashboardController extends Controller
             ? $summary->getSalesInvoicesSummary()
             : null;
 
+        $purchaseInvoices = $user?->can('purchase_invoices.view')
+            ? $summary->getPurchaseInvoicesSummary()
+            : null;
+
         $stockBalances = $user?->can('stock_balances.view')
             ? $summary->getStockBalancesSummary()
             : null;
@@ -52,6 +56,7 @@ class DashboardController extends Controller
             'salesOrders' => $salesOrders,
             'deliveryOrders' => $deliveryOrders,
             'salesInvoices' => $salesInvoices,
+            'purchaseInvoices' => $purchaseInvoices,
             'stockBalances' => $stockBalances,
             'stockMovements' => $stockMovements,
         ]);

@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Ban, ArrowLeft } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Ban, ArrowLeft, FileText } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import Can from '@/Components/ui/Can.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
 import Card from '@/Components/ui/Card.vue';
 import RelatedJournalCard from '@/Components/accounting/RelatedJournalCard.vue';
@@ -29,6 +30,10 @@ const props = defineProps({
     receipt: {
         type: Object,
         default: null,
+    },
+    hasBillableItems: {
+        type: Boolean,
+        default: false,
     },
 });
 
@@ -166,6 +171,15 @@ async function handleVoid() {
                             <Ban class="w-4 h-4 mr-1.5" aria-hidden="true" />
                             Batalkan
                         </Button>
+
+                        <Can v-if="hasBillableItems" permission="purchase_invoices.create">
+                            <Link :href="`/purchasing/invoices/create?purchase_order_id=${receipt.purchase_order_id}`">
+                                <Button variant="primary" size="sm">
+                                    <FileText class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                    Buat Faktur Pembelian
+                                </Button>
+                            </Link>
+                        </Can>
                     </div>
                 </template>
             </PageHeader>

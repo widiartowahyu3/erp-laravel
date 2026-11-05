@@ -17,6 +17,7 @@ use App\Models\Warehouse;
 use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
+use App\Services\Purchasing\PurchaseInvoiceService;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -112,7 +113,7 @@ class GoodsReceiptController extends Controller
             ->with('success', 'Penerimaan barang berhasil dibuat.');
     }
 
-    public function show(GoodsReceipt $goodsReceipt): Response
+    public function show(GoodsReceipt $goodsReceipt, PurchaseInvoiceService $invoices): Response
     {
         $goodsReceipt->load([
             'items.product.baseUnit:id,code,name',
@@ -129,6 +130,7 @@ class GoodsReceiptController extends Controller
         return Inertia::render('Purchasing/GoodsReceipts/Show', [
             'item' => $goodsReceipt,
             'journal' => JournalSourceResolver::related(StockService::SOURCE_GOODS_RECEIPT, $goodsReceipt->id),
+            'hasBillableItems' => $invoices->hasBillableItems($goodsReceipt->purchaseOrder),
         ]);
     }
 

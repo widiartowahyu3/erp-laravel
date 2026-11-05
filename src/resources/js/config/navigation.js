@@ -102,10 +102,10 @@ export const navigationGroups = [
             },
             {
                 name: 'Faktur Pembelian (PI)',
-                href: '#',
+                href: '/purchasing/invoices',
                 icon: 'ReceiptText',
                 permission: 'purchase_invoices.view',
-                available: false,
+                available: true,
                 description: 'Faktur tagihan pembelian dan verifikasi hutang.',
             },
         ],
