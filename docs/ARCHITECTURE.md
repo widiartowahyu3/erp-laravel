@@ -1,4 +1,4 @@
-# Arsitektur Monolith & Alur Sistem (Fase 1)
+# Arsitektur Monolith & Alur Sistem
 
 Dokumen ini mendokumentasikan arsitektur sistem monolitik ERP Distribusi / Trading yang dibangun menggunakan Laravel 13, Vue 3 (Inertia.js), Tailwind CSS v4, dan MariaDB 12.3 LTS di atas infrastruktur Docker hardened.
 
@@ -103,3 +103,87 @@ sequenceDiagram
 - **Prinsip Least Privilege**: Semua kontainer berjalan sebagai user unprivileged (`UID 101` untuk Nginx, `UID 1000` untuk PHP dan Node, `mysql 999` untuk MariaDB).
 - **Read-Only Root Filesystem**: Semua kontainer berjalan dengan `read_only: true`. Operasi tulis hanya diizinkan pada partisi temporer `tmpfs` berukuran terbatas (`/tmp`, `/var/run`) dan cache direktori spesifik.
 - **Isolasi Berkas Sensitif**: Container PHP hanya me-mount direktori `./src:/var/www/html`. Berkas konfigurasi Docker, `.git`, direktori `secrets/`, dan `.env` infrastruktur tidak dapat diakses sama sekali dari dalam runtime aplikasi.
+
+---
+
+## 5. Lapisan Aplikasi
+
+```mermaid
+flowchart TD
+    Route["Route: auth, can:izin, throttle"] --> Controller["Controller tipis"]
+    Controller --> Request["FormRequest: validasi input"]
+    Controller --> Service["Service: DB::transaction, aturan bisnis"]
+    Service --> Model["Model: audit, tanpa logika alur"]
+    Service --> Journal["JournalService"]
+    Service --> Stock["StockService"]
+    Service --> Number["DocumentNumberService"]
+    Model --> DB[("MariaDB: FK, CHECK, trigger")]
+    Journal --> DB
+    Stock --> DB
+    Number --> DB
+    Reports["Reports: kueri baca-saja"] --> DB
+    Controller --> Reports
+```
+
+Aturan bisnis hanya ada di service. Laporan tidak melewati service tulis dan tidak punya efek samping.
+
+## 6. Alur Dokumen
+
+```mermaid
+flowchart LR
+    PO[Pesanan Pembelian] --> GR[Penerimaan Barang]
+    GR --> PI[Faktur Pembelian]
+    PI --> PayOut[Pembayaran Keluar]
+    SO[Pesanan Penjualan] --> DO[Surat Jalan]
+    DO --> SI[Faktur Penjualan]
+    SI --> PayIn[Pembayaran Masuk]
+```
+
+Penerimaan, pengiriman, dan penagihan boleh bertahap. Satu faktur mengacu ke tepat satu SO atau PO.
+
+## 7. Alur Jurnal Otomatis
+
+```mermaid
+flowchart TD
+    GR2[Posting GR] -->|"D 1301 / K 2103"| J[(Jurnal posted)]
+    PI2[Posting faktur pembelian] -->|"D 2103, 1401 / K 2101"| J
+    Out[Pembayaran keluar] -->|"D 2101 / K kas atau bank"| J
+    DO2[Posting DO] -->|"D 5101 / K 1301"| J
+    SI2[Posting faktur penjualan] -->|"D 1201, 4201 / K 4101, 2201"| J
+    In[Pembayaran masuk] -->|"D kas atau bank / K 1201"| J
+    SA[Posting penyesuaian stok] -->|"1301 dan 5201"| J
+    Void[Pembatalan dokumen] -->|"Jurnal pembalik"| J
+    J --> R[Laporan keuangan]
+```
+
+Peta akun dan rumus lengkap ada di [`ACCOUNTING.md`](ACCOUNTING.md).
+
+## 8. Model Data Ringkas
+
+```mermaid
+erDiagram
+    SUPPLIER ||--o{ PURCHASE_ORDER : menerima
+    PURCHASE_ORDER ||--o{ GOODS_RECEIPT : dipenuhi
+    PURCHASE_ORDER ||--o{ PURCHASE_INVOICE : ditagih
+    CUSTOMER ||--o{ SALES_ORDER : memesan
+    SALES_ORDER ||--o{ DELIVERY_ORDER : dipenuhi
+    SALES_ORDER ||--o{ SALES_INVOICE : ditagih
+    PAYMENT ||--o{ PAYMENT_ALLOCATION : dialokasikan
+    SALES_INVOICE ||--o{ PAYMENT_ALLOCATION : dilunasi
+    PURCHASE_INVOICE ||--o{ PAYMENT_ALLOCATION : dilunasi
+    PRODUCT ||--o{ STOCK_BALANCE : tersimpan
+    WAREHOUSE ||--o{ STOCK_BALANCE : menyimpan
+    JOURNAL ||--|{ JOURNAL_LINE : berisi
+    CHART_OF_ACCOUNT ||--o{ JOURNAL_LINE : dipakai
+```
+
+Skema lengkap ada di [`ERD.md`](ERD.md) dan [`DATABASE_DESIGN.md`](DATABASE_DESIGN.md).
+
+## 9. Keputusan Desain Utama
+
+- **Desimal dengan bcmath**: `App\Support\Decimal` menghitung uang dan kuantitas sebagai string. `float` membuat selisih pembulatan yang tidak bisa diaudit.
+- **State machine dokumen**: `DocumentStateMachine` menolak transisi status yang tidak sah. Riwayat mutasi stok bersifat append-only dan dijaga trigger di basis data.
+- **Urutan penguncian tetap**: semua service mengunci baris dalam urutan yang sama untuk mencegah deadlock. Urutannya ada di [`ACCOUNTING.md`](ACCOUNTING.md).
+- **Akun barang diterima belum ditagih (2103)**: penerimaan barang mencatat persediaan sebelum faktur pemasok datang, lalu faktur menutup akun ini. Saldo 2103 berarti ada barang yang belum ditagih.
+- **Audit fail-closed**: kegagalan mencatat audit membatalkan transaksinya. Tidak ada mutasi tanpa jejak.
+- **Laporan baca-saja**: laporan dihitung langsung dari jurnal dengan agregat SQL, jadi tidak ada ringkasan tersimpan yang bisa berbeda dari sumbernya.

@@ -1,203 +1,56 @@
-# ERP Distribusi / Trading (Laravel 13 + Vue 3 Monolith)
+# ERP Distribusi / Trading
 
 [![CI](https://github.com/widiartowahyu3/erp-laravel/actions/workflows/ci.yml/badge.svg)](https://github.com/widiartowahyu3/erp-laravel/actions/workflows/ci.yml)
 
-Repositori sistem ERP operasional distribusi dan trading berbasis arsitektur monolitik modern (**Laravel 13** + **Vue 3 / Inertia 3**, **MariaDB 12.3**, **Tailwind CSS 4**, dan **Docker**). Proyek ini dirancang sebagai sistem siap produksi (*production-grade portfolio*) yang menekankan integritas data moneter dan persediaan, arsitektur perangkat lunak yang ketat, keamanan berlapis (*defense-in-depth*), performa terukur, serta rangkaian verifikasi otomatis tanpa kompromi.
+Sistem ERP untuk perusahaan distribusi dan trading: pembelian, persediaan multi-gudang, penjualan, piutang dan utang, pembayaran, jurnal otomatis, serta laporan keuangan. Dibangun sebagai monolit dengan Laravel 13, Vue 3 lewat Inertia, MariaDB, dan Docker.
 
----
+Setiap dokumen yang diposting membuat jurnal dalam transaksi yang sama, jadi stok, piutang, utang, dan laporan keuangan membaca sumber yang sama. Batasan yang disengaja tertulis di [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 
-## 1. Ringkasan Eksekutif & Karakteristik Utama
+## Fitur per modul
 
-Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen persediaan multi-gudang (*multi-warehouse inventory*), katalog master data komprehensif, serta dashboard ringkasan operasional dengan kepatuhan tinggi terhadap prinsip rekayasa perangkat lunak:
+| Modul | Isi |
+|---|---|
+| Master Data | Produk, kategori, satuan, gudang, pemasok, pelanggan, tarif pajak, syarat pembayaran |
+| Pembelian | Pesanan pembelian, penerimaan barang parsial, faktur pembelian, utang per pemasok |
+| Persediaan | Saldo per gudang, mutasi, kartu stok, penyesuaian stok, biaya rata-rata bergerak |
+| Penjualan | Pesanan penjualan dengan pengecekan batas kredit, surat jalan parsial, faktur penjualan, piutang per pelanggan |
+| Akuntansi | Bagan akun, jurnal otomatis dan manual, jurnal pembalik, pembayaran masuk dan keluar dengan alokasi ke faktur |
+| Laporan | Neraca saldo, buku besar, laba rugi, neraca, umur piutang dan utang, kartu piutang, rekonsiliasi persediaan, ringkasan operasional, ekspor CSV |
+| Administrasi | Pengguna, peran dan hak akses, log audit dengan retensi 7 hari |
 
-- **Nol Aritmetika Floating-Point**: Seluruh kalkulasi uang, kuantitas stok, diskon, dan tarif pajak menggunakan kelas pembungkus `App\Support\Decimal` berbasis ekstensi PHP `bcmath` dengan representasi `string`. Dilarang keras menggunakan `float` atau `double` di seluruh lapisan backend dan frontend guna mencegah cacat presisi moneter IEEE-754.
-- **Buku Besar Stok Append-Only & Immutability**: Saldo persediaan instan dicatat pada snapshot `stock_balances`, sedangkan riwayat mutasi dicatat pada ledger `stock_movements` yang bersifat **append-only**. Integritas data mutasi dilindungi di tingkat database MariaDB menggunakan trigger `BEFORE UPDATE` dan `BEFORE DELETE` yang langsung melempar error SQLSTATE `45000` bila terjadi upaya manipulasi atau penghapusan data ledger.
-- **State Machine Dokumen Siklus Hidup Ketat**: Dokumen Pesanan Pembelian (PO), Penerimaan Barang (GR), dan Penyesuaian Stok (SA) dikontrol oleh `DocumentStateMachine`. Transisi status yang tidak valid atau perubahan pada dokumen berstatus final otomatis ditolak dengan status HTTP 409 Conflict.
-- **Penomoran Dokumen Atomik Bebas Celah (*Gapless Numbering*)**: Penomoran urut dokumen transaksi per periode bulanan (`{PREFIX}/{YYYYMM}/{NNNNN}`) diproses di dalam transaksi database menggunakan penguncian baris pesimistik (`lockForUpdate()`) pada tabel `document_sequences`.
-- **Pemisahan Peran Basis Data Berprinsip *Least Privilege***: Koneksi runtime aplikasi (`erp_app`) dibatasi secara ketat hanya pada hak akses DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`). Seluruh operasi DDL dan pemeliharaan trigger diisolasi pada akun migrasi khusus (`erp_migrator`), dan kredensial migrator tidak pernah diekspos ke environment container PHP atau berkas konfigurasi `src/.env`.
-- **Jejak Audit Fail-Closed**: Setiap mutasi model dicatat ke tabel `audit_logs` melalui trait `RecordsAudit`. Jika pencatatan jejak audit gagal karena alasan teknis apa pun, seluruh transaksi database otomatis dibatalkan (*rollback* secara fail-closed). Log yang berumur lebih dari 7 hari dihapus otomatis setiap hari.
-- **Aksesibilitas Teruji (WCAG 2.1 AA)**: Antarmuka dibangun di atas Design System internal tanpa CDN pihak ketiga dan diaudit lolos otomatis menggunakan `axe-core` dengan 0 temuan berstatus *critical* atau *serious*.
+Dokumen transaksi punya siklus status yang dijaga server. Dokumen yang sudah diposting tidak bisa diubah, hanya dibatalkan dengan jurnal pembalik.
 
----
+## Arsitektur singkat
 
-## 2. Cakupan Fitur per Modul
-
-<!-- screenshots: ditambahkan pemilik di docs/screenshots/ -->
-
-### A. Dashboard Ringkasan Operasional (`/dashboard`)
-- **Metrik Utama Berbasis Izin**: Ringkasan real-time 4 area operasional: Pesanan Pembelian Menunggu Persetujuan, Penerimaan Barang Hari Ini, Nilai Estimasi Persediaan & Jumlah SKU Kritis (di bawah minimum stok), serta Penyesuaian Stok Menunggu Posting.
-- **Tabel Transaksi Terkini**: Daftar PO terbuka terbaru dan mutasi stok terakhir dengan penanda gudang dan status dokumen.
-- **Performa Terkendali**: Seluruh kalkulasi agregat dioptimalkan dalam batas query konstan ($O(1)$) tanpa perulangan N+1.
-
-### B. Master Data (8 Entitas Inti)
-- **Satuan Ukuran (`/master/units`)**: Satuan dasar kuantitas (PCS, BOX, KG, LTR, MTR) dengan validasi unik.
-- **Kategori Produk (`/master/product-categories`)**: Struktur kategori pohon hierarkis dengan validasi anti-siklus (*cycle prevention*), pencegahan self-parenting, dan pembatasan kedalaman maksimal $\le 5$ tingkat.
-- **Gudang (`/master/warehouses`)**: Pengelolaan lokasi penyimpanan fisik stok barang dengan dukungan status aktif/nonaktif.
-- **Tarif Pajak (`/master/tax-rates`)**: Tarif persentase perpajakan (PPN 0%–100%) dengan validasi batas desimal.
-- **Syarat Pembayaran (`/master/payment-terms`)**: Termin jatuh tempo pembayaran komersial dalam jumlah hari (CASH, NET 7, NET 14, NET 30).
-- **Pemasok (`/master/suppliers`)**: Katalog rekanan vendor/supplier pengadaan dengan nomor kontak dan alamat.
-- **Pelanggan (`/master/customers`)**: Katalog customer distribusi dengan informasi plafon kredit dan termin pembayaran.
-- **Produk (`/master/products`)**: Master katalog SKU barang dengan harga beli standar, harga jual, stok minimum, flag pelacakan persediaan (`track_stock`), dan relasi ke satuan dasar serta kategori.
-- **Perlindungan Integritas Referensi (`ReferenceGuard`)**: Operasi hapus master data secara otomatis memvalidasi relasi ke tabel downstream (PO, GR, Saldo Stok, Mutasi Stok, Faktur) dan mengembalikan respons HTTP 409 Conflict informatif dalam Bahasa Indonesia bila data masih digunakan.
-
-### C. Pembelian & Pengadaan (Purchasing)
-- **Pesanan Pembelian / PO (`/purchasing/purchase-orders`)**:
-  - Siklus dokumen: `draft` $\rightarrow$ `submitted` $\rightarrow$ `approved` $\rightarrow$ `partial` / `closed` / `cancelled`.
-  - Kalkulator moneter P3: perhitungan subtotal bruto (*gross*), diskon baris, dasar pengenaan pajak (*net*), nilai PPN (*tax*), dan grand total (*total*) dengan akurasi 2 desimal berbasis `Decimal`.
-  - Dukungan approval workflow dan pembatalan dengan validasi ketergantungan dokumen penerimaan barang.
-- **Penerimaan Barang / GR (`/purchasing/goods-receipts`)**:
-  - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `cancelled`.
-  - Dibuat berdasarkan referensi Pesanan Pembelian yang telah disetujui (`approved` atau `partial`).
-  - Pembaruan kuantitas penerimaan terhadap PO secara atomik dan akurat; transisi status PO otomatis menjadi `partial` atau `closed` saat seluruh item diterima.
-  - Alokasi stok masuk instan ke gudang tujuan dan pembaruan biaya rata-rata bergerak persediaan.
-  - Pembatalan GR (`cancelled`) menghasilkan mutasi pengurang persediaan otomatis dan mengembalikan kuantitas diterima pada dokumen PO terkait.
-
-### D. Persediaan & Gudang (Inventory)
-- **Saldo Stok Realtime (`/inventory/stock-balances`)**: Snapshot kuantitas persediaan saat ini per produk per gudang, dilengkapi informasi harga pokok rata-rata persediaan (*moving average cost*) dan nilai total persediaan.
-- **Buku Besar Mutasi Stok (`/inventory/stock-movements`)**: Riwayat lengkap seluruh pergerakan persediaan masuk/keluar (*receipt*, *adjustment_in*, *adjustment_out*, *reversal*) bersifat append-only dengan nomor referensi dokumen dan user pencatat.
-- **Kartu Stok Kronologis (`/inventory/stock-card`)**: Penampil riwayat mutasi persediaan per SKU dan per gudang dengan saldo berjalan (*running balance*).
-- **Penyesuaian Stok / Opname (`/inventory/stock-adjustments`)**:
-  - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `cancelled`.
-  - Mendukung penyesuaian kuantitas fisik (`adjustment_in` untuk kelebihan fisik, `adjustment_out` untuk kehilangan/kerusakan fisik).
-  - Mutasi pembalik otomatis saat dokumen penyesuaian dibatalkan.
-
-### E. Penjualan & Distribusi (Sales)
-- **Pesanan Penjualan / SO (`/sales/sales-orders`)**:
-  - Siklus dokumen: `draft` $\rightarrow$ `approved` $\rightarrow$ `partially_delivered` / `delivered` / `closed` / `void`.
-  - Kalkulator moneter: perhitungan subtotal bruto (*gross*), diskon baris hingga 100%, dasar pengenaan pajak (*net*), nilai PPN (*tax*), dan total akhir dengan akurasi 2 desimal berbasis `LineTotalsCalculator`.
-  - Alur persetujuan (*approval*) dan pembatalan (*void*) dengan validasi dependensi surat jalan aktif.
-- **Faktur Penjualan / SI (`/sales/invoices`)**:
-  - Ditagih dari surat jalan yang sudah diposting; harga, diskon, dan pajak dihitung server dari SO.
-  - Posting membuat jurnal piutang otomatis; pembatalan membuat jurnal pembalik selama belum ada pembayaran.
-  - Surat jalan yang sudah ditagih tidak dapat dibatalkan, dan batas kredit pelanggan ditegakkan saat SO disetujui.
-  - Faktur dapat dicetak dari halaman detailnya, dan dashboard menampilkan piutang beredar serta faktur jatuh tempo.
-- **Faktur Pembelian (`/purchasing/invoices`)**:
-  - Ditagih dari penerimaan barang yang sudah diposting, dengan harga, diskon, dan pajak dari PO, serta nomor faktur pemasok yang unik per pemasok.
-  - Posting membersihkan akun Barang Diterima Belum Ditagih dan mencatat utang; GR yang sudah ditagih tidak dapat dibatalkan.
-  - Dashboard menampilkan utang beredar serta faktur pembelian yang jatuh tempo.
-- **Penerimaan dan Pembayaran (`/accounting/payments`)**:
-  - Penerimaan dari pelanggan dan pembayaran ke pemasok memakai halaman yang sama, dipisah oleh tab jenis pembayaran.
-  - Satu pembayaran dapat dialokasikan ke beberapa faktur milik pihak yang sama, dengan jumlah alokasi harus sama persis saat diposting.
-  - Posting memperbarui sisa dan status faktur serta membuat jurnal kas/bank terhadap piutang; pembatalan mengembalikan semuanya lewat jurnal pembalik.
-- **Surat Jalan / DO (`/sales/delivery-orders`)**:
-  - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `void`.
-  - Diterbitkan dari Pesanan Penjualan yang telah disetujui (`approved` atau `partially_delivered`).
-  - Posting pengiriman memotong kuantitas fisik gudang via `StockService::decrease`, mencatat snapshot biaya satuan rata-rata bergerak di `delivery_order_items.unit_cost`, dan memperbarui status pesanan penjualan secara atomik.
-  - Pembatalan pengiriman terposting (`void`) memulihkan saldo fisik gudang via `StockService::increase` menggunakan snapshot biaya satuan pengiriman awal dan menghitung mundur kemajuan status pesanan penjualan secara akurat.
-
-### F. Akuntansi (Accounting)
-- **Jurnal otomatis**: posting penerimaan barang, surat jalan, dan penyesuaian stok otomatis membuat jurnal dalam transaksi yang sama, dan pembatalannya membuat jurnal pembalik.
-- **Jurnal manual (`/accounting/journals`)**: siklus draf, posting, pembatalan draf, dan pembalik.
-- **Bagan akun (`/accounting/accounts`)**: hierarki akun dengan perlindungan akun yang sudah dipakai atau dipetakan.
-- **Jurnal terkait**: halaman detail GR, DO, dan penyesuaian stok menampilkan jurnal dari dokumen tersebut.
-- Rincian ada di [`docs/ACCOUNTING.md`](docs/ACCOUNTING.md).
-- **Laporan (`/reports/*`)**: neraca saldo, buku besar, laba rugi, neraca, umur piutang dan utang, kartu piutang, rekonsiliasi persediaan, serta ringkasan penjualan, pembelian, dan persediaan. Semuanya hanya membaca data dan bisa diekspor ke CSV. Rincian ada di [`docs/REPORTS.md`](docs/REPORTS.md).
-
-### G. Administrasi
-- **Pengguna (`/admin/users`)**: tambah, ubah, atur peran, reset kata sandi, serta aktifkan dan nonaktifkan akun. Tidak ada penghapusan pengguna.
-- **Peran & Hak Akses (`/admin/roles`)**: peran kustom dengan matriks izin per modul, sumber, dan aksi. Peran bawaan terkunci dan dapat diduplikasi.
-- **Log Audit (`/admin/audit-logs`)**: penampil hanya baca dengan filter tanggal, pengguna, event, dan tipe objek.
-- Rincian ada di [`docs/ADMINISTRATION.md`](docs/ADMINISTRATION.md).
-
----
-
-## 3. Arsitektur Monolitik & Standar Teknis
-
-Arsitektur aplikasi memisahkan tanggung jawab secara tegas (*Separation of Concerns*):
-
-```text
-[Browser / Klien]
-       │
-       ▼
-[Nginx Web Server] ──────► Rate Limiting, CSP Nonce, HSTS, Gzip Asset Caching
-       │
-       ▼
-[Laravel HTTP Kernel] ───► SecurityHeaders, Auth, Throttling (throttle:erp-write)
-       │
-       ▼
-[FormRequest] ───────────► Sanitasi Input, Validasi DesimalString, Soft-Delete Unique
-       │
-       ▼
-[Service Layer] ─────────► Orkestrasi Transaksi (DB::transaction), ReferenceGuard,
-       │                   DocumentStateMachine, DocumentNumberService, StockService
-       ▼
-[Eloquent Models] ───────► Strict Mode, HasAuditUsers, RecordsAudit (Fail-Closed)
-       │
-       ▼
-[MariaDB Database] ──────► Foreign Key RESTRICT, CHECK Constraints, Append-Only Triggers
+```mermaid
+flowchart LR
+    Browser --> Nginx --> Laravel
+    Laravel --> Service[Service dengan transaksi DB]
+    Service --> MariaDB
+    Service --> Jurnal[Jurnal otomatis]
+    Jurnal --> MariaDB
+    MariaDB --> Laporan[Laporan baca-saja]
 ```
 
-Dokumentasi arsitektur lebih rinci dapat dipelajari pada:
-- [Arsitektur Monolith & Alur Sistem](docs/ARCHITECTURE.md)
-- [Arsitektur & Spesifikasi Modul Pembelian](docs/PURCHASING.md)
-- [Arsitektur & Spesifikasi Modul Penjualan](docs/SALES.md)
-- [Arsitektur & Spesifikasi Modul Inventori](docs/INVENTORY.md)
-- [Desain & Konvensi Database 37 Tabel](docs/DATABASE_DESIGN.md)
-- [Entity Relationship Diagram (ERD)](docs/ERD.md)
-- [Kebijakan Keamanan & Matriks Mitigasi](docs/SECURITY.md)
-- [Standar Koding Backend & Konvensi Proyek](docs/CONVENTIONS.md)
-- [Konvensi Frontend, UI & Glosarium](docs/FRONTEND_CONVENTIONS.md)
-- [Panduan Operasional & Backup](docs/OPERATIONS.md)
-- [Laporan Kinerja & Rencana Optimasi Basis Data](docs/PERFORMANCE.md)
+- Uang dan kuantitas dihitung sebagai string desimal lewat `bcmath`, tanpa `float`.
+- Aplikasi memakai akun database `erp_app` yang hanya punya hak baca dan tulis data. Migrasi memakai akun terpisah.
+- Log audit bersifat fail-closed: bila gagal dicatat, transaksinya ikut batal.
 
----
+Rincian ada di [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## 4. Keamanan Berlapis (*Defense-in-Depth*)
+## Menjalankan
 
-1. **Content Security Policy (CSP) & Header Proteksi**:
-   - CSP berbasis nonce unik per request: script inline tanpa nonce ditolak peramban.
-   - Header keamanan lengkap: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Strict-Transport-Security`.
-2. **Kredensial & Autentikasi Modern**:
-   - Algoritma hashing kata sandi `Argon2id` dengan parameter aman memori dan thread.
-   - Cookie sesi terisolasi dengan atribut `HttpOnly`, `SameSite=Lax`, dan `Secure`.
-3. **Pembersihan Data Sensitif pada Redirect**:
-   - Seluruh kegagalan validasi formulir menyaring field kredensial (`password`, `password_confirmation`, `current_password`) sehingga kata sandi tidak pernah disimpan kembali ke dalam flash session store.
-4. **Perlindungan Laju Permintaan (Rate Limiting)**:
-   - Rute login dilindungi zona rate limiting Nginx dan anti-spoofing `X-Forwarded-For`.
-   - Seluruh mutasi state aplikasi (`POST`, `PUT`, `PATCH`, `DELETE`) dilindungi middleware `throttle:erp-write` (kuota 60 request/menit).
-   - Antarmuka frontend mengimplementasikan proteksi klik ganda via composable `useSubmitLock` (throttle 1000ms dan status `busy`).
-5. **Pencegahan Injeksi SQL**:
-   - Query builder memanfaatkan parameter binding penuh.
-   - Pencarian teks pada helper `ListQuery` menerapkan sanitasi wildcard SQL `LIKE` (`%`, `_`, `\`) menggunakan escaping backslash (`\`) eksplisit.
+Prasyarat: Linux atau WSL2, Docker dengan Compose v2, `make`, `git`, dan `openssl`.
 
----
-
-## 5. Kualitas, Pengujian & CI/CD
-
-Proyek ini menerapkan standar mutu berkelanjutan yang dapat diverifikasi secara mandiri melalui kakas otomatis:
-
-- **Analisis Statis PHP**: Divalidasi menggunakan **PHPStan / Larastan Level 6** pada cakupan kode aplikasi `app/` tanpa error dan tanpa supresi baseline palsu.
-- **Standardisasi Gaya Kode**: Diformat secara ketat menggunakan **Laravel Pint** sesuai PSR-12.
-- **Suite Pengujian Pest**: Suite pengujian mencakup Unit, Feature, dan Architecture Tests (termasuk verifikasi integritas trigger, pencegahan fungsi berbahaya, dan isolasi layer).
-- **Pengujian Frontend Vitest & Aksesibilitas**: Unit test komponen UI, composables, dan audit aksesibilitas otomatis **axe-core** (0 pelanggaran *critical* / *serious*).
-- **Skrip Verifikasi Hardening**: Skrip `scripts/verify-hardening.sh` menguji 27 butir hardening infrastruktur, database privileges, dan isolasi rahasia.
-- **Pemindaian Rahasia Gitleaks**: Git hooks lokal dan CI workflow memeriksa seluruh commit dari potensi kebocoran token atau kunci rahasia.
-- **Audit Dependensi**: Pemindaian kerentanan berkala menggunakan `composer audit` dan `npm audit`.
-- **Continuous Integration (GitHub Actions)**: Workflow `.github/workflows/ci.yml` menjalankan seluruh gerbang kualitas, `make verify`, dan uji asap image production (`make prod-smoke`) pada pull request dan push ke cabang utama.
-- **Rilis Image**: Tag `vX.Y.Z` memicu `.github/workflows/release.yml` yang mendorong image teruji ke GHCR. Panduan lengkap ada di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
-- **Dependabot**: Konfigurasi `.github/dependabot.yml` memantau pembaruan rutin untuk Composer, NPM, GitHub Actions, Docker, dan Docker Compose.
-
----
-
-## 6. Panduan Menjalankan Sistem (Quickstart)
-
-### Prasyarat
-- Sistem Operasi: Linux atau Windows dengan WSL2 (Ubuntu 22.04 / 24.04 disarankan).
-- Docker Engine $\ge 24.0$ dan Docker Compose v2.
-- Kakas `make`, `git`, dan `openssl`.
-
-### 1. Kloning Repositori & Konfigurasi Git Hooks
 ```bash
 git clone git@github.com:widiartowahyu3/erp-laravel.git erp-trading
 cd erp-trading
-
-# Pasang git hooks keamanan lokal (.githooks: Gitleaks, regex secret detector, Conventional Commits)
 make hooks
 ```
 
-### 2. Inisialisasi Berkas Lingkungan & Rahasia
+Siapkan berkas rahasia. Kata sandi dibuat acak di mesin kamu dan tidak pernah masuk ke repositori.
+
 ```bash
-# 1. Konfigurasi infrastruktur di root repositori
 cp .env.example .env
 APP_PASS=$(openssl rand -hex 24)
 MIGRATOR_PASS=$(openssl rand -hex 24)
@@ -205,12 +58,10 @@ sed -i "s/change_this_to_a_secure_random_app_password/${APP_PASS}/" .env
 sed -i "s/change_this_to_a_secure_random_migrator_password/${MIGRATOR_PASS}/" .env
 chmod 600 .env
 
-# 2. Kata sandi root MariaDB terpisah (Docker Compose Secret)
 openssl rand -hex 24 > secrets/db_root_password.txt
 chmod 644 secrets/db_root_password.txt
 chmod 700 secrets
 
-# 3. Konfigurasi aplikasi Laravel di src/.env
 cp src/.env.example src/.env
 sed -i "s/APP_ENV=production/APP_ENV=local/" src/.env
 sed -i "s/APP_DEBUG=false/APP_DEBUG=true/" src/.env
@@ -220,119 +71,63 @@ sed -i "s/DB_PASSWORD=change_this_to_erp_app_password/DB_PASSWORD=${APP_PASS}/" 
 chmod 600 src/.env
 ```
 
-### 3. Membangun & Menjalankan Stack Docker
+Bangun dan jalankan:
+
 ```bash
-# Bangun image Docker
 make build
-
-# Jalankan seluruh service (Nginx, PHP-FPM, MariaDB) di latar belakang
 make up
-
-# Generate application key Laravel
 make artisan cmd="key:generate"
-
-# Jalankan migrasi skema tabel via koneksi terisolasi erp_migrator
 make migrate
-
-# Jalankan seeder referensi baku (roles, permissions, units, payment terms, coa, tax rates)
 make seed
-
-# Buat akun Super Administrator pertama secara interaktif
 make artisan cmd="erp:admin:create"
-
-# Kompilasi bundel aset frontend
 docker compose --profile tools run --rm node npm run build
 ```
 
-### 4. Mengisi Data Uji Realistis (Opsional / Development)
-```bash
-# Isi data demo master data (8 entitas katalog produk dan rekanan bisnis)
-make seed-demo
+Aplikasi terbuka di `http://127.0.0.1:8080`.
 
-# Isi katalog barang umum Indonesia, pemasok, pelanggan, dan gudang tanpa transaksi (untuk uji PO, GR, SO, DO manual)
-make seed-demo-catalog
+### Akun dan data demo
 
-# Isi data demo transaksi operasional berantai (PO, GR, Saldo Stok, dan SA via domain services)
-make seed-demo-tx
-```
+Tidak ada akun bawaan. `erp:admin:create` meminta email dan kata sandi Super Administrator pertama, lalu pengguna lain didaftarkan dari menu Administrasi.
 
-### 5. Akses Aplikasi
-- **Aplikasi Web**: [http://127.0.0.1:8080](http://127.0.0.1:8080)
-- **Halaman Login**: [http://127.0.0.1:8080/login](http://127.0.0.1:8080/login)
-- **Katalog Styleguide (Khusus APP_ENV=local)**: [http://127.0.0.1:8080/dev/styleguide](http://127.0.0.1:8080/dev/styleguide)
-- **Healthcheck Service**: [http://127.0.0.1:8080/up](http://127.0.0.1:8080/up)
+Semua seeder demo menolak berjalan di production dan tidak dipanggil oleh `make seed`:
 
----
+| Perintah | Isi |
+|---|---|
+| `make seed-demo` | Master data contoh |
+| `make seed-demo-catalog` | Katalog barang umum, pemasok, pelanggan, dan gudang tanpa transaksi |
+| `make seed-demo-tx` | Skenario dokumen operasional dengan berbagai status |
+| `make seed-demo-full` | Siklus lengkap sekitar 20 pembelian dan 30 penjualan, dengan faktur, pembayaran, penyesuaian stok, dan jurnal manual, agar semua laporan terisi |
 
-## 7. Perintah Pengujian & Operasional
+Gunakan `make seed-demo-full` pada database yang masih kosong transaksinya. Bila dijalankan di atas transaksi lain, rekonsiliasi dan saldo 2103 ikut membaca transaksi tersebut.
 
-Seluruh perintah perawatan dan pengujian distandarisasi melalui target `Makefile`:
+## Menjalankan tes
 
 ```bash
-# Menjalankan seluruh gerbang kualitas (Pint + Larastan + Pest + Vitest + ESLint)
 make check
-
-# Menjalankan suite pengujian backend Pest (auto migrasi test-db)
 make test
-
-# Menjalankan suite pengujian frontend Vitest & axe-core
 make test-js
-
-# Menjalankan analisis statis kode PHP (PHPStan/Larastan level 6)
-make analyse
-
-# Menjalankan inspeksi gaya kode PHP (Laravel Pint)
-make lint
-
-# Menjalankan linting frontend Vue/JS (ESLint)
-make lint-js
-
-# Menjalankan skrip verifikasi keamanan & hardening (24 butir)
 make verify
-
-# Melakukan pencadangan basis data terkompresi ke direktori backups/
-make backup
-
-# Memvalidasi integritas file cadangan terhadap basis data uji sementara
-make restore-check
 ```
 
----
+`make check` menjalankan Pint, PHPStan, Pest, Vitest, dan ESLint. `make verify` memeriksa hardening pada container yang sedang berjalan. Penjelasannya ada di [`docs/TESTING.md`](docs/TESTING.md).
 
-## 8. Tata Letak Direktori Utama
+## Struktur folder
 
 ```text
 .
-├── .agent/skills/         # Pedoman dan aturan otomatis agen AI pengembang
-├── .github/               # Workflow GitHub Actions CI & konfigurasi Dependabot
-├── .githooks/             # Git hooks lokal (commit-msg, pre-commit secret detection)
-├── backups/               # Direktori penyimpanan arsip cadangan basis data (.gitignore)
-├── docker/                # Konfigurasi container Docker (Nginx, PHP-FPM, MariaDB)
-├── docs/                  # Dokumentasi arsitektur, keamanan, database, dan operasional
-├── review/                # Berkas log audit dan bukti verifikasi independen
-├── scripts/               # Skrip shell otomasi (hardening, backup, restore-check)
-├── secrets/               # Secret files Docker (chmod 700, di luar repositori git)
-├── src/                   # Kode sumber aplikasi Laravel & frontend Vue
-│   ├── app/               # Logika aplikasi (Controllers, Models, Services, Support)
-│   ├── bootstrap/         # Bootstrapping framework & exception handling
-│   ├── config/            # Konfigurasi aplikasi, keamanan, sesi, dan database
-│   ├── database/          # Skema migrasi tabel DDL dan seeder transaksi
-│   ├── resources/         # Kode frontend Vue 3, layout, halaman, dan design system
-│   ├── routes/            # Definisi rute web dan konsol
-│   └── tests/             # Suite pengujian Pest (Arch, Feature, Unit)
-├── compose.yaml           # Definisi service multi-container Docker Compose
-└── Makefile               # Antarmuka perintah otomasi terpadu
+├── docker/     Konfigurasi container
+├── docs/       Dokumentasi
+├── scripts/    Hardening, backup, dan deploy
+├── secrets/    Rahasia lokal, di luar git
+├── src/        Aplikasi Laravel dan frontend Vue
+├── compose.yaml
+└── Makefile
 ```
 
----
+## Dokumentasi
 
-## 9. Batasan Sistem Saat Ini & Rencana Masa Depan (*Roadmap*)
-
-Secara transparan dan jujur, implementasi saat ini memiliki batasan arsitektural yang disengaja:
-
-1. **Mata Uang Tunggal (Single Currency - IDR)**: Seluruh transaksi beroperasi eksklusif dalam Rupiah Indonesia tanpa konversi valuta asing.
-2. **Satuan Dasar Tunggal per Produk**: Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Konversi multi-satuan dinamis bertingkat (*UOM conversion*) belum diimplementasikan di tingkat transaksi.
-3. **Tanpa Dokumen Mutasi Antar-Gudang Langsung**: Fitur transfer persediaan antar-gudang saat ini ditangani secara manual melalui kombinasi dokumen Penyesuaian Keluar (`adjustment_out`) pada gudang asal dan Penyesuaian Masuk (`adjustment_in`) pada gudang tujuan.
-4. **Tanpa Tutup Buku**: Laporan keuangan membaca seluruh jurnal yang sudah diposting. Belum ada periode terkunci, sehingga laba tahun lalu ikut terbaca sebagai laba berjalan di neraca.
-5. **Batasan Administrasi yang Disengaja**: Tanpa 2FA, tanpa alur lupa kata sandi lewat email, tanpa wajib ganti kata sandi saat login pertama, tanpa ekspor log audit, dan peran bawaan tidak dapat diubah lewat antarmuka.
-6. **Deploy Otomatis ke Server**: Image production sudah dibangun, diuji, dan dirilis ke GHCR, tetapi deploy ke server masih dijalankan manual lewat `scripts/deploy.sh` karena belum ada server tetap.
+- Arsitektur: [`ARCHITECTURE`](docs/ARCHITECTURE.md), [`DATABASE_DESIGN`](docs/DATABASE_DESIGN.md), [`ERD`](docs/ERD.md), [`STACK`](docs/STACK.md)
+- Modul: [`PURCHASING`](docs/PURCHASING.md), [`INVENTORY`](docs/INVENTORY.md), [`SALES`](docs/SALES.md), [`ACCOUNTING`](docs/ACCOUNTING.md), [`REPORTS`](docs/REPORTS.md), [`MASTER_DATA`](docs/MASTER_DATA.md), [`ADMINISTRATION`](docs/ADMINISTRATION.md)
+- Keamanan dan operasi: [`SECURITY`](docs/SECURITY.md), [`AUTH`](docs/AUTH.md), [`OPERATIONS`](docs/OPERATIONS.md), [`DEPLOYMENT`](docs/DEPLOYMENT.md), [`DOCKER`](docs/DOCKER.md), [`PERFORMANCE`](docs/PERFORMANCE.md)
+- Pengembangan: [`CONVENTIONS`](docs/CONVENTIONS.md), [`FRONTEND_CONVENTIONS`](docs/FRONTEND_CONVENTIONS.md), [`DESIGN_SYSTEM`](docs/DESIGN_SYSTEM.md), [`GIT`](docs/GIT.md), [`TESTING`](docs/TESTING.md)
+- Batasan: [`LIMITATIONS`](docs/LIMITATIONS.md)
