@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Ban, ArrowLeft, Printer } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Ban, ArrowLeft, Printer, Wallet } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
@@ -13,6 +13,7 @@ import DateDisplay from '@/Components/ui/DateDisplay.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Alert from '@/Components/ui/Alert.vue';
+import Can from '@/Components/ui/Can.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
@@ -46,6 +47,8 @@ const breadcrumbs = computed(() => [
 const flashError = computed(() => page.props.flash?.error || null);
 const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
+
+const canReceivePayment = computed(() => ['posted', 'partially_paid'].includes(props.item.status));
 
 const hasPayments = computed(() => compareDecimals(props.item.paidAmount, '0', 2) > 0);
 
@@ -130,6 +133,15 @@ async function handleVoid() {
                                 Cetak
                             </Button>
                         </Link>
+
+                        <Can v-if="canReceivePayment" permission="payments.create">
+                            <Link :href="`/accounting/payments/create?customer_id=${item.customer.id}`">
+                                <Button variant="primary" size="sm">
+                                    <Wallet class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                    Terima Pembayaran
+                                </Button>
+                            </Link>
+                        </Can>
 
                         <Link v-if="canEditSalesInvoice(item)" :href="`/sales/invoices/${item.id}/edit`">
                             <Button variant="secondary" size="sm">
@@ -329,7 +341,14 @@ async function handleVoid() {
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                             <tr v-for="allocation in allocations" :key="allocation.paymentId">
-                                <td class="py-3 px-3 font-mono text-xs">{{ allocation.number }}</td>
+                                <td class="py-3 px-3 font-mono text-xs">
+                                    <Link
+                                        :href="`/accounting/payments/${allocation.paymentId}`"
+                                        class="text-indigo-600 dark:text-indigo-400 hover:underline"
+                                    >
+                                        {{ allocation.number }}
+                                    </Link>
+                                </td>
                                 <td class="py-3 px-3"><DateDisplay :value="allocation.paymentDate" /></td>
                                 <td class="py-3 px-3"><StatusBadge :status="allocation.status" /></td>
                                 <td class="py-3 px-3 text-right"><Rupiah :value="allocation.amount" /></td>

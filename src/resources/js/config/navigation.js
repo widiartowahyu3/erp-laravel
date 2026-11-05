@@ -197,10 +197,10 @@ export const navigationGroups = [
             },
             {
                 name: 'Pembayaran Kas/Bank',
-                href: '#',
+                href: '/accounting/payments',
                 icon: 'Wallet',
                 permission: 'payments.view',
-                available: false,
+                available: true,
                 description: 'Transaksi penerimaan dan pengeluaran kas atau bank.',
             },
         ],

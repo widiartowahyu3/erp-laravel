@@ -505,6 +505,28 @@ describe('Sales invoice detail', () => {
         }
     });
 
+    it.each([
+        ['draft', false],
+        ['posted', true],
+        ['partially_paid', true],
+        ['paid', false],
+        ['void', false],
+    ])('links to receiving a payment on status %s: %s', (status, expected) => {
+        const href = 'a[href="/accounting/payments/create?customer_id=3"]';
+        const paidAmount = ['partially_paid', 'paid'].includes(status) ? '1000.00' : '0.00';
+
+        expect(mountShow(invoice({ status, paidAmount }), [...ALL_PERMISSIONS, 'payments.create']).find(href).exists()).toBe(expected);
+        expect(mountShow(invoice({ status, paidAmount }), ALL_PERMISSIONS).find(href).exists()).toBe(false);
+    });
+
+    it('links each allocation to its payment', () => {
+        const wrapper = mountShow(invoice({ status: 'posted' }), ALL_PERMISSIONS, {
+            allocations: [{ paymentId: 5, number: 'PAY/202611/00005', paymentDate: '2026-11-04', status: 'posted', amount: '1000.00' }],
+        });
+
+        expect(wrapper.find('a[href="/accounting/payments/5"]').text()).toBe('PAY/202611/00005');
+    });
+
     it('hides every action without permission', () => {
         const labels = buttonLabels(mountShow(invoice({ status: 'draft' }), ['sales_invoices.view']));
 
