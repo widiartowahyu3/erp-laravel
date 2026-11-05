@@ -1,6 +1,6 @@
 # Modul Akuntansi: Bagan Akun & Jurnal
 
-Dokumen ini menjelaskan mesin jurnal Fase 8B: pemetaan akun, jurnal otomatis, pembalik, backfill, dan batasannya. Faktur, pembayaran, dan laporan keuangan dibangun pada fase berikutnya.
+Dokumen ini menjelaskan mesin jurnal: pemetaan akun, jurnal otomatis, pembalik, backfill, dan batasannya. Faktur penjualan tersedia sejak Fase 9 ([rincian](SALES.md)); pembayaran dan laporan keuangan dibangun pada fase berikutnya.
 
 ---
 
@@ -36,6 +36,7 @@ Akun kas/bank untuk pembayaran: 1101 dan 1102. Seeder `ChartOfAccountSeeder` ber
 | JT-GR | Posting penerimaan barang | `inventory` = Σ qty × `unit_cost` | `grir` | `goods_receipt` |
 | JT-DO | Posting surat jalan | `cogs` = Σ qty × `unit_cost` snapshot | `inventory` | `delivery_order` |
 | JT-SA | Posting penyesuaian stok | Selisih lebih: `inventory`; selisih kurang: `inventory_adjustment` | Selisih lebih: `inventory_adjustment`; selisih kurang: `inventory` | `stock_adjustment` |
+| JT-SI | Posting faktur penjualan | `receivable` = total; `sales_discount` = jumlah diskon | `sales` = subtotal; `vat_output` = jumlah pajak | `sales_invoice` |
 
 - `journal_date` memakai tanggal dokumen.
 - Baris bernilai nol tidak dibuat. Bila semua nol, tidak ada jurnal dan peristiwa `journal.skipped` dicatat di audit.
@@ -68,6 +69,8 @@ Wajib sama di semua layanan untuk mencegah deadlock:
 8. `stock_balances` (`product_id` menaik, di dalam `StockService`)
 9. `document_sequences` (di dalam `DocumentNumberService`)
 10. Penulisan `journals` dan `journal_lines`
+
+Posting faktur penjualan mengikuti urutan itu: SO, DO, baris SO, baris DO, faktur, nomor dokumen, jurnal. Karena semua penulisan untuk satu SO mengambil kunci SO lebih dulu, faktur dan pembatalan DO pada SO yang sama berjalan bergantian. Pembatalan faktur hanya mengunci faktur, dan persetujuan SO mengunci pelanggan lalu SO.
 
 ## 7. Backfill
 

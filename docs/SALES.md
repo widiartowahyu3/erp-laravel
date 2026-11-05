@@ -163,6 +163,8 @@ Aturan Transisi Status DO:
 3. Mengurangi `delivered_quantity` pada `sales_order_items`.
 4. Memperbarui status pesanan penjualan melalui `SalesOrderProgress::determineStatus` (dapat melakukan rollback dari `delivered` ke `partially_delivered` atau ke `approved`).
 
+5. **Ditolak bila sudah ditagih:** surat jalan yang barisnya dirujuk faktur berstatus selain `void`, termasuk draf, tidak dapat dibatalkan (409 pada `status`, pesan menyebut nomor fakturnya). Batalkan fakturnya terlebih dahulu.
+
 ---
 
 ## 5. Protokol Konkurensi & Penguncian Transaksi (S7)
@@ -229,10 +231,57 @@ Berikut adalah keputusan arsitektural dan batasan desain yang ditetapkan pada mo
    - `Edit.vue`: Formulir pengubahan draf surat jalan.
    - `Show.vue`: Rincian surat jalan dengan penyembunyian informasi HPP (`unit_cost`) pada status draf/batal dan menampilkan HPP hanya saat dokumen berstatus `posted`. Dilengkapi tombol *Posting DO* (dengan peringatan pemotongan stok gudang) dan *Batalkan DO* (dengan modal alasan pembatalan).
 
-### B. Batasan Eksplisit Ruang Lingkup (Scope Boundaries)
-Fitur-fitur berikut **BUKAN** merupakan bagian dari Fase 8A dan secara eksplisit dialokasikan untuk Fase 8B dan fase berikutnya:
-1. **Faktur Penjualan (*Sales Invoice / SI*)**: Pembuatan faktur penagihan pelanggan dan penentuan termin jatuh tempo piutang.
-2. **Penerimaan Pembayaran Piutang (*Customer Payments*)**: Pencatatan pelunasan faktur, pembayaran di muka (*down payment*), dan alokasi bukti potong pajak.
-3. **Pencatatan Buku Besar & Jurnal Otomatis (*GL Journal Entries*)**: Pengakuan piutang dagang, pendapatan penjualan, PPN keluaran, dan beban HPP ke modul akuntansi.
-4. **Laporan Analitis Penjualan (*Sales Reports*)**: Laporan omzet penjualan per periode, per produk, per pelanggan, dan per salesman.
-5. **Pemeriksaan Plafon Kredit (*Credit Limit Check*)**: Pemblokiran penerbitan SO melebihi batas plafon piutang.
+### B. Batasan Ruang Lingkup Saat Ini
+Fitur berikut belum tersedia dan dialokasikan untuk fase berikutnya:
+1. **Penerimaan Pembayaran Piutang (*Customer Payments*)**: Fase 10. Tanpa uang muka dan tanpa kelebihan bayar.
+2. **Laporan Analitis Penjualan (*Sales Reports*)**: Fase 12.
+
+---
+
+## 9. Faktur Penjualan (Fase 9)
+
+Rute `/sales/invoices`. Satu faktur memuat satu pelanggan dan satu SO, dan barisnya berasal dari baris DO berstatus `posted` milik SO itu, boleh dari beberapa DO. Gabungan lintas SO tidak didukung.
+
+### A. Alur
+```text
+SO disetujui -> DO diposting -> Faktur draf -> Faktur diposting -> Dibayar (Fase 10)
+                                     |               |
+                                     v               v
+                                 Dibatalkan      Dibatalkan (bila belum ada pembayaran, dengan jurnal pembalik)
+```
+
+SO harus berstatus `approved`, `partially_delivered`, `delivered`, atau `closed`, dan pelanggan harus aktif saat faktur dibuat maupun saat diposting.
+
+### B. Sisa yang dapat ditagih
+`sisa = kuantitas baris DO - jumlah kuantitas pada faktur diposting (posted, partially_paid, paid) yang merujuk baris itu`.
+
+Draf **tidak** mereservasi kuantitas: dua draf boleh mengincar sisa yang sama. Saat posting, sisa dan semua nilai dihitung ulang di bawah kunci, sehingga posting kedua yang melampaui sisa ditolak (422 pada `items`) tanpa mengubah apa pun. Faktur yang dibatalkan membebaskan kuantitasnya.
+
+Pengguna hanya menentukan baris, kuantitas, tanggal, jatuh tempo, dan catatan. Harga, diskon, dan pajak selalu dihitung server dari baris SO.
+
+### C. Alokasi diskon dan pajak (`SalesInvoiceCalculator`)
+- Bruto baris: `kuantitas x harga satuan`.
+- Diskon baris: proporsional `diskon SO x kuantitas / kuantitas SO`, dibulatkan 2 desimal. Penagihan yang menggenapi kuantitas baris SO mengambil **sisa diskon**, sehingga jumlah diskon sama persis dengan diskon SO. Contoh diskon 100 untuk 3 unit: 33,33 + 33,33 + 33,34.
+- Pajak per baris: `(bruto - diskon) x tarif / 100`, dengan tarif dari baris SO.
+- Header: `subtotal = jumlah bruto`, `total = subtotal - diskon + pajak`.
+- Penagihan bertahap dapat berselisih beberapa sen terhadap bruto atau pajak SO karena pembulatan per baris. Selisih ini diterima.
+
+### D. Jatuh tempo
+`tanggal faktur + hari termin`, dengan termin dari SO, lalu dari pelanggan, lalu 0 hari. Pada draf boleh diubah selama tidak sebelum tanggal faktur. Tanggal faktur tidak boleh di masa depan.
+
+### E. Pembatalan
+Alasan wajib, 1 sampai 255 karakter. Draf dibatalkan tanpa jurnal. Faktur diposting hanya dapat dibatalkan bila `paid_amount = 0` (selain itu 409 pada `status`, "batalkan pembayaran terlebih dahulu") dan menghasilkan jurnal pembalik.
+
+---
+
+## 10. Batas Kredit Pelanggan (Fase 9)
+
+Diperiksa hanya saat SO disetujui, di bawah kunci baris pelanggan:
+
+`eksposur = jumlah (total - paid_amount) faktur posted/partially_paid milik pelanggan + total SO yang disetujui`
+
+- `credit_limit = 0` berarti tanpa batas. Kolom ini tidak boleh NULL dan default-nya 0.
+- Eksposur **tepat sama** dengan batas diizinkan. Bila melebihi, persetujuan ditolak (422 pada `customer_id`) dengan pesan berisi batas, piutang beredar, dan nilai pesanan, dan SO tetap draf.
+- Tidak ada izin override: naikkan batasnya di master pelanggan.
+
+**Celah yang disengaja:** SO terbuka lain dan DO terkirim yang belum difakturkan tidak dihitung. Beberapa SO yang disetujui berurutan masing-masing bisa lolos walaupun jumlahnya melewati batas, sampai fakturnya diposting.

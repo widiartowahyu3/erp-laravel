@@ -1600,10 +1600,10 @@ SALES_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_SALES UNPROT_SALES MISSING_CAN_SALES MISSING_THROTTLE_SALES <<< "$SALES_ROUTE_CHECK"
 
-if [ "$TOTAL_SALES" -eq 17 ]; then
-    pass "Ditemukan 17 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_SALES" -eq 25 ]; then
+    pass "Ditemukan 25 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 17, ditemukan: $TOTAL_SALES)"
+    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 25, ditemukan: $TOTAL_SALES)"
 fi
 
 if [ "$UNPROT_SALES" -eq 0 ]; then
@@ -1845,6 +1845,70 @@ if [ "$ADMIN_FORBIDDEN_TOTAL" -eq 17 ] && [ "$ADMIN_FORBIDDEN_WRONG" -eq 0 ]; th
     pass "Seluruh 17 rute /admin/* menjawab HTTP 403 untuk pengguna tanpa izin"
 else
     fail "Rute /admin/* tidak menjawab 403 untuk pengguna tanpa izin (diperiksa: $ADMIN_FORBIDDEN_TOTAL, keliru: $ADMIN_FORBIDDEN_WRONG; $ADMIN_FORBIDDEN_LIST)"
+fi
+
+# ------------------------------------------------------------------------------
+# 31. Keamanan rute faktur penjualan (/sales/invoices*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 31: Verifikasi Keamanan Rute & Otorisasi Faktur Penjualan (/sales/invoices*) ---"
+
+INVOICE_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $total = 0;
+    $bad = [];
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        $uri = $route->uri();
+
+        if ($uri !== "sales/invoices" && !str_starts_with($uri, "sales/invoices/")) {
+            continue;
+        }
+
+        $total++;
+        $methods = $route->methods();
+        $middleware = $route->gatherMiddleware();
+        $isMutation = count(array_intersect($methods, ["POST", "PUT", "PATCH", "DELETE"])) > 0;
+
+        if (!in_array("auth", $middleware, true)) {
+            $bad[] = "auth " . $uri;
+        }
+
+        if (count(preg_grep("/^can:sales_invoices\.(view|create|update|post|void)$/", $middleware)) !== 1) {
+            $bad[] = "can " . implode("|", $methods) . " " . $uri;
+        }
+
+        if ($isMutation && !in_array("throttle:erp-write", $middleware, true)) {
+            $bad[] = "throttle " . implode("|", $methods) . " " . $uri;
+        }
+    }
+
+    echo $total . ":" . count($bad) . ":" . implode(",", $bad);
+' 2>/dev/null || echo "0:1:gagal-dijalankan")
+
+IFS=':' read -r INVOICE_ROUTE_TOTAL INVOICE_ROUTE_BAD INVOICE_ROUTE_LIST <<< "$INVOICE_ROUTE_CHECK"
+
+if [ "$INVOICE_ROUTE_TOTAL" -eq 8 ]; then
+    pass "Ditemukan 8 rute faktur penjualan (/sales/invoices*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute faktur penjualan tidak sesuai ekspektasi (harus 8, ditemukan: $INVOICE_ROUTE_TOTAL)"
+fi
+
+if [ "$INVOICE_ROUTE_BAD" -eq 0 ]; then
+    pass "Seluruh rute /sales/invoices* memiliki auth, satu 'can:sales_invoices.*', dan throttle:erp-write pada mutasi"
+else
+    fail "Rute /sales/invoices* tidak memenuhi syarat ($INVOICE_ROUTE_BAD: $INVOICE_ROUTE_LIST)"
+fi
+
+GUEST_INVOICE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/sales/invoices" || true)
+if [ "$GUEST_INVOICE_CODE" = "302" ]; then
+    pass "Akses guest ke /sales/invoices dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke /sales/invoices mengembalikan HTTP $GUEST_INVOICE_CODE (harus 302)"
 fi
 
 # ------------------------------------------------------------------------------
