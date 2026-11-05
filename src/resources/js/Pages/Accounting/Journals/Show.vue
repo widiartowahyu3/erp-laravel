@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Ban, Undo2 } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Ban, Undo2, Printer } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
@@ -138,6 +138,12 @@ async function handleReverse() {
             <PageHeader :title="item.number" :description="item.description">
                 <template #actions>
                     <div class="flex items-center gap-2">
+                        <Link :href="`/accounting/journals/${item.id}/print`">
+                            <Button variant="secondary" size="sm">
+                                <Printer class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                Cetak
+                            </Button>
+                        </Link>
                         <Link v-if="canEdit" :href="`/accounting/journals/${item.id}/edit`">
                             <Button variant="secondary" size="sm">
                                 <Edit class="w-4 h-4 mr-1.5" aria-hidden="true" />

@@ -19,6 +19,7 @@ use App\Services\Inventory\StockService;
 use App\Services\Purchasing\GoodsReceiptService;
 use App\Services\Purchasing\PurchaseInvoiceService;
 use App\Support\Decimal;
+use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\RedirectResponse;
@@ -131,6 +132,13 @@ class GoodsReceiptController extends Controller
             'item' => $goodsReceipt,
             'journal' => JournalSourceResolver::related(StockService::SOURCE_GOODS_RECEIPT, $goodsReceipt->id),
             'hasBillableItems' => $invoices->hasBillableItems($goodsReceipt->purchaseOrder),
+        ]);
+    }
+
+    public function print(GoodsReceipt $goodsReceipt): Response
+    {
+        return Inertia::render('Purchasing/GoodsReceipts/Print', [
+            'item' => DocumentPrintProps::goodsReceipt($goodsReceipt),
         ]);
     }
 

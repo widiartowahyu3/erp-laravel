@@ -18,6 +18,7 @@ use App\Models\Warehouse;
 use App\Services\Sales\CreditExposureService;
 use App\Services\Sales\SalesInvoiceService;
 use App\Services\Sales\SalesOrderService;
+use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\RedirectResponse;
@@ -122,6 +123,13 @@ class SalesOrderController extends Controller
         return Inertia::render('Sales/SalesOrders/Show', [
             'item' => $salesOrder,
             'hasBillableItems' => $invoices->hasBillableItems($salesOrder),
+        ]);
+    }
+
+    public function print(SalesOrder $salesOrder): Response
+    {
+        return Inertia::render('Sales/SalesOrders/Print', [
+            'item' => DocumentPrintProps::salesOrder($salesOrder),
         ]);
     }
 

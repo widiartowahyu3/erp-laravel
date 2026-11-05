@@ -17,7 +17,7 @@ test('all purchasing routes are protected by authentication, explicit can middle
         }
     }
 
-    expect($purchasingRoutes)->toHaveCount(25);
+    expect($purchasingRoutes)->toHaveCount(28);
 
     foreach ($purchasingRoutes as $route) {
         $uri = $route->uri();

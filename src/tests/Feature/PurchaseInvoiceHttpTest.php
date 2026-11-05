@@ -415,7 +415,7 @@ test('all invoice routes carry auth, one can and the write limiter', function ()
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route): bool => str_starts_with($route->uri(), 'purchasing/invoices'));
 
-    expect($routes->count())->toBe(8);
+    expect($routes->count())->toBe(9);
 
     foreach ($routes as $route) {
         $middleware = $route->gatherMiddleware();

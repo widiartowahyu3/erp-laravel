@@ -16,6 +16,7 @@ use App\Models\Warehouse;
 use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Inventory\StockAdjustmentService;
 use App\Services\Inventory\StockService;
+use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\RedirectResponse;
@@ -108,6 +109,13 @@ final class StockAdjustmentController extends Controller
             'item' => $stockAdjustment,
             'movements' => $movements,
             'journal' => JournalSourceResolver::related(StockService::SOURCE_STOCK_ADJUSTMENT, $stockAdjustment->id),
+        ]);
+    }
+
+    public function print(StockAdjustment $stockAdjustment): Response
+    {
+        return Inertia::render('Inventory/StockAdjustments/Print', [
+            'item' => DocumentPrintProps::stockAdjustment($stockAdjustment),
         ]);
     }
 

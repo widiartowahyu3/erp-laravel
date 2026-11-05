@@ -17,6 +17,7 @@ use App\Models\TaxRate;
 use App\Models\Warehouse;
 use App\Services\Purchasing\PurchaseInvoiceService;
 use App\Services\Purchasing\PurchaseOrderService;
+use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\RedirectResponse;
@@ -124,6 +125,13 @@ class PurchaseOrderController extends Controller
         return Inertia::render('Purchasing/PurchaseOrders/Show', [
             'item' => $purchaseOrder,
             'hasBillableItems' => $invoices->hasBillableItems($purchaseOrder),
+        ]);
+    }
+
+    public function print(PurchaseOrder $purchaseOrder): Response
+    {
+        return Inertia::render('Purchasing/PurchaseOrders/Print', [
+            'item' => DocumentPrintProps::purchaseOrder($purchaseOrder),
         ]);
     }
 

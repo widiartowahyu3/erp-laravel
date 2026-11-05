@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Ban, ArrowLeft, FileText } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Ban, ArrowLeft, FileText, Printer } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
@@ -149,6 +149,12 @@ async function handleVoid() {
             >
                 <template #actions>
                     <div class="flex items-center gap-2">
+                        <Link :href="`/sales/delivery-orders/${deliveryOrder.id}/print`">
+                            <Button variant="secondary" size="sm">
+                                <Printer class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                Cetak
+                            </Button>
+                        </Link>
                         <Link href="/sales/delivery-orders">
                             <Button variant="secondary" size="sm">
                                 <ArrowLeft class="w-4 h-4 mr-1.5" aria-hidden="true" />

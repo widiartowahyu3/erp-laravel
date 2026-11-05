@@ -19,6 +19,7 @@ use App\Services\Inventory\StockService;
 use App\Services\Sales\DeliveryOrderService;
 use App\Services\Sales\SalesInvoiceService;
 use App\Support\Decimal;
+use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Http\RedirectResponse;
@@ -132,6 +133,13 @@ class DeliveryOrderController extends Controller
             'item' => $deliveryOrder,
             'journal' => JournalSourceResolver::related(StockService::SOURCE_DELIVERY_ORDER, $deliveryOrder->id),
             'hasBillableItems' => $invoices->hasBillableItems($deliveryOrder->salesOrder),
+        ]);
+    }
+
+    public function print(DeliveryOrder $deliveryOrder): Response
+    {
+        return Inertia::render('Sales/DeliveryOrders/Print', [
+            'item' => DocumentPrintProps::deliveryOrder($deliveryOrder),
         ]);
     }
 

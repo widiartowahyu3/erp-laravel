@@ -139,6 +139,13 @@ final class PurchaseInvoiceController extends Controller
         ]);
     }
 
+    public function print(PurchaseInvoice $purchaseInvoice): Response
+    {
+        return Inertia::render('Purchasing/Invoices/Print', [
+            'item' => $this->detailProps($purchaseInvoice),
+        ]);
+    }
+
     public function edit(PurchaseInvoice $purchaseInvoice): Response|RedirectResponse
     {
         if (! $purchaseInvoice->isEditable() || $purchaseInvoice->purchase_order_id === null) {
@@ -283,7 +290,7 @@ final class PurchaseInvoiceController extends Controller
     private function detailProps(PurchaseInvoice $invoice): array
     {
         $invoice->load([
-            'supplier:id,code,name',
+            'supplier:id,code,name,address',
             'purchaseOrder:id,number',
             'poster:id,name',
             'voider:id,name',
@@ -311,6 +318,7 @@ final class PurchaseInvoiceController extends Controller
                 'id' => $invoice->supplier->id,
                 'code' => $invoice->supplier->code,
                 'name' => $invoice->supplier->name,
+                'address' => $invoice->supplier->address,
             ],
             'purchaseOrder' => $invoice->purchaseOrder === null ? null : [
                 'id' => $invoice->purchaseOrder->id,

@@ -1332,10 +1332,10 @@ INV_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_INV UNPROT_INV MISSING_CAN_INV MISSING_THROTTLE_INV <<< "$INV_ROUTE_CHECK"
 
-if [ "$TOTAL_INV" -eq 11 ]; then
-    pass "Ditemukan 11 rute modul inventori (/inventory/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_INV" -eq 12 ]; then
+    pass "Ditemukan 12 rute modul inventori (/inventory/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul inventori tidak sesuai ekspektasi (harus 11, ditemukan: $TOTAL_INV)"
+    fail "Jumlah rute modul inventori tidak sesuai ekspektasi (harus 12, ditemukan: $TOTAL_INV)"
 fi
 
 if [ "$UNPROT_INV" -eq 0 ]; then
@@ -1413,10 +1413,10 @@ PURCH_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_PURCH UNPROT_PURCH MISSING_CAN_PURCH MISSING_THROTTLE_PURCH <<< "$PURCH_ROUTE_CHECK"
 
-if [ "$TOTAL_PURCH" -eq 25 ]; then
-    pass "Ditemukan 25 rute modul purchasing (/purchasing/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_PURCH" -eq 28 ]; then
+    pass "Ditemukan 28 rute modul purchasing (/purchasing/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul purchasing tidak sesuai ekspektasi (harus 25, ditemukan: $TOTAL_PURCH)"
+    fail "Jumlah rute modul purchasing tidak sesuai ekspektasi (harus 28, ditemukan: $TOTAL_PURCH)"
 fi
 
 if [ "$UNPROT_PURCH" -eq 0 ]; then
@@ -1600,10 +1600,10 @@ SALES_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_SALES UNPROT_SALES MISSING_CAN_SALES MISSING_THROTTLE_SALES <<< "$SALES_ROUTE_CHECK"
 
-if [ "$TOTAL_SALES" -eq 26 ]; then
-    pass "Ditemukan 26 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_SALES" -eq 28 ]; then
+    pass "Ditemukan 28 rute modul penjualan (/sales/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 26, ditemukan: $TOTAL_SALES)"
+    fail "Jumlah rute modul penjualan tidak sesuai ekspektasi (harus 28, ditemukan: $TOTAL_SALES)"
 fi
 
 if [ "$UNPROT_SALES" -eq 0 ]; then
@@ -1687,10 +1687,10 @@ ACCOUNTING_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r TOTAL_ACCOUNTING UNPROT_ACCOUNTING MISSING_CAN_ACCOUNTING MISSING_THROTTLE_ACCOUNTING <<< "$ACCOUNTING_ROUTE_CHECK"
 
-if [ "$TOTAL_ACCOUNTING" -eq 24 ]; then
-    pass "Ditemukan 24 rute modul akuntansi (/accounting/*) terdaftar dalam aplikasi"
+if [ "$TOTAL_ACCOUNTING" -eq 25 ]; then
+    pass "Ditemukan 25 rute modul akuntansi (/accounting/*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute modul akuntansi tidak sesuai ekspektasi (harus 24, ditemukan: $TOTAL_ACCOUNTING)"
+    fail "Jumlah rute modul akuntansi tidak sesuai ekspektasi (harus 25, ditemukan: $TOTAL_ACCOUNTING)"
 fi
 
 if [ "$UNPROT_ACCOUNTING" -eq 0 ]; then
@@ -2056,10 +2056,10 @@ PURCHASE_INVOICE_ROUTE_CHECK=$(docker compose exec -T php php -r '
 
 IFS=':' read -r PURCHASE_INVOICE_ROUTE_TOTAL PURCHASE_INVOICE_ROUTE_BAD PURCHASE_INVOICE_ROUTE_LIST <<< "$PURCHASE_INVOICE_ROUTE_CHECK"
 
-if [ "$PURCHASE_INVOICE_ROUTE_TOTAL" -eq 8 ]; then
-    pass "Ditemukan 8 rute faktur pembelian (/purchasing/invoices*) terdaftar dalam aplikasi"
+if [ "$PURCHASE_INVOICE_ROUTE_TOTAL" -eq 9 ]; then
+    pass "Ditemukan 9 rute faktur pembelian (/purchasing/invoices*) terdaftar dalam aplikasi"
 else
-    fail "Jumlah rute faktur pembelian tidak sesuai ekspektasi (harus 8, ditemukan: $PURCHASE_INVOICE_ROUTE_TOTAL)"
+    fail "Jumlah rute faktur pembelian tidak sesuai ekspektasi (harus 9, ditemukan: $PURCHASE_INVOICE_ROUTE_TOTAL)"
 fi
 
 if [ "$PURCHASE_INVOICE_ROUTE_BAD" -eq 0 ]; then
@@ -2143,6 +2143,51 @@ if [ "$GUEST_REPORT_EXPORT_CODE" = "302" ]; then
     pass "Akses guest ke ekspor CSV laporan dialihkan ke halaman login (HTTP 302)"
 else
     fail "Akses guest ke ekspor CSV laporan mengembalikan HTTP $GUEST_REPORT_EXPORT_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
+# 37. Rute cetak dokumen
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 37: Verifikasi Rute Cetak Dokumen ---"
+
+DOCUMENT_PRINT_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $expected = [
+        "purchasing/purchase-orders/{purchase_order}/print" => "can:purchase_orders.view",
+        "purchasing/goods-receipts/{goods_receipt}/print" => "can:goods_receipts.view",
+        "purchasing/invoices/{purchase_invoice}/print" => "can:purchase_invoices.view",
+        "sales/sales-orders/{sales_order}/print" => "can:sales_orders.view",
+        "sales/delivery-orders/{delivery_order}/print" => "can:delivery_orders.view",
+        "inventory/stock-adjustments/{stock_adjustment}/print" => "can:stock_adjustments.view",
+        "accounting/journals/{journal}/print" => "can:journals.view",
+    ];
+    $bad = array_keys($expected);
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        $uri = $route->uri();
+
+        if (isset($expected[$uri])
+            && array_values(array_diff($route->methods(), ["HEAD"])) === ["GET"]
+            && in_array($expected[$uri], $route->gatherMiddleware(), true)
+            && in_array("auth", $route->gatherMiddleware(), true)) {
+            $bad = array_values(array_diff($bad, [$uri]));
+        }
+    }
+
+    echo count($bad) . ":" . implode(",", $bad);
+' 2>/dev/null || echo "1:gagal-dijalankan")
+
+IFS=':' read -r DOCUMENT_PRINT_BAD DOCUMENT_PRINT_LIST <<< "$DOCUMENT_PRINT_CHECK"
+
+if [ "$DOCUMENT_PRINT_BAD" -eq 0 ]; then
+    pass "Ketujuh rute cetak dokumen hanya GET, memiliki auth, dan izin lihat dokumennya"
+else
+    fail "Rute cetak dokumen tidak memenuhi syarat ($DOCUMENT_PRINT_BAD: $DOCUMENT_PRINT_LIST)"
 fi
 
 # ------------------------------------------------------------------------------

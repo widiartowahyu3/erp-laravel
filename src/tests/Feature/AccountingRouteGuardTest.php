@@ -15,7 +15,7 @@ test('all accounting routes are protected by authentication, explicit can middle
         }
     }
 
-    expect($accountingRoutes)->toHaveCount(24);
+    expect($accountingRoutes)->toHaveCount(25);
 
     foreach ($accountingRoutes as $route) {
         $uri = $route->uri();

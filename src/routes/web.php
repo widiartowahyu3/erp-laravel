@@ -138,6 +138,7 @@ Route::middleware([
         Route::get('stock-adjustments/create', [StockAdjustmentController::class, 'create'])->middleware('can:stock_adjustments.create')->name('stock-adjustments.create');
         Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->middleware('can:stock_adjustments.create')->name('stock-adjustments.store');
         Route::get('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'show'])->middleware('can:stock_adjustments.view')->name('stock-adjustments.show');
+        Route::get('stock-adjustments/{stock_adjustment}/print', [StockAdjustmentController::class, 'print'])->middleware('can:stock_adjustments.view')->name('stock-adjustments.print');
         Route::get('stock-adjustments/{stock_adjustment}/edit', [StockAdjustmentController::class, 'edit'])->middleware('can:stock_adjustments.update')->name('stock-adjustments.edit');
         Route::put('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'update'])->middleware('can:stock_adjustments.update')->name('stock-adjustments.update');
         Route::post('stock-adjustments/{stock_adjustment}/post', [StockAdjustmentController::class, 'post'])->middleware('can:stock_adjustments.post')->name('stock-adjustments.post');
@@ -150,6 +151,7 @@ Route::middleware([
         Route::get('purchase-orders/create', [PurchaseOrderController::class, 'create'])->middleware('can:purchase_orders.create')->name('purchase-orders.create');
         Route::post('purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('can:purchase_orders.create')->name('purchase-orders.store');
         Route::get('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'show'])->middleware('can:purchase_orders.view')->name('purchase-orders.show');
+        Route::get('purchase-orders/{purchase_order}/print', [PurchaseOrderController::class, 'print'])->middleware('can:purchase_orders.view')->name('purchase-orders.print');
         Route::get('purchase-orders/{purchase_order}/edit', [PurchaseOrderController::class, 'edit'])->middleware('can:purchase_orders.update')->name('purchase-orders.edit');
         Route::put('purchase-orders/{purchase_order}', [PurchaseOrderController::class, 'update'])->middleware('can:purchase_orders.update')->name('purchase-orders.update');
         Route::post('purchase-orders/{purchase_order}/approve', [PurchaseOrderController::class, 'approve'])->middleware('can:purchase_orders.approve')->name('purchase-orders.approve');
@@ -160,6 +162,7 @@ Route::middleware([
         Route::get('goods-receipts/create', [GoodsReceiptController::class, 'create'])->middleware('can:goods_receipts.create')->name('goods-receipts.create');
         Route::post('goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('can:goods_receipts.create')->name('goods-receipts.store');
         Route::get('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'show'])->middleware('can:goods_receipts.view')->name('goods-receipts.show');
+        Route::get('goods-receipts/{goods_receipt}/print', [GoodsReceiptController::class, 'print'])->middleware('can:goods_receipts.view')->name('goods-receipts.print');
         Route::get('goods-receipts/{goods_receipt}/edit', [GoodsReceiptController::class, 'edit'])->middleware('can:goods_receipts.update')->name('goods-receipts.edit');
         Route::put('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'update'])->middleware('can:goods_receipts.update')->name('goods-receipts.update');
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post'])->middleware('can:goods_receipts.post')->name('goods-receipts.post');
@@ -169,6 +172,7 @@ Route::middleware([
         Route::get('invoices/create', [PurchaseInvoiceController::class, 'create'])->middleware('can:purchase_invoices.create')->name('invoices.create');
         Route::post('invoices', [PurchaseInvoiceController::class, 'store'])->middleware('can:purchase_invoices.create')->name('invoices.store');
         Route::get('invoices/{purchase_invoice}', [PurchaseInvoiceController::class, 'show'])->middleware('can:purchase_invoices.view')->name('invoices.show');
+        Route::get('invoices/{purchase_invoice}/print', [PurchaseInvoiceController::class, 'print'])->middleware('can:purchase_invoices.view')->name('invoices.print');
         Route::get('invoices/{purchase_invoice}/edit', [PurchaseInvoiceController::class, 'edit'])->middleware('can:purchase_invoices.update')->name('invoices.edit');
         Route::put('invoices/{purchase_invoice}', [PurchaseInvoiceController::class, 'update'])->middleware('can:purchase_invoices.update')->name('invoices.update');
         Route::post('invoices/{purchase_invoice}/post', [PurchaseInvoiceController::class, 'post'])->middleware('can:purchase_invoices.post')->name('invoices.post');
@@ -181,6 +185,7 @@ Route::middleware([
         Route::get('sales-orders/create', [SalesOrderController::class, 'create'])->middleware('can:sales_orders.create')->name('sales-orders.create');
         Route::post('sales-orders', [SalesOrderController::class, 'store'])->middleware('can:sales_orders.create')->name('sales-orders.store');
         Route::get('sales-orders/{sales_order}', [SalesOrderController::class, 'show'])->middleware('can:sales_orders.view')->name('sales-orders.show');
+        Route::get('sales-orders/{sales_order}/print', [SalesOrderController::class, 'print'])->middleware('can:sales_orders.view')->name('sales-orders.print');
         Route::get('sales-orders/{sales_order}/edit', [SalesOrderController::class, 'edit'])->middleware('can:sales_orders.update')->name('sales-orders.edit');
         Route::put('sales-orders/{sales_order}', [SalesOrderController::class, 'update'])->middleware('can:sales_orders.update')->name('sales-orders.update');
         Route::post('sales-orders/{sales_order}/approve', [SalesOrderController::class, 'approve'])->middleware('can:sales_orders.approve')->name('sales-orders.approve');
@@ -191,6 +196,7 @@ Route::middleware([
         Route::get('delivery-orders/create', [DeliveryOrderController::class, 'create'])->middleware('can:delivery_orders.create')->name('delivery-orders.create');
         Route::post('delivery-orders', [DeliveryOrderController::class, 'store'])->middleware('can:delivery_orders.create')->name('delivery-orders.store');
         Route::get('delivery-orders/{delivery_order}', [DeliveryOrderController::class, 'show'])->middleware('can:delivery_orders.view')->name('delivery-orders.show');
+        Route::get('delivery-orders/{delivery_order}/print', [DeliveryOrderController::class, 'print'])->middleware('can:delivery_orders.view')->name('delivery-orders.print');
         Route::get('delivery-orders/{delivery_order}/edit', [DeliveryOrderController::class, 'edit'])->middleware('can:delivery_orders.update')->name('delivery-orders.edit');
         Route::put('delivery-orders/{delivery_order}', [DeliveryOrderController::class, 'update'])->middleware('can:delivery_orders.update')->name('delivery-orders.update');
         Route::post('delivery-orders/{delivery_order}/post', [DeliveryOrderController::class, 'post'])->middleware('can:delivery_orders.post')->name('delivery-orders.post');
@@ -235,6 +241,7 @@ Route::middleware([
         Route::get('journals/create', [JournalController::class, 'create'])->middleware('can:journals.create')->name('journals.create');
         Route::post('journals', [JournalController::class, 'store'])->middleware('can:journals.create')->name('journals.store');
         Route::get('journals/{journal}', [JournalController::class, 'show'])->middleware('can:journals.view')->name('journals.show');
+        Route::get('journals/{journal}/print', [JournalController::class, 'print'])->middleware('can:journals.view')->name('journals.print');
         Route::get('journals/{journal}/edit', [JournalController::class, 'edit'])->middleware('can:journals.update')->name('journals.edit');
         Route::put('journals/{journal}', [JournalController::class, 'update'])->middleware('can:journals.update')->name('journals.update');
         Route::post('journals/{journal}/post', [JournalController::class, 'post'])->middleware('can:journals.post')->name('journals.post');

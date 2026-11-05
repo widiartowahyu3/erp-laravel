@@ -17,7 +17,7 @@ test('all inventory routes are protected by authentication, explicit can middlew
         }
     }
 
-    expect($inventoryRoutes)->toHaveCount(11);
+    expect($inventoryRoutes)->toHaveCount(12);
 
     foreach ($inventoryRoutes as $route) {
         $uri = $route->uri();

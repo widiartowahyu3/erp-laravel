@@ -13,6 +13,7 @@ use App\Models\ChartOfAccount;
 use App\Models\Journal;
 use App\Services\Accounting\JournalService;
 use App\Services\Accounting\JournalSourceResolver;
+use App\Support\Documents\DocumentPrintProps;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
 use Illuminate\Database\Eloquent\Builder;
@@ -102,6 +103,13 @@ final class JournalController extends Controller
             'sourceLabel' => JournalSourceResolver::label($journal->source_type),
             'sourceUrl' => JournalSourceResolver::url($journal->source_type, $journal->source_id),
             'isAutomatic' => $journal->source_type !== null,
+        ]);
+    }
+
+    public function print(Journal $journal): Response
+    {
+        return Inertia::render('Accounting/Journals/Print', [
+            'item' => DocumentPrintProps::journal($journal),
         ]);
     }
 
