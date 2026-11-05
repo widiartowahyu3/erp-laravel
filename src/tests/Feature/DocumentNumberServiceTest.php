@@ -221,3 +221,19 @@ test('sales invoice numbers follow SI/YYYYMM/NNNNN and restart each period', fun
         DB::rollBack();
     }
 });
+
+test('purchase invoice numbers follow PI/YYYYMM/NNNNN and restart each period', function (): void {
+    DB::beginTransaction();
+
+    try {
+        $november = DocumentNumberService::generate(DocumentType::PI, '2026-11-05');
+        $nextInNovember = DocumentNumberService::generate(DocumentType::PI, '2026-11-20');
+        $december = DocumentNumberService::generate(DocumentType::PI, '2099-12-01');
+
+        expect($november)->toMatch('#^PI/202611/\d{5}$#')
+            ->and((int) substr($nextInNovember, -5))->toBe((int) substr($november, -5) + 1)
+            ->and($december)->toBe('PI/209912/00001');
+    } finally {
+        DB::rollBack();
+    }
+});
