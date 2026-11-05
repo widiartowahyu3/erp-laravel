@@ -125,7 +125,9 @@ Formulir mendapat faktur terbuka milik pelanggan terpilih dengan memuat ulang ru
 - **Bagan Akun:** daftar pohon dengan indentasi per level, filter tipe dan status, serta kolom terkunci yang tampil nonaktif beserta keterangannya.
 - **Jurnal:** filter tanggal, status, dan sumber. Jurnal pembalik diberi lencana "Pembalik" dan jurnal yang sudah dibalik diberi lencana "Sudah dibalik".
 - **Editor baris:** mengisi debit mengosongkan kredit pada baris yang sama, dan sebaliknya. Indikator total dan selisih memakai `Support/money.js`. Tombol "Simpan dan Posting" hanya aktif saat seimbang. Tombol "Simpan Draf" tetap bisa ditekan, tetapi server menolak draf yang tidak seimbang.
-- **Jurnal terkait:** halaman detail GR, DO, dan penyesuaian stok menampilkan nomor dan status jurnalnya bagi pengguna yang punya izin `journals.view`.
+- **Jurnal terkait:** halaman detail GR, DO, penyesuaian stok, faktur penjualan, dan pembayaran menampilkan nomor dan status jurnalnya bagi pengguna yang punya izin `journals.view`.
+- **Pembayaran:** daftar dengan filter status, pelanggan, metode, dan tanggal. Formulir menampilkan faktur terbuka pelanggan terpilih, tombol **Alokasikan otomatis**, serta indikator "Dialokasikan" dan "Sisa belum dialokasikan". Detail menampilkan alokasi sebagai tautan ke fakturnya, dan dialog pembatalan menjelaskan akibatnya pada faktur.
+- **Dari faktur:** halaman detail faktur berstatus `posted` atau `partially_paid` menampilkan tombol **Terima Pembayaran** bagi pemegang `payments.create`, dan daftar alokasinya menaut ke pembayaran.
 
 ## 10. Penerimaan Pembayaran
 

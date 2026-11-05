@@ -232,3 +232,13 @@ Editor baris ada di `Pages/Accounting/Journals/Form.vue`. Setiap baris hanya bol
 - **Pilih pesanan:** `create` tanpa `sales_order_id` menampilkan daftar SO yang masih punya sisa tertagih, maksimal 50 baris dengan pencarian.
 - **Cetak:** `Print.vue` memakai `Layouts/PrintLayout.vue` tanpa menu. Tombol memanggil `window.print()` lewat handler agar patuh CSP, dan tampilan cetak diatur dengan kelas `print:` Tailwind. Faktur draf dan dibatalkan menampilkan statusnya pada kop.
 - **Label formulir:** `Textarea` membungkus elemennya dengan `div`, sehingga `aria-label` pada komponen ini jatuh ke `div`. Hubungkan labelnya lewat `id` dari slot `FormField`.
+
+## Halaman Pembayaran
+
+`Pages/Accounting/Payments/` memakai props camelCase dan nilai uang berupa string.
+
+- **Faktur terbuka:** saat pelanggan diganti, formulir memuat ulang rute `create` atau `edit` dengan `customer_id` sebagai kunjungan parsial (`only: ['outstandingInvoices', 'selectedCustomerId']`).
+- **Alokasikan otomatis:** mengisi dari baris teratas, yaitu jatuh tempo paling lama sesuai urutan server, sampai jumlah habis. Semua perhitungan memakai `Support/money.js`.
+- **Bandingkan nilai asli, bukan selisihnya:** `compareMoney` dan helper lain di `Support/money.js` hanya menerima angka tidak negatif. `subtractMoney` boleh menghasilkan negatif untuk ditampilkan, tetapi hasil itu tidak boleh dimasukkan lagi ke `compareMoney`.
+- **Posting:** tombol hanya aktif saat "Sisa belum dialokasikan" tepat nol. Simpan Draf tetap boleh selama alokasi tidak melebihi jumlah pembayaran.
+- **Galat per baris:** baris kosong tidak dikirim, sehingga galat server dicocokkan lewat `sales_invoice_id`, bukan posisi baris.
