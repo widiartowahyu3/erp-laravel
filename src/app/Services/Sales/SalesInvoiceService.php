@@ -116,6 +116,31 @@ class SalesInvoiceService
     }
 
     /**
+     * Payments allocated to an invoice, read only. Payments themselves arrive in Fase 10.
+     *
+     * @return list<array{paymentId: int, number: string, paymentDate: string, status: string, amount: string}>
+     */
+    public function allocationsFor(SalesInvoice $invoice): array
+    {
+        return DB::table('payment_allocations as a')
+            ->join('payments as p', 'p.id', '=', 'a.payment_id')
+            ->where('a.sales_invoice_id', $invoice->id)
+            ->orderBy('p.payment_date')
+            ->orderBy('p.id')
+            ->select(['p.id', 'p.number', 'p.payment_date', 'p.status', 'a.amount'])
+            ->get()
+            ->map(fn ($row): array => [
+                'paymentId' => (int) $row->id,
+                'number' => (string) $row->number,
+                'paymentDate' => (string) $row->payment_date,
+                'status' => (string) $row->status,
+                'amount' => (string) $row->amount,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Orders in a billable status with at least one posted delivery line that is not fully billed.
      *
      * @return Builder<SalesOrder>

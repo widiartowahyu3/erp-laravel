@@ -25,6 +25,7 @@ use App\Http\Controllers\MasterData\WarehouseController;
 use App\Http\Controllers\Purchasing\GoodsReceiptController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Sales\DeliveryOrderController;
+use App\Http\Controllers\Sales\SalesInvoiceController;
 use App\Http\Controllers\Sales\SalesOrderController;
 use App\Http\Middleware\EnforceSessionTimeouts;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -179,6 +180,15 @@ Route::middleware([
         Route::put('delivery-orders/{delivery_order}', [DeliveryOrderController::class, 'update'])->middleware('can:delivery_orders.update')->name('delivery-orders.update');
         Route::post('delivery-orders/{delivery_order}/post', [DeliveryOrderController::class, 'post'])->middleware('can:delivery_orders.post')->name('delivery-orders.post');
         Route::post('delivery-orders/{delivery_order}/void', [DeliveryOrderController::class, 'void'])->middleware('can:delivery_orders.void')->name('delivery-orders.void');
+
+        Route::get('invoices', [SalesInvoiceController::class, 'index'])->middleware('can:sales_invoices.view')->name('invoices.index');
+        Route::get('invoices/create', [SalesInvoiceController::class, 'create'])->middleware('can:sales_invoices.create')->name('invoices.create');
+        Route::post('invoices', [SalesInvoiceController::class, 'store'])->middleware('can:sales_invoices.create')->name('invoices.store');
+        Route::get('invoices/{sales_invoice}', [SalesInvoiceController::class, 'show'])->middleware('can:sales_invoices.view')->name('invoices.show');
+        Route::get('invoices/{sales_invoice}/edit', [SalesInvoiceController::class, 'edit'])->middleware('can:sales_invoices.update')->name('invoices.edit');
+        Route::put('invoices/{sales_invoice}', [SalesInvoiceController::class, 'update'])->middleware('can:sales_invoices.update')->name('invoices.update');
+        Route::post('invoices/{sales_invoice}/post', [SalesInvoiceController::class, 'post'])->middleware('can:sales_invoices.post')->name('invoices.post');
+        Route::post('invoices/{sales_invoice}/void', [SalesInvoiceController::class, 'void'])->middleware('can:sales_invoices.void')->name('invoices.void');
     });
 
     // Accounting module routes

@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\SalesOrder;
 use App\Models\TaxRate;
 use App\Models\Warehouse;
+use App\Services\Sales\CreditExposureService;
 use App\Services\Sales\SalesOrderService;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -26,7 +27,8 @@ use Inertia\Response;
 class SalesOrderController extends Controller
 {
     public function __construct(
-        private readonly SalesOrderService $soService
+        private readonly SalesOrderService $soService,
+        private readonly CreditExposureService $credit
     ) {}
 
     public function index(Request $request): Response
@@ -67,11 +69,7 @@ class SalesOrderController extends Controller
     public function create(): Response
     {
         return Inertia::render('Sales/SalesOrders/Create', [
-            'customers' => Customer::query()
-                ->select(['id', 'code', 'name', 'payment_term_id', 'address'])
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
+            'customers' => $this->customerOptions(),
             'warehouses' => Warehouse::query()
                 ->select(['id', 'code', 'name'])
                 ->where('is_active', true)
@@ -140,11 +138,7 @@ class SalesOrderController extends Controller
 
         return Inertia::render('Sales/SalesOrders/Edit', [
             'item' => $salesOrder,
-            'customers' => Customer::query()
-                ->select(['id', 'code', 'name', 'payment_term_id', 'address'])
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
+            'customers' => $this->customerOptions(),
             'warehouses' => Warehouse::query()
                 ->select(['id', 'code', 'name'])
                 ->where('is_active', true)
@@ -197,5 +191,31 @@ class SalesOrderController extends Controller
         $this->soService->close($salesOrder);
 
         return back()->with('success', 'Pesanan penjualan berhasil ditutup.');
+    }
+
+    /**
+     * Active customers with their credit position, using one query for all outstanding amounts.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function customerOptions(): array
+    {
+        $customers = Customer::query()
+            ->select(['id', 'code', 'name', 'payment_term_id', 'address', 'credit_limit'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $outstanding = $this->credit->outstandingFor($customers->modelKeys());
+
+        return $customers->map(fn (Customer $customer): array => [
+            'id' => $customer->id,
+            'code' => $customer->code,
+            'name' => $customer->name,
+            'payment_term_id' => $customer->payment_term_id,
+            'address' => $customer->address,
+            'creditLimit' => (string) $customer->credit_limit,
+            'outstandingReceivable' => $outstanding[$customer->id] ?? '0.00',
+        ])->values()->all();
     }
 }
