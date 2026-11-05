@@ -5,6 +5,8 @@ import {
     purchaseOrderPermissions,
     goodsReceiptStatusConfig,
     goodsReceiptPermissions,
+    purchaseInvoiceStatusConfig,
+    purchaseInvoicePermissions,
 } from '@/config/purchasing';
 import {
     salesOrderStatusConfig,
@@ -76,6 +78,11 @@ export function useActionGuard(customCan = null) {
         return canPerform(action, docOrStatus, salesInvoiceStatusConfig, salesInvoicePermissions);
     }
 
+    // Purchase Invoices
+    function canPerformPurchaseInvoice(action, docOrStatus) {
+        return canPerform(action, docOrStatus, purchaseInvoiceStatusConfig, purchaseInvoicePermissions);
+    }
+
     // Payments
     function canPerformPayment(action, docOrStatus) {
         return canPerform(action, docOrStatus, paymentStatusConfig, paymentPermissions);
@@ -121,6 +128,10 @@ export function useActionGuard(customCan = null) {
         canEditSalesInvoice: (docOrStatus) => canPerformSalesInvoice('edit', docOrStatus),
         canPostSalesInvoice: (docOrStatus) => canPerformSalesInvoice('post', docOrStatus),
         canVoidSalesInvoice: (docOrStatus) => canPerformSalesInvoice('void', docOrStatus),
+        canPerformPurchaseInvoice,
+        canEditPurchaseInvoice: (docOrStatus) => canPerformPurchaseInvoice('edit', docOrStatus),
+        canPostPurchaseInvoice: (docOrStatus) => canPerformPurchaseInvoice('post', docOrStatus),
+        canVoidPurchaseInvoice: (docOrStatus) => canPerformPurchaseInvoice('void', docOrStatus),
         canPerformPayment,
         canEditPayment: (docOrStatus) => canPerformPayment('edit', docOrStatus),
         canPostPayment: (docOrStatus) => canPerformPayment('post', docOrStatus),

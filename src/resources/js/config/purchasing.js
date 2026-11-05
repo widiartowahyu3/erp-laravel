@@ -68,3 +68,30 @@ export const goodsReceiptPermissions = {
     post: 'goods_receipts.post',
     void: 'goods_receipts.void',
 };
+
+export const purchaseInvoiceStatusConfig = {
+    draft: {
+        allowedActions: ['edit', 'post', 'void'],
+    },
+    posted: {
+        allowedActions: ['void'],
+    },
+    partially_paid: {
+        allowedActions: ['void'],
+    },
+    paid: {
+        allowedActions: ['void'],
+    },
+    void: {
+        allowedActions: [],
+    },
+};
+
+export const purchaseInvoicePermissions = {
+    view: 'purchase_invoices.view',
+    create: 'purchase_invoices.create',
+    edit: 'purchase_invoices.update',
+    update: 'purchase_invoices.update',
+    post: 'purchase_invoices.post',
+    void: 'purchase_invoices.void',
+};
