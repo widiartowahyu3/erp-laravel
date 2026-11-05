@@ -29,6 +29,10 @@ class SalesOrderService
 {
     use RequiresTransaction;
 
+    public function __construct(
+        private readonly CreditExposureService $credit = new CreditExposureService
+    ) {}
+
     /**
      * Create a new draft Sales Order with line items.
      *
@@ -227,6 +231,13 @@ class SalesOrderService
         return DB::transaction(function () use ($order, $userId): SalesOrder {
             $effectiveUserId = $userId ?? Auth::id();
 
+            // Global lock order: customer before sales order, so credit checks run one at a time per customer
+            $customerId = SalesOrder::query()->whereKey($order->id)->value('customer_id');
+            $customer = Customer::withTrashed()
+                ->whereKey($customerId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             // S7 locking order: Lock SO
             $locked = SalesOrder::query()
                 ->whereKey($order->id)
@@ -235,9 +246,15 @@ class SalesOrderService
 
             DocumentStateMachine::assertTransition($locked->status, SalesOrderStatus::APPROVED);
 
+            if ($locked->customer_id !== $customer->id) {
+                throw new BusinessRuleException('Pelanggan pada pesanan baru saja berubah. Silakan ulangi persetujuan.', 409, 'customer_id');
+            }
+
             if ($locked->items()->count() === 0) {
                 throw new BusinessRuleException('Pesanan penjualan harus memiliki minimal 1 baris barang.', 422, 'items');
             }
+
+            $this->credit->assertWithinLimit($customer, $locked->total);
 
             $locked->status = SalesOrderStatus::APPROVED;
             $locked->approved_by = $effectiveUserId;
