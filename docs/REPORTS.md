@@ -71,3 +71,31 @@ Tambahkan `?export=csv` pada rute laporan. Izinnya sama dengan halaman laporan.
 - Sel teks yang diawali `=`, `+`, `-`, `@`, tab, atau CR diberi awalan tanda petik tunggal agar tidak dijalankan sebagai formula. Kolom angka tidak diubah.
 - Batasnya 50.000 baris. Ekspor yang melebihi batas ditolak dengan 422 dan tidak dipotong diam-diam.
 - Buku besar dan kartu piutang diawali baris saldo awal. Laba rugi dan neraca diratakan menjadi bagian, kode, nama, dan jumlah, termasuk baris total.
+
+## 8. Ekspor daftar
+
+Tombol Ekspor CSV juga ada di 13 daftar: produk, pelanggan, pemasok, saldo stok, mutasi stok, pesanan pembelian, penerimaan barang, faktur pembelian, pesanan penjualan, surat jalan, faktur penjualan, pembayaran, dan jurnal.
+
+- Rutenya sama dengan daftar, ditambah `?export=csv`, jadi izinnya sama dengan melihat daftar itu.
+- Isinya semua baris yang cocok dengan pencarian, filter, dan urutan yang sedang aktif, bukan hanya satu halaman.
+- Kolomnya tidak lebih dari yang sudah terlihat di daftar.
+- Format, penjaga formula, dan batas 50.000 baris sama dengan ekspor laporan.
+
+## 9. Cetak
+
+Halaman laporan punya tombol Cetak. Saat dicetak, sidebar, filter, dan tombol disembunyikan, dan tabel berlanjut ke halaman berikutnya tanpa terpotong.
+
+Dokumen berikut punya tampilan cetak di rute `.../{id}/print`, dengan izin yang sama dengan melihat dokumennya:
+
+| Dokumen | Isi uang | Tanda tangan |
+|---|---|---|
+| Pesanan pembelian | Harga, diskon, pajak, total | Penyetuju |
+| Penerimaan barang | Tanpa uang | Pengirim, penerima |
+| Faktur pembelian | Harga, diskon, pajak, total, sisa tagihan | Tidak ada |
+| Pesanan penjualan | Harga, diskon, pajak, total | Penyetuju, pelanggan |
+| Surat jalan | Tanpa uang | Gudang, pengemudi, penerima |
+| Faktur penjualan | Harga, diskon, pajak, total | Tidak ada |
+| Penyesuaian stok | Tanpa uang | Penghitung, penyetuju |
+| Jurnal | Debit dan kredit | Pembuat, pemeriksa |
+
+Penerimaan barang, surat jalan, dan penyesuaian stok tidak mengirim harga atau biaya sama sekali ke halaman, karena kertasnya berpindah ke pengemudi, pemasok, atau pelanggan. Dokumen draf dan batal diberi cap statusnya agar tidak terbaca sebagai dokumen sah. Bukti pembayaran belum punya tampilan cetak.

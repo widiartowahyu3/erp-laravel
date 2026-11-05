@@ -31,6 +31,8 @@ Dokumen ini mencatat apa yang sengaja belum ada, supaya tidak dianggap sudah ter
 - **Umur piutang dan utang hanya untuk hari ini.** `paid_amount` hanya menyimpan posisi terakhir, jadi umur per tanggal lampau tidak bisa dibentuk ulang.
 - **Rekonsiliasi persediaan hanya untuk saat ini.** Saldo stok tidak punya riwayat per tanggal di laporan ini.
 - **Ekspor CSV dibatasi 50.000 baris.**
+- **Tidak ada ekspor Excel atau PDF.** PDF dibuat dari dialog cetak peramban.
+- **Bukti pembayaran belum punya tampilan cetak.**
 - **Laporan arus kas belum ada.**
 
 ## 5. Administrasi dan Keamanan

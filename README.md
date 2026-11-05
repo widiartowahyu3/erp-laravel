@@ -15,7 +15,8 @@ Setiap dokumen yang diposting membuat jurnal dalam transaksi yang sama, jadi sto
 | Persediaan | Saldo per gudang, mutasi, kartu stok, penyesuaian stok, biaya rata-rata bergerak |
 | Penjualan | Pesanan penjualan dengan pengecekan batas kredit, surat jalan parsial, faktur penjualan, piutang per pelanggan |
 | Akuntansi | Bagan akun, jurnal otomatis dan manual, jurnal pembalik, pembayaran masuk dan keluar dengan alokasi ke faktur |
-| Laporan | Neraca saldo, buku besar, laba rugi, neraca, umur piutang dan utang, kartu piutang, rekonsiliasi persediaan, ringkasan operasional, ekspor CSV |
+| Laporan | Neraca saldo, buku besar, laba rugi, neraca, umur piutang dan utang, kartu piutang, rekonsiliasi persediaan, ringkasan operasional |
+| Cetak dan ekspor | Tampilan cetak dokumen dan laporan, ekspor CSV untuk laporan dan daftar |
 | Administrasi | Pengguna, peran dan hak akses, log audit dengan retensi 7 hari |
 
 Dokumen transaksi punya siklus status yang dijaga server. Dokumen yang sudah diposting tidak bisa diubah, hanya dibatalkan dengan jurnal pembalik.
