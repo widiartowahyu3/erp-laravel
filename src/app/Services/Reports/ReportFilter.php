@@ -20,6 +20,8 @@ final readonly class ReportFilter
         public ?string $asOf = null,
         public ?int $accountId = null,
         public ?int $customerId = null,
+        public ?int $warehouseId = null,
+        public bool $belowMinimumOnly = false,
         public int $page = 1,
         public int $perPage = 50,
     ) {}
