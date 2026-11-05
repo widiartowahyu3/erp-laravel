@@ -130,6 +130,7 @@ Formulir mendapat faktur terbuka milik pelanggan terpilih dengan memuat ulang ru
 - **Jurnal terkait:** halaman detail GR, DO, penyesuaian stok, faktur penjualan, dan pembayaran menampilkan nomor dan status jurnalnya bagi pengguna yang punya izin `journals.view`.
 - **Pembayaran:** daftar dengan filter status, pelanggan, metode, dan tanggal. Formulir menampilkan faktur terbuka pelanggan terpilih, tombol **Alokasikan otomatis**, serta indikator "Dialokasikan" dan "Sisa belum dialokasikan". Detail menampilkan alokasi sebagai tautan ke fakturnya, dan dialog pembatalan menjelaskan akibatnya pada faktur.
 - **Dari faktur:** halaman detail faktur berstatus `posted` atau `partially_paid` menampilkan tombol **Terima Pembayaran** bagi pemegang `payments.create`, dan daftar alokasinya menaut ke pembayaran.
+- **Pengeluaran:** halaman pembayaran punya tab Penerimaan dan Pengeluaran, dan tombol **Bayar Pemasok** membuka formulir untuk pemasok dengan faktur pembelian terbukanya. Alokasinya menaut ke faktur pembelian.
 
 ## 10. Penerimaan Pembayaran
 

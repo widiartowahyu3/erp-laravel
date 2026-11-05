@@ -74,8 +74,10 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
 - **Faktur Pembelian (`/purchasing/invoices`)**:
   - Ditagih dari penerimaan barang yang sudah diposting, dengan harga, diskon, dan pajak dari PO, serta nomor faktur pemasok yang unik per pemasok.
   - Posting membersihkan akun Barang Diterima Belum Ditagih dan mencatat utang; GR yang sudah ditagih tidak dapat dibatalkan.
+  - Dashboard menampilkan utang beredar serta faktur pembelian yang jatuh tempo.
 - **Penerimaan dan Pembayaran (`/accounting/payments`)**:
-  - Satu pembayaran dapat dialokasikan ke beberapa faktur pelanggan yang sama, dengan jumlah alokasi harus sama persis saat diposting.
+  - Penerimaan dari pelanggan dan pembayaran ke pemasok memakai halaman yang sama, dipisah oleh tab jenis pembayaran.
+  - Satu pembayaran dapat dialokasikan ke beberapa faktur milik pihak yang sama, dengan jumlah alokasi harus sama persis saat diposting.
   - Posting memperbarui sisa dan status faktur serta membuat jurnal kas/bank terhadap piutang; pembatalan mengembalikan semuanya lewat jurnal pembalik.
 - **Surat Jalan / DO (`/sales/delivery-orders`)**:
   - Siklus dokumen: `draft` $\rightarrow$ `posted` $\rightarrow$ `void`.

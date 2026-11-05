@@ -242,3 +242,11 @@ GR yang barisnya dirujuk faktur selain `void`, termasuk draf, tidak dapat dibata
 
 ### F. Penguncian
 PO, GR, baris PO, baris GR, faktur, nomor dokumen, lalu jurnal. Pembuatan, pengubahan, posting, dan pembatalan GR kini juga mengunci PO sebelum GR, sehingga tidak bisa deadlock dengan posting faktur.
+
+### G. Antarmuka
+- **Daftar (`/purchasing/invoices`):** filter status, pemasok, rentang tanggal, dan jatuh tempo lewat (`filter[overdue]=1`), serta pencarian nomor internal atau nomor faktur pemasok.
+- **Buat faktur:** tanpa `purchase_order_id` menampilkan pilihan PO yang masih bisa ditagih. Formulir hanya meminta nomor faktur pemasok, tanggal, jatuh tempo, catatan, dan kuantitas ditagih.
+- **Detail:** ringkasan, jurnal terkait, alokasi pembayaran, serta aksi Ubah, Posting, dan Batalkan menurut status dan izin. Tombol Batalkan nonaktif bila sudah ada pembayaran.
+- **Pintasan:** detail PO dan GR menampilkan **Buat Faktur Pembelian** bagi pemegang `purchase_invoices.create` selama masih ada sisa tertagih. Detail faktur berstatus `posted` atau `partially_paid` menampilkan **Bayar Pemasok** bagi pemegang `payments.create`.
+- **Dashboard:** kartu **Utang Beredar** dan **Faktur Pembelian Jatuh Tempo** bagi pemegang `purchase_invoices.view`.
+

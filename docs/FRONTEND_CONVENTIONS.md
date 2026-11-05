@@ -242,3 +242,10 @@ Editor baris ada di `Pages/Accounting/Journals/Form.vue`. Setiap baris hanya bol
 - **Bandingkan nilai asli, bukan selisihnya:** `compareMoney` dan helper lain di `Support/money.js` hanya menerima angka tidak negatif. `subtractMoney` boleh menghasilkan negatif untuk ditampilkan, tetapi hasil itu tidak boleh dimasukkan lagi ke `compareMoney`.
 - **Posting:** tombol hanya aktif saat "Sisa belum dialokasikan" tepat nol. Simpan Draf tetap boleh selama alokasi tidak melebihi jumlah pembayaran.
 - **Galat per baris:** baris kosong tidak dikirim, sehingga galat server dicocokkan lewat `sales_invoice_id`, bukan posisi baris.
+
+## Faktur Pembelian dan Pembayaran ke Pemasok
+
+- `Pages/Purchasing/Invoices/` mengikuti pola halaman Faktur Penjualan, dengan tambahan **Nomor Faktur Pemasok** pada formulir. Galat duplikatnya datang dari server pada field `supplier_invoice_number`.
+- `Components/accounting/AllocationEditor.vue` dipakai bersama untuk penerimaan dan pengeluaran. Komponen ini memegang baris alokasi, tombol **Alokasikan otomatis**, dan indikatornya, lalu melaporkan keadaannya lewat event `change` secara sinkron. Induknya hanya menentukan kolom faktur yang dikirim.
+- `Pages/Accounting/Payments/` melayani dua tipe. `paymentType` menentukan pihak dan jenis faktur: `customer_id` dengan `sales_invoice_id`, atau `supplier_id` dengan `purchase_invoice_id`. Halaman daftar memakai tab yang mengirim `filter[payment_type]`.
+
