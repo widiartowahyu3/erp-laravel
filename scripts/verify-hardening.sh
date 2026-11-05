@@ -2076,6 +2076,76 @@ else
 fi
 
 # ------------------------------------------------------------------------------
+# 35. Keamanan rute laporan (/reports/*)
+# ------------------------------------------------------------------------------
+echo ""
+echo "--- Butir 35: Verifikasi Keamanan Rute & Otorisasi Laporan (/reports/*) ---"
+
+REPORT_ROUTE_CHECK=$(docker compose exec -T php php -r '
+    require "vendor/autoload.php";
+    $app = require_once "bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $total = 0;
+    $bad = [];
+
+    foreach ($app["router"]->getRoutes() as $route) {
+        $uri = $route->uri();
+
+        if (!str_starts_with($uri, "reports/")) {
+            continue;
+        }
+
+        $total++;
+        $methods = $route->methods();
+        $middleware = $route->gatherMiddleware();
+
+        if (!in_array("auth", $middleware, true)) {
+            $bad[] = "auth " . $uri;
+        }
+
+        if (count(preg_grep("/^can:reports\.view_(finance|sales|purchasing|inventory)$/", $middleware)) !== 1) {
+            $bad[] = "can " . $uri;
+        }
+
+        if (array_diff($methods, ["GET", "HEAD"]) !== []) {
+            $bad[] = "tulis " . implode("|", $methods) . " " . $uri;
+        }
+    }
+
+    echo $total . ":" . count($bad) . ":" . implode(",", $bad);
+' 2>/dev/null || echo "0:1:gagal-dijalankan")
+
+IFS=':' read -r REPORT_ROUTE_TOTAL REPORT_ROUTE_BAD REPORT_ROUTE_LIST <<< "$REPORT_ROUTE_CHECK"
+
+if [ "$REPORT_ROUTE_TOTAL" -eq 11 ]; then
+    pass "Ditemukan 11 rute laporan (/reports/*) terdaftar dalam aplikasi"
+else
+    fail "Jumlah rute laporan tidak sesuai ekspektasi (harus 11, ditemukan: $REPORT_ROUTE_TOTAL)"
+fi
+
+if [ "$REPORT_ROUTE_BAD" -eq 0 ]; then
+    pass "Seluruh rute /reports/* hanya GET, memiliki auth, dan satu 'can:reports.view_*'"
+else
+    fail "Rute /reports/* tidak memenuhi syarat ($REPORT_ROUTE_BAD: $REPORT_ROUTE_LIST)"
+fi
+
+GUEST_REPORT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/reports/trial-balance" || true)
+if [ "$GUEST_REPORT_CODE" = "302" ]; then
+    pass "Akses guest ke /reports/trial-balance dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke /reports/trial-balance mengembalikan HTTP $GUEST_REPORT_CODE (harus 302)"
+fi
+
+GUEST_REPORT_EXPORT_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${APP_PORT:-8080}/reports/trial-balance?export=csv" || true)
+if [ "$GUEST_REPORT_EXPORT_CODE" = "302" ]; then
+    pass "Akses guest ke ekspor CSV laporan dialihkan ke halaman login (HTTP 302)"
+else
+    fail "Akses guest ke ekspor CSV laporan mengembalikan HTTP $GUEST_REPORT_EXPORT_CODE (harus 302)"
+fi
+
+# ------------------------------------------------------------------------------
 # 30. Retensi log audit dan container penjadwal
 # ------------------------------------------------------------------------------
 echo ""

@@ -152,7 +152,15 @@ Aturannya sama, memakai pemasok dan faktur pembelian: draf, alokasi, posting, da
 
 Posting GR mengkreditkan 2103 dan posting faktur pembelian mendebitnya. Saldo kredit yang tersisa adalah barang yang sudah diterima tetapi belum ditagih pemasok, dan menjadi tepat nol setelah semua kuantitas GR ditagih.
 
-## 11. Batasan yang Disengaja
+## 11. Pelaporan
+
+Laporan keuangan hanya menghitung jurnal berstatus `posted`, menurut `journal_date`. Jurnal asal yang sudah dibalik tetap berstatus `posted` dan ikut dihitung bersama pembaliknya, sehingga nilainya saling menghapus. Saldo dibaca pada sisi normal akun, jadi akun kontra seperti 4201 tampil negatif di kelompok pendapatan.
+
+Tanpa tutup buku, laba rugi tidak pernah dipindahkan ke akun ekuitas. Neraca menghitung laba berjalan dari seluruh akun pendapatan dan beban sampai tanggal posisi, termasuk tahun-tahun sebelumnya. Definisi tiap laporan ada di [`REPORTS.md`](REPORTS.md).
+
+Skenario ujung ke ujung di `tests/Feature/Accounting/EndToEndAccountingTest.php` memeriksa seluruh rantai dokumen: jurnal seimbang, persamaan akuntansi, saldo 2103, rekonsiliasi persediaan, umur piutang, dan laba bersih.
+
+## 12. Batasan yang Disengaja
 
 Tanpa tutup buku/periode terkunci, tanpa nota retur/kredit, tanpa uang muka/kelebihan bayar, tanpa multi-mata-uang, tanpa penyusutan/aset tetap, tanpa gabungan faktur lintas SO/PO, kredit pelanggan hanya dicek saat menyetujui SO, dan laporan umur piutang/utang hanya posisi hari ini.
 

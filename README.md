@@ -91,6 +91,7 @@ Sistem ini mengelola siklus operasional pengadaan (*procurement*), manajemen per
 - **Bagan akun (`/accounting/accounts`)**: hierarki akun dengan perlindungan akun yang sudah dipakai atau dipetakan.
 - **Jurnal terkait**: halaman detail GR, DO, dan penyesuaian stok menampilkan jurnal dari dokumen tersebut.
 - Rincian ada di [`docs/ACCOUNTING.md`](docs/ACCOUNTING.md).
+- **Laporan (`/reports/*`)**: neraca saldo, buku besar, laba rugi, neraca, umur piutang dan utang, kartu piutang, rekonsiliasi persediaan, serta ringkasan penjualan, pembelian, dan persediaan. Semuanya hanya membaca data dan bisa diekspor ke CSV. Rincian ada di [`docs/REPORTS.md`](docs/REPORTS.md).
 
 ### G. Administrasi
 - **Pengguna (`/admin/users`)**: tambah, ubah, atur peran, reset kata sandi, serta aktifkan dan nonaktifkan akun. Tidak ada penghapusan pengguna.
@@ -332,6 +333,6 @@ Secara transparan dan jujur, implementasi saat ini memiliki batasan arsitektural
 1. **Mata Uang Tunggal (Single Currency - IDR)**: Seluruh transaksi beroperasi eksklusif dalam Rupiah Indonesia tanpa konversi valuta asing.
 2. **Satuan Dasar Tunggal per Produk**: Setiap produk hanya memiliki satu satuan inventori dasar (`base_unit_id`). Konversi multi-satuan dinamis bertingkat (*UOM conversion*) belum diimplementasikan di tingkat transaksi.
 3. **Tanpa Dokumen Mutasi Antar-Gudang Langsung**: Fitur transfer persediaan antar-gudang saat ini ditangani secara manual melalui kombinasi dokumen Penyesuaian Keluar (`adjustment_out`) pada gudang asal dan Penyesuaian Masuk (`adjustment_in`) pada gudang tujuan.
-4. **Modul Hilir Belum Tersedia**: Buku Kas/Bank dan Laporan Keuangan dialokasikan pada fase pengembangan berikutnya.
+4. **Tanpa Tutup Buku**: Laporan keuangan membaca seluruh jurnal yang sudah diposting. Belum ada periode terkunci, sehingga laba tahun lalu ikut terbaca sebagai laba berjalan di neraca.
 5. **Batasan Administrasi yang Disengaja**: Tanpa 2FA, tanpa alur lupa kata sandi lewat email, tanpa wajib ganti kata sandi saat login pertama, tanpa ekspor log audit, dan peran bawaan tidak dapat diubah lewat antarmuka.
 6. **Deploy Otomatis ke Server**: Image production sudah dibangun, diuji, dan dirilis ke GHCR, tetapi deploy ke server masih dijalankan manual lewat `scripts/deploy.sh` karena belum ada server tetap.
