@@ -6,6 +6,7 @@ namespace App\Services\Purchasing;
 
 use App\Enums\DocumentType;
 use App\Enums\GoodsReceiptStatus;
+use App\Enums\PurchaseInvoiceStatus;
 use App\Enums\PurchaseOrderStatus;
 use App\Enums\StockMovementType;
 use App\Exceptions\BusinessRuleException;
@@ -14,6 +15,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Exceptions\InvalidStateTransitionException;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptItem;
+use App\Models\PurchaseInvoice;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Services\Accounting\Builders\GoodsReceiptJournalBuilder;
@@ -25,6 +27,7 @@ use App\Support\Concerns\RequiresTransaction;
 use App\Support\Decimal;
 use App\Support\Purchasing\PurchaseOrderProgress;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -183,7 +186,13 @@ class GoodsReceiptService
         return DB::transaction(function () use ($receipt, $data, $userId): GoodsReceipt {
             $effectiveUserId = $userId ?? Auth::id();
 
-            // 1. Lock GR
+            // 1. Global lock order: PO before GR. A receipt never moves to another order, so reading the id unlocked is safe.
+            $po = PurchaseOrder::query()
+                ->whereKey($receipt->purchase_order_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // 2. Lock GR
             $lockedGr = GoodsReceipt::query()
                 ->whereKey($receipt->id)
                 ->lockForUpdate()
@@ -192,12 +201,6 @@ class GoodsReceiptService
             if (! $lockedGr->isEditable()) {
                 throw new DocumentNotEditableException('Hanya draf penerimaan barang yang dapat diubah.');
             }
-
-            // 2. Lock PO
-            $po = PurchaseOrder::query()
-                ->whereKey($lockedGr->purchase_order_id)
-                ->lockForUpdate()
-                ->firstOrFail();
 
             if ($po->status !== PurchaseOrderStatus::APPROVED && $po->status !== PurchaseOrderStatus::PARTIALLY_RECEIVED) {
                 throw new BusinessRuleException(
@@ -291,19 +294,19 @@ class GoodsReceiptService
         return DB::transaction(function () use ($receipt, $userId): GoodsReceipt {
             $effectiveUserId = $userId ?? Auth::id();
 
-            // 1. Lock GR and verify document state transition
+            // 1. Global lock order: PO before GR. A receipt never moves to another order, so reading the id unlocked is safe.
+            $lockedPo = PurchaseOrder::query()
+                ->whereKey($receipt->purchase_order_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // 2. Lock GR and verify document state transition
             $lockedGr = GoodsReceipt::query()
                 ->whereKey($receipt->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             DocumentStateMachine::assertTransition($lockedGr->status, GoodsReceiptStatus::POSTED);
-
-            // 2. Lock PO and verify purchase order status
-            $lockedPo = PurchaseOrder::query()
-                ->whereKey($lockedGr->purchase_order_id)
-                ->lockForUpdate()
-                ->firstOrFail();
 
             if ($lockedPo->status !== PurchaseOrderStatus::APPROVED && $lockedPo->status !== PurchaseOrderStatus::PARTIALLY_RECEIVED) {
                 throw new BusinessRuleException(
@@ -408,19 +411,19 @@ class GoodsReceiptService
         return DB::transaction(function () use ($receipt, $reason, $userId): GoodsReceipt {
             $effectiveUserId = $userId ?? Auth::id();
 
-            // 1. Lock GR and verify document state transition
+            // 1. Global lock order: PO before GR. A receipt never moves to another order, so reading the id unlocked is safe.
+            $lockedPo = PurchaseOrder::query()
+                ->whereKey($receipt->purchase_order_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // 2. Lock GR and verify document state transition
             $lockedGr = GoodsReceipt::query()
                 ->whereKey($receipt->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             DocumentStateMachine::assertTransition($lockedGr->status, GoodsReceiptStatus::VOID);
-
-            // 2. Lock PO
-            $lockedPo = PurchaseOrder::query()
-                ->whereKey($lockedGr->purchase_order_id)
-                ->lockForUpdate()
-                ->firstOrFail();
 
             $trimmedReason = trim($reason);
             if ($trimmedReason === '') {
@@ -436,6 +439,8 @@ class GoodsReceiptService
                         'status'
                     );
                 }
+
+                $this->assertNotInvoiced($lockedGr);
 
                 // 3. Lock PO items ordered by id ASC
                 $poItems = PurchaseOrderItem::query()
@@ -497,5 +502,30 @@ class GoodsReceiptService
 
             return $lockedGr->load(['items.product', 'purchaseOrder', 'supplier', 'warehouse']);
         });
+    }
+
+    /**
+     * Any invoice that is not void still bills this receipt, drafts included. Invoices
+     * take the purchase order lock first, so none can appear while the caller holds it.
+     *
+     * @throws BusinessRuleException
+     */
+    private function assertNotInvoiced(GoodsReceipt $receipt): void
+    {
+        $numbers = PurchaseInvoice::query()
+            ->where('status', '!=', PurchaseInvoiceStatus::VOID)
+            ->whereHas('items.goodsReceiptItem', function (Builder $query) use ($receipt): void {
+                $query->where('goods_receipt_id', $receipt->id);
+            })
+            ->orderBy('number')
+            ->pluck('number');
+
+        if ($numbers->isNotEmpty()) {
+            throw new BusinessRuleException(
+                "Penerimaan barang sudah ditagih pada faktur {$numbers->implode(', ')}. Silakan batalkan faktur terlebih dahulu.",
+                409,
+                'status'
+            );
+        }
     }
 }
