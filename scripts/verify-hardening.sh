@@ -1520,7 +1520,7 @@ echo ""
 echo "--- Butir 26: Verifikasi Aset Statis Nginx (Gzip, Cache-Control, Nosniff) ---"
 
 # Cari berkas aset nyata di src/public/build/assets/*.js
-REAL_ASSET=$(find src/public/build/assets -name "*.js" -size +1k | head -n 1)
+REAL_ASSET=$(find src/public/build/assets -name "*.js" -size +1k -print -quit)
 
 if [ -n "$REAL_ASSET" ] && [ -f "$REAL_ASSET" ]; then
     ASSET_NAME=$(basename "$REAL_ASSET")
