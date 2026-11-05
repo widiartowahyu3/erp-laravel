@@ -6,6 +6,7 @@ namespace App\Services\Sales;
 
 use App\Enums\DeliveryOrderStatus;
 use App\Enums\DocumentType;
+use App\Enums\SalesInvoiceStatus;
 use App\Enums\SalesOrderStatus;
 use App\Enums\StockMovementType;
 use App\Exceptions\BusinessRuleException;
@@ -15,6 +16,7 @@ use App\Exceptions\InvalidStateTransitionException;
 use App\Models\Customer;
 use App\Models\DeliveryOrder;
 use App\Models\DeliveryOrderItem;
+use App\Models\SalesInvoice;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
 use App\Services\Accounting\Builders\DeliveryOrderJournalBuilder;
@@ -26,6 +28,7 @@ use App\Support\Concerns\RequiresTransaction;
 use App\Support\Decimal;
 use App\Support\Sales\SalesOrderProgress;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -500,6 +503,8 @@ class DeliveryOrderService
                     );
                 }
 
+                $this->assertNotInvoiced($lockedDo);
+
                 // 3. Strict S7 lock order: Lock SO items ordered by id ASC
                 $soItems = SalesOrderItem::query()
                     ->where('sales_order_id', $lockedSo->id)
@@ -562,5 +567,30 @@ class DeliveryOrderService
 
             return $lockedDo->load(['items.product', 'salesOrder', 'customer', 'warehouse']);
         });
+    }
+
+    /**
+     * Any invoice that is not void still bills this delivery, drafts included. Invoices
+     * take the sales order lock first, so none can appear while the caller holds it.
+     *
+     * @throws BusinessRuleException
+     */
+    private function assertNotInvoiced(DeliveryOrder $deliveryOrder): void
+    {
+        $numbers = SalesInvoice::query()
+            ->where('status', '!=', SalesInvoiceStatus::VOID)
+            ->whereHas('items.deliveryOrderItem', function (Builder $query) use ($deliveryOrder): void {
+                $query->where('delivery_order_id', $deliveryOrder->id);
+            })
+            ->orderBy('number')
+            ->pluck('number');
+
+        if ($numbers->isNotEmpty()) {
+            throw new BusinessRuleException(
+                "Surat jalan sudah ditagih pada faktur {$numbers->implode(', ')}. Silakan batalkan faktur terlebih dahulu.",
+                409,
+                'status'
+            );
+        }
     }
 }
