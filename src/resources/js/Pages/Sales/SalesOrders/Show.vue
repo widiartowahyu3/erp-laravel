@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Truck, Lock, Ban, ArrowLeft } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Truck, Lock, Ban, ArrowLeft, FileText } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
+import Can from '@/Components/ui/Can.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
 import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
@@ -25,6 +26,10 @@ const props = defineProps({
     item: {
         type: Object,
         default: null,
+    },
+    hasBillableItems: {
+        type: Boolean,
+        default: false,
     },
 });
 
@@ -131,6 +136,9 @@ async function handleVoid() {
             <Alert v-if="flashSuccess" variant="success">
                 {{ flashSuccess }}
             </Alert>
+            <Alert v-if="pageErrors.customer_id" variant="danger">
+                {{ pageErrors.customer_id }}
+            </Alert>
             <Alert v-if="pageErrors.status" variant="danger">
                 {{ pageErrors.status }}
             </Alert>
@@ -183,6 +191,15 @@ async function handleVoid() {
                                 Buat Surat Jalan
                             </Button>
                         </Link>
+
+                        <Can v-if="hasBillableItems" permission="sales_invoices.create">
+                            <Link :href="`/sales/invoices/create?sales_order_id=${salesOrder.id}`">
+                                <Button variant="primary" size="sm">
+                                    <FileText class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                    Buat Faktur
+                                </Button>
+                            </Link>
+                        </Can>
 
                         <Button
                             v-if="canCloseSalesOrder(salesOrder)"

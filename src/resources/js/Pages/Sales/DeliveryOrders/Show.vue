@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Edit, CheckCircle2, Ban, ArrowLeft } from 'lucide-vue-next';
+import { Edit, CheckCircle2, Ban, ArrowLeft, FileText } from 'lucide-vue-next';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Breadcrumbs from '@/Components/ui/Breadcrumbs.vue';
@@ -13,6 +13,7 @@ import DateDisplay from '@/Components/ui/DateDisplay.vue';
 import Quantity from '@/Components/ui/Quantity.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
 import Alert from '@/Components/ui/Alert.vue';
+import Can from '@/Components/ui/Can.vue';
 import { useActionGuard } from '@/composables/useActionGuard';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 import { useConfirm } from '@/composables/useConfirm';
@@ -30,6 +31,10 @@ const props = defineProps({
     deliveryOrder: {
         type: Object,
         default: null,
+    },
+    hasBillableItems: {
+        type: Boolean,
+        default: false,
     },
 });
 
@@ -186,6 +191,15 @@ async function handleVoid() {
                             <Ban class="w-4 h-4 mr-1.5" aria-hidden="true" />
                             Batalkan DO
                         </Button>
+
+                        <Can v-if="hasBillableItems" permission="sales_invoices.create">
+                            <Link :href="`/sales/invoices/create?sales_order_id=${deliveryOrder.sales_order_id}`">
+                                <Button variant="primary" size="sm">
+                                    <FileText class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                    Buat Faktur
+                                </Button>
+                            </Link>
+                        </Can>
                     </div>
                 </template>
             </PageHeader>

@@ -12,7 +12,7 @@ import IconButton from '@/Components/ui/IconButton.vue';
 import Card from '@/Components/ui/Card.vue';
 import Alert from '@/Components/ui/Alert.vue';
 import Rupiah from '@/Components/ui/Rupiah.vue';
-import { addDecimals, calculateSalesOrderItem, trimDecimal } from '@/Support/decimal';
+import { addDecimals, calculateSalesOrderItem, compareDecimals, subtractDecimals, trimDecimal } from '@/Support/decimal';
 import { useSubmitLock } from '@/composables/useSubmitLock';
 
 const props = defineProps({
@@ -174,6 +174,26 @@ const calculatedLines = computed(() => {
     });
 });
 
+// Information only: the server enforces the limit when the order is approved.
+const creditInfo = computed(() => {
+    const customer = props.customers.find((c) => String(c.id) === String(form.customer_id));
+
+    if (!customer || customer.creditLimit === undefined) {
+        return null;
+    }
+
+    const limited = compareDecimals(customer.creditLimit, '0', 2) > 0;
+    const exposure = addDecimals(customer.outstandingReceivable, calculatedSummary.value.total, 2);
+
+    return {
+        limited,
+        limit: customer.creditLimit,
+        outstanding: customer.outstandingReceivable,
+        available: subtractDecimals(customer.creditLimit, customer.outstandingReceivable, 2),
+        exceeded: limited && compareDecimals(exposure, customer.creditLimit, 2) > 0,
+    };
+});
+
 const calculatedSummary = computed(() => {
     let subtotal = '0.00';
     let discount = '0.00';
@@ -246,6 +266,20 @@ function submit() {
                         :disabled="form.processing"
                         aria-label="Pilih pelanggan"
                     />
+                    <div v-if="creditInfo" class="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                        <template v-if="creditInfo.limited">
+                            <p>Batas kredit: <Rupiah :value="creditInfo.limit" /></p>
+                            <p>Piutang beredar: <Rupiah :value="creditInfo.outstanding" /></p>
+                            <p>Sisa batas: <Rupiah :value="creditInfo.available" /></p>
+                            <p v-if="creditInfo.exceeded" class="font-medium text-red-700 dark:text-red-400">
+                                Pesanan ini akan melampaui batas kredit dan ditolak saat disetujui.
+                            </p>
+                        </template>
+                        <template v-else>
+                            <p>Batas kredit: tanpa batas</p>
+                            <p>Piutang beredar: <Rupiah :value="creditInfo.outstanding" /></p>
+                        </template>
+                    </div>
                 </FormField>
 
                 <FormField

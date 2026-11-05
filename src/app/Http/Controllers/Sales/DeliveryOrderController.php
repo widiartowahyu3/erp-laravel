@@ -17,6 +17,7 @@ use App\Models\Warehouse;
 use App\Services\Accounting\JournalSourceResolver;
 use App\Services\Inventory\StockService;
 use App\Services\Sales\DeliveryOrderService;
+use App\Services\Sales\SalesInvoiceService;
 use App\Support\Decimal;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -113,7 +114,7 @@ class DeliveryOrderController extends Controller
             ->with('success', 'Surat jalan berhasil dibuat.');
     }
 
-    public function show(DeliveryOrder $deliveryOrder): Response
+    public function show(DeliveryOrder $deliveryOrder, SalesInvoiceService $invoices): Response
     {
         $deliveryOrder->load([
             'items.product.baseUnit:id,code,name',
@@ -130,6 +131,7 @@ class DeliveryOrderController extends Controller
         return Inertia::render('Sales/DeliveryOrders/Show', [
             'item' => $deliveryOrder,
             'journal' => JournalSourceResolver::related(StockService::SOURCE_DELIVERY_ORDER, $deliveryOrder->id),
+            'hasBillableItems' => $invoices->hasBillableItems($deliveryOrder->salesOrder),
         ]);
     }
 

@@ -16,6 +16,7 @@ use App\Models\SalesOrder;
 use App\Models\TaxRate;
 use App\Models\Warehouse;
 use App\Services\Sales\CreditExposureService;
+use App\Services\Sales\SalesInvoiceService;
 use App\Services\Sales\SalesOrderService;
 use App\Support\Inertia\Paginated;
 use App\Support\Query\ListQuery;
@@ -103,7 +104,7 @@ class SalesOrderController extends Controller
             ->with('success', 'Pesanan penjualan berhasil dibuat.');
     }
 
-    public function show(SalesOrder $salesOrder): Response
+    public function show(SalesOrder $salesOrder, SalesInvoiceService $invoices): Response
     {
         $salesOrder->load([
             'items.product.baseUnit:id,code,name',
@@ -120,6 +121,7 @@ class SalesOrderController extends Controller
 
         return Inertia::render('Sales/SalesOrders/Show', [
             'item' => $salesOrder,
+            'hasBillableItems' => $invoices->hasBillableItems($salesOrder),
         ]);
     }
 

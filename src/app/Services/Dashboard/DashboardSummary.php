@@ -79,6 +79,25 @@ class DashboardSummary
     }
 
     /**
+     * Ringkasan piutang: sisa tagihan faktur diposting dan jumlah faktur yang lewat jatuh tempo.
+     *
+     * @return array{outstanding_total: string, overdue_count: int}
+     */
+    public function getSalesInvoicesSummary(): array
+    {
+        $data = DB::table('sales_invoices')
+            ->whereIn('status', ['posted', 'partially_paid'])
+            ->selectRaw('COALESCE(SUM(total - paid_amount), 0) as outstanding_total')
+            ->selectRaw('COALESCE(SUM(CASE WHEN due_date < CURDATE() AND total > paid_amount THEN 1 ELSE 0 END), 0) as overdue_count')
+            ->first();
+
+        return [
+            'outstanding_total' => Decimal::round((string) ($data->outstanding_total ?? '0'), Decimal::SCALE_MONEY),
+            'overdue_count' => (int) ($data->overdue_count ?? 0),
+        ];
+    }
+
+    /**
      * Ringkasan stok minimum: jumlah produk di bawah min_stock & 5 produk paling kekurangan.
      *
      * @return array{low_stock_count: int, deficient_products: list<array{id: int, sku: string, name: string, unit_code: string, current_stock: string, min_stock: string, shortage: string}>}
