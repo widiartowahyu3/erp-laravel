@@ -15,7 +15,7 @@ test('all accounting routes are protected by authentication, explicit can middle
         }
     }
 
-    expect($accountingRoutes)->toHaveCount(16);
+    expect($accountingRoutes)->toHaveCount(24);
 
     foreach ($accountingRoutes as $route) {
         $uri = $route->uri();
@@ -26,7 +26,7 @@ test('all accounting routes are protected by authentication, explicit can middle
 
         $canMiddleware = array_values(array_filter($middleware, fn ($m): bool => is_string($m) && str_starts_with($m, 'can:')));
         expect($canMiddleware)->toHaveCount(1, "Route [{$methods}] {$uri} must have one specific 'can:' middleware.");
-        expect($canMiddleware[0])->toMatch('/^can:(journals|chart_of_accounts)\.[a-z]+$/');
+        expect($canMiddleware[0])->toMatch('/^can:(journals|chart_of_accounts|payments)\.[a-z]+$/');
 
         if (count(array_intersect($route->methods(), ['POST', 'PUT', 'PATCH', 'DELETE'])) > 0) {
             expect(in_array('throttle:erp-write', $middleware, true))->toBeTrue("Write route {$uri} must be rate limited.");

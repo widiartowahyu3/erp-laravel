@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\JournalController;
+use App\Http\Controllers\Accounting\PaymentController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -225,6 +226,15 @@ Route::middleware([
         Route::post('journals/{journal}/post', [JournalController::class, 'post'])->middleware('can:journals.post')->name('journals.post');
         Route::post('journals/{journal}/reverse', [JournalController::class, 'reverse'])->middleware('can:journals.reverse')->name('journals.reverse');
         Route::post('journals/{journal}/void', [JournalController::class, 'void'])->middleware('can:journals.void')->name('journals.void');
+
+        Route::get('payments', [PaymentController::class, 'index'])->middleware('can:payments.view')->name('payments.index');
+        Route::get('payments/create', [PaymentController::class, 'create'])->middleware('can:payments.create')->name('payments.create');
+        Route::post('payments', [PaymentController::class, 'store'])->middleware('can:payments.create')->name('payments.store');
+        Route::get('payments/{payment}', [PaymentController::class, 'show'])->middleware('can:payments.view')->name('payments.show');
+        Route::get('payments/{payment}/edit', [PaymentController::class, 'edit'])->middleware('can:payments.update')->name('payments.edit');
+        Route::put('payments/{payment}', [PaymentController::class, 'update'])->middleware('can:payments.update')->name('payments.update');
+        Route::post('payments/{payment}/post', [PaymentController::class, 'post'])->middleware('can:payments.post')->name('payments.post');
+        Route::post('payments/{payment}/void', [PaymentController::class, 'void'])->middleware('can:payments.void')->name('payments.void');
 
         Route::get('accounts', [AccountController::class, 'index'])->middleware('can:chart_of_accounts.view')->name('accounts.index');
         Route::get('accounts/create', [AccountController::class, 'create'])->middleware('can:chart_of_accounts.create')->name('accounts.create');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Accounting;
 
 use App\Models\Journal;
+use App\Models\Payment;
 use App\Models\SalesInvoice;
 use App\Services\Inventory\StockService;
 use Illuminate\Support\Facades\Gate;
@@ -22,6 +23,7 @@ final class JournalSourceResolver
         StockService::SOURCE_DELIVERY_ORDER => ['label' => 'Surat Jalan', 'route' => 'sales.delivery-orders.show'],
         StockService::SOURCE_STOCK_ADJUSTMENT => ['label' => 'Penyesuaian Stok', 'route' => 'inventory.stock-adjustments.show'],
         SalesInvoice::JOURNAL_SOURCE => ['label' => 'Faktur Penjualan', 'route' => 'sales.invoices.show'],
+        Payment::JOURNAL_SOURCE => ['label' => 'Pembayaran', 'route' => 'accounting.payments.show'],
     ];
 
     public static function label(?string $sourceType): ?string
