@@ -11,7 +11,23 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    paymentType: {
+        type: String,
+        default: 'receipt',
+    },
     customers: {
+        type: Array,
+        default: () => [],
+    },
+    suppliers: {
+        type: Array,
+        default: () => [],
+    },
+    selectedSupplierId: {
+        type: Number,
+        default: null,
+    },
+    outstandingPurchaseInvoices: {
         type: Array,
         default: () => [],
     },
@@ -53,7 +69,11 @@ const breadcrumbs = computed(() => [
             />
 
             <PaymentForm
+                :payment-type="paymentType"
                 :customers="customers"
+                :suppliers="suppliers"
+                :selected-supplier-id="selectedSupplierId"
+                :outstanding-purchase-invoices="outstandingPurchaseInvoices"
                 :cash-bank-accounts="cashBankAccounts"
                 :methods="methods"
                 :selected-customer-id="selectedCustomerId"

@@ -15,7 +15,15 @@ import { useFocusFirstField } from '@/composables/useFocusFirstField';
 import { usePermission } from '@/composables/usePermission';
 
 const props = defineProps({
+    paymentType: {
+        type: String,
+        default: 'receipt',
+    },
     customers: {
+        type: Array,
+        default: () => [],
+    },
+    suppliers: {
         type: Array,
         default: () => [],
     },
@@ -35,6 +43,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    selectedSupplierId: {
+        type: Number,
+        default: null,
+    },
+    outstandingPurchaseInvoices: {
+        type: Array,
+        default: () => [],
+    },
     initial: {
         type: Object,
         required: true,
@@ -51,8 +67,15 @@ const props = defineProps({
 
 const { can } = usePermission();
 
+const isDisbursement = props.paymentType === 'disbursement';
+const invoiceKey = isDisbursement ? 'purchase_invoice_id' : 'sales_invoice_id';
+const savedInvoiceKey = isDisbursement ? 'purchaseInvoiceId' : 'salesInvoiceId';
+
 const form = useForm({
-    customer_id: props.initial.customerId ? String(props.initial.customerId) : (props.selectedCustomerId ? String(props.selectedCustomerId) : ''),
+    payment_type: props.paymentType,
+    ...(isDisbursement
+        ? { supplier_id: props.initial.supplierId ? String(props.initial.supplierId) : (props.selectedSupplierId ? String(props.selectedSupplierId) : '') }
+        : { customer_id: props.initial.customerId ? String(props.initial.customerId) : (props.selectedCustomerId ? String(props.selectedCustomerId) : '') }),
     payment_date: props.initial.paymentDate,
     method: props.initial.method || 'bank_transfer',
     account_id: props.initial.accountId ? String(props.initial.accountId) : '',
@@ -62,17 +85,26 @@ const form = useForm({
     allocations: [],
 });
 
-const savedByInvoice = ref(Object.fromEntries(props.savedAllocations.map((line) => [line.salesInvoiceId, line.amount])));
+const savedByInvoice = ref(Object.fromEntries(props.savedAllocations.map((line) => [line[savedInvoiceKey], line.amount])));
+
+const openInvoices = computed(() => (isDisbursement ? props.outstandingPurchaseInvoices : props.outstandingInvoices));
 
 const droppedAllocations = computed(() => {
-    const open = new Set(props.outstandingInvoices.map((invoice) => invoice.id));
+    const open = new Set(openInvoices.value.map((invoice) => invoice.id));
+    const sameParty = isDisbursement
+        ? props.selectedSupplierId === props.initial.supplierId
+        : props.selectedCustomerId === props.initial.customerId;
 
-    return props.selectedCustomerId === props.initial.customerId
-        ? props.savedAllocations.filter((line) => !open.has(line.salesInvoiceId)).length
+    return sameParty
+        ? props.savedAllocations.filter((line) => !open.has(line[savedInvoiceKey])).length
         : 0;
 });
 
-const customerOptions = computed(() => props.customers.map((c) => ({ value: String(c.id), label: `${c.code} - ${c.name}` })));
+const partyOptions = computed(() => (isDisbursement ? props.suppliers : props.customers)
+    .map((party) => ({ value: String(party.id), label: `${party.code} - ${party.name}` })));
+const partyField = isDisbursement ? 'supplier_id' : 'customer_id';
+const partyLabel = isDisbursement ? 'Pemasok' : 'Pelanggan';
+const partyWord = partyLabel.toLowerCase();
 const accountOptions = computed(() => props.cashBankAccounts.map((a) => ({ value: String(a.id), label: `${a.code} - ${a.name}` })));
 
 const clientError = ref(null);
@@ -83,12 +115,18 @@ const { busy, submit: submitWithLock } = useSubmitLock();
 const reloadUrl = computed(() => (props.paymentId ? `/accounting/payments/${props.paymentId}/edit` : '/accounting/payments/create'));
 const cancelHref = computed(() => (props.paymentId ? `/accounting/payments/${props.paymentId}` : '/accounting/payments'));
 
-function onCustomerChange(value) {
-    form.customer_id = value;
+function onPartyChange(value) {
+    form[partyField] = value;
     savedByInvoice.value = {};
 
-    router.get(reloadUrl.value, value ? { customer_id: value } : {}, {
-        only: ['outstandingInvoices', 'selectedCustomerId'],
+    const query = isDisbursement
+        ? { payment_type: 'disbursement', ...(value ? { supplier_id: value } : {}) }
+        : (value ? { customer_id: value } : {});
+
+    router.get(reloadUrl.value, query, {
+        only: isDisbursement
+            ? ['outstandingPurchaseInvoices', 'selectedSupplierId']
+            : ['outstandingInvoices', 'selectedCustomerId'],
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -110,10 +148,10 @@ const rowErrors = computed(() => {
     const errors = {};
 
     form.allocations.forEach((line, index) => {
-        const message = form.errors[`allocations.${index}.amount`] || form.errors[`allocations.${index}.sales_invoice_id`];
+        const message = form.errors[`allocations.${index}.amount`] || form.errors[`allocations.${index}.${invoiceKey}`];
 
         if (message) {
-            errors[line.sales_invoice_id] = message;
+            errors[line[invoiceKey]] = message;
         }
     });
 
@@ -142,7 +180,7 @@ function prepare() {
     }
 
     form.amount = String(form.amount).trim();
-    form.allocations = allocation.value.lines.map((line) => ({ sales_invoice_id: line.invoiceId, amount: line.amount }));
+    form.allocations = allocation.value.lines.map((line) => ({ [invoiceKey]: line.invoiceId, amount: line.amount }));
 
     return true;
 }
@@ -192,15 +230,15 @@ function saveAndPost() {
             </template>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <FormField v-slot="{ id, invalid }" label="Pelanggan" required :error="form.errors.customer_id">
+                <FormField v-slot="{ id, invalid }" :label="partyLabel" required :error="form.errors[partyField]">
                     <Select
                         :id="id"
-                        :model-value="form.customer_id"
-                        :options="customerOptions"
-                        placeholder="Pilih pelanggan"
+                        :model-value="form[partyField]"
+                        :options="partyOptions"
+                        :placeholder="`Pilih ${partyWord}`"
                         :invalid="invalid"
                         :disabled="form.processing"
-                        @update:model-value="onCustomerChange"
+                        @update:model-value="onPartyChange"
                     />
                 </FormField>
 
@@ -240,16 +278,16 @@ function saveAndPost() {
         </Card>
 
         <AllocationEditor
-            :invoices="outstandingInvoices"
+            :invoices="openInvoices"
             :amount="form.amount"
             :saved="savedByInvoice"
             :row-errors="rowErrors"
             :error="form.errors.allocations"
             :disabled="form.processing"
-            :party-chosen="Boolean(form.customer_id)"
-            description="Faktur terbuka milik pelanggan, jatuh tempo paling lama lebih dulu."
-            choose-party-message="Pilih pelanggan untuk melihat faktur terbukanya."
-            no-invoices-message="Pelanggan ini tidak memiliki faktur terbuka."
+            :party-chosen="Boolean(form[partyField])"
+            :description="`Faktur terbuka milik ${partyWord}, jatuh tempo paling lama lebih dulu.`"
+            :choose-party-message="`Pilih ${partyWord} untuk melihat faktur terbukanya.`"
+            :no-invoices-message="`${partyLabel} ini tidak memiliki faktur terbuka.`"
             @change="allocation = $event"
         />
 

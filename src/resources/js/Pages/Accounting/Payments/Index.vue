@@ -28,6 +28,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    suppliers: {
+        type: Array,
+        default: () => [],
+    },
     methods: {
         type: Array,
         default: () => [],
@@ -45,7 +49,9 @@ const { search, filters, setSearch, setFilter, resetFilters, setPage, setPerPage
         search: props.items.query?.search || '',
         perPage: props.items.meta?.per_page || 25,
         filters: {
+            payment_type: props.items.query?.filter?.payment_type || '',
             customer_id: props.items.query?.filter?.customer_id || '',
+            supplier_id: props.items.query?.filter?.supplier_id || '',
             status: props.items.query?.filter?.status || '',
             method: props.items.query?.filter?.method || '',
             date_from: props.items.query?.filter?.date_from || '',
@@ -58,6 +64,19 @@ const customerOptions = computed(() => [
     { value: '', label: 'Semua Pelanggan' },
     ...props.customers.map((c) => ({ value: String(c.id), label: `${c.code} - ${c.name}` })),
 ]);
+
+const supplierOptions = computed(() => [
+    { value: '', label: 'Semua Pemasok' },
+    ...props.suppliers.map((s) => ({ value: String(s.id), label: `${s.code} - ${s.name}` })),
+]);
+
+const typeTabs = [
+    { value: '', label: 'Semua' },
+    { value: 'receipt', label: 'Penerimaan' },
+    { value: 'disbursement', label: 'Pengeluaran' },
+];
+
+const showingDisbursements = computed(() => filters.value.payment_type === 'disbursement');
 
 const statusOptions = computed(() => [
     { value: '', label: 'Semua Status' },
@@ -72,7 +91,7 @@ const methodOptions = computed(() => [
 const columns = [
     { key: 'number', label: 'No. Pembayaran', sortable: false, class: 'whitespace-nowrap font-mono text-xs' },
     { key: 'paymentDate', label: 'Tanggal', sortable: false, class: 'whitespace-nowrap text-xs' },
-    { key: 'customer', label: 'Pelanggan', sortable: false },
+    { key: 'customer', label: 'Pelanggan/Pemasok', sortable: false },
     { key: 'methodLabel', label: 'Metode', sortable: false },
     { key: 'account', label: 'Akun Kas/Bank', sortable: false },
     { key: 'amount', label: 'Jumlah', sortable: false, align: 'right' },
@@ -81,7 +100,9 @@ const columns = [
 ];
 
 const hasActiveFilters = computed(() => Boolean(
+    filters.value.payment_type ||
     filters.value.customer_id ||
+    filters.value.supplier_id ||
     filters.value.status ||
     filters.value.method ||
     filters.value.date_from ||
@@ -96,7 +117,7 @@ const hasActiveFilters = computed(() => Boolean(
         <div class="space-y-6">
             <PageHeader
                 title="Pembayaran Kas/Bank"
-                description="Penerimaan pembayaran dari pelanggan dan alokasinya ke faktur."
+                description="Penerimaan dari pelanggan, pembayaran ke pemasok, dan alokasinya ke faktur."
             >
                 <template #actions>
                     <Can permission="payments.create">
@@ -106,9 +127,29 @@ const hasActiveFilters = computed(() => Boolean(
                                 Terima Pembayaran
                             </Button>
                         </Link>
+                        <Link href="/accounting/payments/create?payment_type=disbursement">
+                            <Button variant="secondary">
+                                <Plus class="w-4 h-4 mr-1.5" aria-hidden="true" />
+                                Bayar Pemasok
+                            </Button>
+                        </Link>
                     </Can>
                 </template>
             </PageHeader>
+
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Jenis pembayaran">
+                <Button
+                    v-for="tab in typeTabs"
+                    :key="tab.value"
+                    type="button"
+                    size="sm"
+                    :variant="filters.payment_type === tab.value ? 'primary' : 'secondary'"
+                    :aria-pressed="filters.payment_type === tab.value"
+                    @click="setFilter('payment_type', tab.value)"
+                >
+                    {{ tab.label }}
+                </Button>
+            </div>
 
             <FilterBar
                 :search="search"
@@ -117,7 +158,17 @@ const hasActiveFilters = computed(() => Boolean(
                 @update:search="setSearch"
                 @reset="resetFilters"
             >
-                <div class="w-full sm:w-56">
+                <div v-if="showingDisbursements" class="w-full sm:w-56">
+                    <Select
+                        :model-value="filters.supplier_id"
+                        :options="supplierOptions"
+                        size="sm"
+                        aria-label="Filter berdasarkan pemasok"
+                        @update:model-value="setFilter('supplier_id', $event)"
+                    />
+                </div>
+
+                <div v-else class="w-full sm:w-56">
                     <Select
                         :model-value="filters.customer_id"
                         :options="customerOptions"
@@ -188,8 +239,8 @@ const hasActiveFilters = computed(() => Boolean(
                 </template>
 
                 <template #cell(customer)="{ row }">
-                    <div class="font-medium text-slate-800 dark:text-slate-200">{{ row.customer?.name || '-' }}</div>
-                    <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ row.customer?.code }}</div>
+                    <div class="font-medium text-slate-800 dark:text-slate-200">{{ (row.supplier ?? row.customer)?.name || '-' }}</div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ (row.supplier ?? row.customer)?.code }}</div>
                 </template>
 
                 <template #cell(account)="{ row }">

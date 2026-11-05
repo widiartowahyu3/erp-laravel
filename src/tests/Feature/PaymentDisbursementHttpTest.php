@@ -18,7 +18,6 @@ use Tests\Support\PurchaseInvoiceFixtures;
 use Tests\Support\TestDataFactory;
 
 beforeEach(function (): void {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     (new ChartOfAccountSeeder)->run();
     (new RoleSeeder)->run();
     $this->finance = userWithRole('finance');

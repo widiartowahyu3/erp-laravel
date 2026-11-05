@@ -38,6 +38,10 @@ const breadcrumbs = computed(() => [
     { label: props.item.number },
 ]);
 
+const isDisbursement = computed(() => props.item.paymentType === 'disbursement');
+const party = computed(() => (isDisbursement.value ? props.item.supplier : props.item.customer));
+const partyLabel = computed(() => (isDisbursement.value ? 'Pemasok' : 'Pelanggan'));
+
 const flashError = computed(() => page.props.flash?.error || null);
 const flashSuccess = computed(() => page.props.flash?.success || null);
 const pageErrors = computed(() => page.props.errors || {});
@@ -108,13 +112,14 @@ async function handleVoid() {
             <Alert v-if="pageErrors.status" variant="danger">{{ pageErrors.status }}</Alert>
             <Alert v-if="pageErrors.allocations" variant="danger">{{ pageErrors.allocations }}</Alert>
             <Alert v-if="pageErrors.customer_id" variant="danger">{{ pageErrors.customer_id }}</Alert>
+            <Alert v-if="pageErrors.supplier_id" variant="danger">{{ pageErrors.supplier_id }}</Alert>
             <Alert v-if="pageErrors.account_id" variant="danger">{{ pageErrors.account_id }}</Alert>
             <Alert v-if="pageErrors.reason" variant="danger">{{ pageErrors.reason }}</Alert>
             <Alert v-if="pageErrors.form" variant="danger">{{ pageErrors.form }}</Alert>
 
             <PageHeader
                 :title="item.number"
-                :description="`${item.typeLabel} dari ${item.customer?.name || ''}`"
+                :description="`${isDisbursement ? 'Pembayaran ke pemasok' : 'Penerimaan dari pelanggan'} ${party?.name || ''}`"
             >
                 <template #actions>
                     <div class="flex flex-wrap items-center gap-2">
@@ -186,9 +191,9 @@ async function handleVoid() {
                             <StatusBadge :status="item.status" />
                         </div>
                         <div>
-                            <span class="text-xs text-slate-500 dark:text-slate-400 block">Pelanggan:</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 block">{{ partyLabel }}:</span>
                             <span class="font-medium text-slate-800 dark:text-slate-200">
-                                {{ item.customer?.code }} - {{ item.customer?.name }}
+                                {{ party?.code }} - {{ party?.name }}
                             </span>
                         </div>
                         <div>
@@ -242,7 +247,7 @@ async function handleVoid() {
                             <tr v-for="line in item.allocations" :key="line.id">
                                 <td class="py-3 px-3 font-mono text-xs">
                                     <Link
-                                        :href="`/sales/invoices/${line.salesInvoiceId}`"
+:href="isDisbursement ? `/purchasing/invoices/${line.purchaseInvoiceId}` : `/sales/invoices/${line.salesInvoiceId}`"
                                         class="text-indigo-600 dark:text-indigo-400 hover:underline"
                                     >
                                         {{ line.invoiceNumber }}
