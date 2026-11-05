@@ -36,4 +36,28 @@ final class ReportFixtures
 
         return $post ? $service->post($journal) : $journal;
     }
+
+    /**
+     * A stored invoice row with exact dates and amounts, for reports that only read it.
+     *
+     * @param  'sales_invoices'|'purchase_invoices'  $table
+     */
+    public static function invoiceRow(string $table, int $partyId, string $dueDate, string $total, string $paid = '0.00', string $status = 'posted', string $invoiceDate = '2026-01-01'): int
+    {
+        $isSales = $table === 'sales_invoices';
+
+        return (int) DB::table($table)->insertGetId(array_merge([
+            'number' => ($isSales ? 'SI-' : 'PI-').bin2hex(random_bytes(6)),
+            'invoice_date' => $invoiceDate,
+            'due_date' => $dueDate,
+            'status' => $status,
+            'subtotal' => $total,
+            'total' => $total,
+            'paid_amount' => $paid,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], $isSales
+            ? ['customer_id' => $partyId]
+            : ['supplier_id' => $partyId, 'supplier_invoice_number' => 'INV-'.bin2hex(random_bytes(6))]));
+    }
 }
