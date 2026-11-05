@@ -205,3 +205,19 @@ test('two-connection lock test on PRE-EXISTING row: connection B fails with lock
             ->delete();
     }
 });
+
+test('sales invoice numbers follow SI/YYYYMM/NNNNN and restart each period', function (): void {
+    DB::beginTransaction();
+
+    try {
+        $november = DocumentNumberService::generate(DocumentType::SI, '2026-11-05');
+        $nextInNovember = DocumentNumberService::generate(DocumentType::SI, '2026-11-20');
+        $december = DocumentNumberService::generate(DocumentType::SI, '2099-12-01');
+
+        expect($november)->toMatch('#^SI/202611/\d{5}$#')
+            ->and((int) substr($nextInNovember, -5))->toBe((int) substr($november, -5) + 1)
+            ->and($december)->toBe('SI/209912/00001');
+    } finally {
+        DB::rollBack();
+    }
+});
