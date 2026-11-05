@@ -44,12 +44,12 @@ Keberhasilan di lokal belum membuktikan CI. Status akhirnya ada di tab Actions G
 
 ## 5. Angka terakhir
 
-Dari log pada 2026-11-05 di commit `e842bcc`:
+Dari log pada 2026-11-05 di commit `463715f`:
 
 | Rangkaian | Hasil |
 |---|---|
 | Backend | 1304 tes lulus, 11844 penegasan |
 | Penjaga integritas akhir (`ZGuardIntegrityTest`) | 1 tes lulus, 3 penegasan |
-| Frontend | 47 berkas, 631 tes lulus |
+| Frontend | 47 berkas, 632 tes lulus |
 
 Angka ini akan bertambah di fase berikutnya. Sumber yang berlaku tetap keluaran perintah di atas.
