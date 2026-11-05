@@ -65,7 +65,7 @@ final class GeneralLedgerReport
     }
 
     /**
-     * Every row of the period for export, read one at a time.
+     * The balance brought forward, then every row of the period, read one at a time for export.
      *
      * @return Generator<int, array<string, mixed>>
      *
@@ -77,6 +77,8 @@ final class GeneralLedgerReport
         $account = $this->postableAccount($filter->accountId);
         $balance = $this->balanceBefore($account, $from);
 
+        yield ['journal_date' => $from, 'description' => 'Saldo awal', 'balance' => $balance];
+
         foreach ($this->orderedLines($account->id, $from, $to)->cursor() as $line) {
             $balance = $this->advance($account, $balance, (string) $line->debit, (string) $line->credit);
 
@@ -85,6 +87,8 @@ final class GeneralLedgerReport
     }
 
     /**
+     * How many rows an export holds, including the balance brought forward.
+     *
      * @throws BusinessRuleException
      */
     public function lineCount(ReportFilter $filter): int
@@ -92,7 +96,7 @@ final class GeneralLedgerReport
         [$from, $to] = $filter->period();
         $account = $this->postableAccount($filter->accountId);
 
-        return (int) $this->periodTotals($account->id, $from, $to)->line_count;
+        return (int) $this->periodTotals($account->id, $from, $to)->line_count + 1;
     }
 
     /**

@@ -26,6 +26,10 @@ use App\Http\Controllers\MasterData\WarehouseController;
 use App\Http\Controllers\Purchasing\GoodsReceiptController;
 use App\Http\Controllers\Purchasing\PurchaseInvoiceController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
+use App\Http\Controllers\Reports\AccountingReportController;
+use App\Http\Controllers\Reports\InventoryReportController;
+use App\Http\Controllers\Reports\PurchasingReportController;
+use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\Sales\DeliveryOrderController;
 use App\Http\Controllers\Sales\SalesInvoiceController;
 use App\Http\Controllers\Sales\SalesOrderController;
@@ -253,6 +257,20 @@ Route::middleware([
         Route::get('accounts/{account}/edit', [AccountController::class, 'edit'])->middleware('can:chart_of_accounts.update')->name('accounts.edit');
         Route::put('accounts/{account}', [AccountController::class, 'update'])->middleware('can:chart_of_accounts.update')->name('accounts.update');
         Route::delete('accounts/{account}', [AccountController::class, 'destroy'])->middleware('can:chart_of_accounts.delete')->name('accounts.destroy');
+    });
+
+    Route::prefix('reports')->name('reports.')->group(function (): void {
+        Route::get('trial-balance', [AccountingReportController::class, 'trialBalance'])->middleware('can:reports.view_finance')->name('trial-balance');
+        Route::get('general-ledger', [AccountingReportController::class, 'generalLedger'])->middleware('can:reports.view_finance')->name('general-ledger');
+        Route::get('income-statement', [AccountingReportController::class, 'incomeStatement'])->middleware('can:reports.view_finance')->name('income-statement');
+        Route::get('balance-sheet', [AccountingReportController::class, 'balanceSheet'])->middleware('can:reports.view_finance')->name('balance-sheet');
+        Route::get('receivable-aging', [AccountingReportController::class, 'receivableAging'])->middleware('can:reports.view_finance')->name('receivable-aging');
+        Route::get('payable-aging', [AccountingReportController::class, 'payableAging'])->middleware('can:reports.view_finance')->name('payable-aging');
+        Route::get('customer-statement', [AccountingReportController::class, 'customerStatement'])->middleware('can:reports.view_finance')->name('customer-statement');
+        Route::get('inventory-reconciliation', [AccountingReportController::class, 'inventoryReconciliation'])->middleware('can:reports.view_finance')->name('inventory-reconciliation');
+        Route::get('sales-summary', SalesReportController::class)->middleware('can:reports.view_sales')->name('sales-summary');
+        Route::get('purchasing-summary', PurchasingReportController::class)->middleware('can:reports.view_purchasing')->name('purchasing-summary');
+        Route::get('inventory-summary', InventoryReportController::class)->middleware('can:reports.view_inventory')->name('inventory-summary');
     });
 });
 
