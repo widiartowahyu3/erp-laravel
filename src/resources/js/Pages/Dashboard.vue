@@ -25,6 +25,8 @@ import {
     LineChart,
     PieChart,
     TrendingUp,
+    Scale,
+    Landmark,
     UserCheck,
     Shield,
     Settings,
@@ -48,6 +50,10 @@ const props = defineProps({
     appName: {
         type: String,
         default: 'ERP Distribusi',
+    },
+    finance: {
+        type: Object,
+        default: null,
     },
     purchaseOrders: {
         type: Object,
@@ -96,7 +102,8 @@ const hasAnySummaryPermission = computed(() => {
         props.salesInvoices !== null ||
         props.purchaseInvoices !== null ||
         props.stockBalances !== null ||
-        props.stockMovements !== null
+        props.stockMovements !== null ||
+        props.finance !== null
     );
 });
 
@@ -125,6 +132,8 @@ const iconMap = {
     LineChart,
     PieChart,
     TrendingUp,
+    Scale,
+    Landmark,
     UserCheck,
     Shield,
     Settings,
@@ -174,6 +183,63 @@ const movementTypeLabels = {
             <!-- Operational Metrics Summary Cards -->
             <div v-if="hasAnySummaryPermission" class="space-y-6">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Finance Metric Cards -->
+                    <Card v-if="finance !== null" padding="md" class="border-emerald-100 dark:border-emerald-900/30">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Laba Bulan Ini
+                                </span>
+                                <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white" data-test="month-profit">
+                                    <Rupiah :value="finance.month_profit" />
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Dari jurnal yang diposting bulan ini
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <TrendingUp class="w-5 h-5" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <Link
+                                href="/reports/income-statement"
+                                class="inline-flex items-center text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                            >
+                                <span>Lihat laba rugi</span>
+                                <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+                            </Link>
+                        </div>
+                    </Card>
+
+                    <Card v-if="finance !== null" padding="md" class="border-emerald-100 dark:border-emerald-900/30">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Kas dan Bank
+                                </span>
+                                <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white" data-test="cash-and-bank">
+                                    <Rupiah :value="finance.cash_and_bank" />
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    Saldo akun kas dan bank saat ini
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <Landmark class="w-5 h-5" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                            <Link
+                                href="/reports/trial-balance"
+                                class="inline-flex items-center text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                            >
+                                <span>Lihat neraca saldo</span>
+                                <ArrowRight class="w-3.5 h-3.5" aria-hidden="true" />
+                            </Link>
+                        </div>
+                    </Card>
+
                     <!-- 1. Purchase Orders Metric Card -->
                     <Card v-if="purchaseOrders !== null" padding="md" class="border-indigo-100 dark:border-indigo-900/30">
                         <div class="flex items-start justify-between">

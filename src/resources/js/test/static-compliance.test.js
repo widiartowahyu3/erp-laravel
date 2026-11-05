@@ -153,8 +153,38 @@ describe('Frontend Static Compliance & Security Audits', () => {
         expect(availableNames).toContain('Pengguna');
         expect(availableNames).toContain('Peran & Hak Akses');
         expect(availableNames).toContain('Log Audit');
+        expect(availableNames).toContain('Laporan Penjualan');
+        expect(availableNames).toContain('Laporan Pembelian');
+        expect(availableNames).toContain('Laporan Persediaan');
+        expect(availableNames).toContain('Neraca Saldo');
+        expect(availableNames).toContain('Buku Besar');
+        expect(availableNames).toContain('Laba Rugi');
+        expect(availableNames).toContain('Neraca');
+        expect(availableNames).toContain('Umur Piutang');
+        expect(availableNames).toContain('Umur Utang');
+        expect(availableNames).toContain('Kartu Piutang');
+        expect(availableNames).toContain('Rekonsiliasi Persediaan');
         expect(availableNames).not.toContain('Pengaturan Sistem');
-        expect(availableItems.length).toBe(25);
+        expect(availableItems.length).toBe(36);
+    });
+
+    it('hides the app shell, filters and buttons when a report is printed', () => {
+        const layout = fs.readFileSync(path.resolve(__dirname, '../Layouts/AppLayout.vue'), 'utf-8');
+        const css = fs.readFileSync(path.resolve(__dirname, '../../css/app.css'), 'utf-8');
+        const filterBar = fs.readFileSync(path.resolve(__dirname, '../Components/reports/ReportFilterBar.vue'), 'utf-8');
+        const exportButton = fs.readFileSync(path.resolve(__dirname, '../Components/reports/ExportButton.vue'), 'utf-8');
+        const header = fs.readFileSync(path.resolve(__dirname, '../Components/reports/ReportHeader.vue'), 'utf-8');
+
+        expect((layout.match(/<aside[\s\S]*?print:hidden/g) || []).length).toBe(2);
+        expect((layout.match(/<header[\s\S]*?print:hidden/g) || []).length).toBe(2);
+        expect(layout).toContain('print:overflow-visible');
+        expect(filterBar).toContain('print:hidden');
+        expect(exportButton).toContain('print:hidden');
+        expect(header).toContain('print:hidden');
+        expect(css).toContain('@media print');
+        expect(css).toContain('.report-page');
+        expect(css).toContain('.report-table');
+        expect(css).toContain('break-inside: avoid');
     });
 
     it('ensures PurchaseOrders/Form.vue renders discount_amount error per item row', () => {

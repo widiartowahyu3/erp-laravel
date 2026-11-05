@@ -231,3 +231,30 @@
         transform: rotate(360deg);
     }
 }
+
+/* Printed reports: plain ink on white, with tables that run across pages instead of being cut. */
+@media print {
+    @page {
+        margin: 12mm;
+    }
+
+    .report-page,
+    .report-page * {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+    }
+
+    .report-page .report-table {
+        overflow: visible !important;
+    }
+
+    .report-page thead {
+        display: table-header-group;
+    }
+
+    .report-page tr,
+    .report-page .report-section {
+        break-inside: avoid;
+    }
+}

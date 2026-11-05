@@ -321,3 +321,34 @@ describe('Dashboard Component & Permissions', () => {
         await expectNoViolations(wrapper.element);
     });
 });
+
+describe('Dashboard finance cards', () => {
+    beforeEach(() => {
+        resetMockPageProps();
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    it('shows profit and cash, including a loss, with links to their reports', () => {
+        const wrapper = mount(Dashboard, {
+            props: { finance: { month_profit: '-1250.50', cash_and_bank: '98000.00' } },
+            global: { stubs: { Head: true, Link: { props: ['href'], template: '<a :href="href"><slot /></a>' } } },
+        });
+
+        expect(wrapper.text()).toContain('Laba Bulan Ini');
+        expect(wrapper.text()).toContain('Kas dan Bank');
+        expect(wrapper.find('[data-test="month-profit"]').text()).toBe('-Rp 1.250,50');
+        expect(wrapper.find('[data-test="cash-and-bank"]').text()).toBe('Rp 98.000');
+        expect(wrapper.find('a[href="/reports/income-statement"]').exists()).toBe(true);
+        expect(wrapper.find('a[href="/reports/trial-balance"]').exists()).toBe(true);
+    });
+
+    it('hides the cards without the finance permission', () => {
+        const wrapper = mount(Dashboard, { props: { finance: null }, global: { stubs: defaultStubs } });
+
+        expect(wrapper.text()).not.toContain('Laba Bulan Ini');
+        expect(wrapper.text()).not.toContain('Kas dan Bank');
+    });
+});

@@ -5,11 +5,41 @@ declare(strict_types=1);
 namespace App\Services\Dashboard;
 
 use App\Models\StockMovement;
+use App\Services\Reports\IncomeStatementReport;
+use App\Services\Reports\ReportFilter;
 use App\Support\Decimal;
 use Illuminate\Support\Facades\DB;
 
 class DashboardSummary
 {
+    /**
+     * This month's profit so far and what cash and bank hold today, from posted journals.
+     *
+     * @return array{month_profit: string, cash_and_bank: string}
+     */
+    public function getFinanceSummary(): array
+    {
+        $today = now()->toDateString();
+        $income = (new IncomeStatementReport)->handle(new ReportFilter(
+            dateFrom: now()->startOfMonth()->toDateString(),
+            dateTo: $today,
+        ));
+
+        $cash = DB::table('journal_lines as l')
+            ->join('journals as j', 'j.id', '=', 'l.journal_id')
+            ->join('chart_of_accounts as a', 'a.id', '=', 'l.account_id')
+            ->where('j.status', 'posted')
+            ->where('j.journal_date', '<=', $today)
+            ->whereIn('a.code', (array) config('accounting.cash_bank'))
+            ->selectRaw('COALESCE(SUM(l.debit), 0) - COALESCE(SUM(l.credit), 0) as balance')
+            ->value('balance');
+
+        return [
+            'month_profit' => $income->summary['net_profit'],
+            'cash_and_bank' => Decimal::round((string) $cash, Decimal::SCALE_MONEY),
+        ];
+    }
+
     /**
      * Ringkasan Pesanan Pembelian berjalan (status approved + partially_received).
      *

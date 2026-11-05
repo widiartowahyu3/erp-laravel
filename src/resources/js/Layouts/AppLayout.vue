@@ -26,6 +26,8 @@ import {
     LineChart,
     PieChart,
     TrendingUp,
+    Scale,
+    Landmark,
     UserCheck,
     Shield,
     Settings,
@@ -134,6 +136,8 @@ const iconMap = {
     LineChart,
     PieChart,
     TrendingUp,
+    Scale,
+    Landmark,
     UserCheck,
     Shield,
     Settings,
@@ -208,18 +212,18 @@ function isItemActive(href) {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 transition-colors">
+    <div class="print:block print:min-h-0 print:bg-white min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 transition-colors">
         <!-- Skip to content link -->
         <a
             href="#main-content"
-            class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+            class="print:hidden sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
         >
             Lewati ke konten
         </a>
 
         <!-- Mobile Header -->
         <header
-            class="lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800"
+            class="print:hidden lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800"
         >
             <div class="flex items-center gap-3">
                 <button
@@ -279,7 +283,7 @@ function isItemActive(href) {
             id="mobile-sidebar-drawer"
             ref="drawerRef"
             :class="[
-                'fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 ease-in-out lg:hidden flex flex-col',
+                'print:hidden fixed top-0 bottom-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-200 ease-in-out lg:hidden flex flex-col',
                 isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full',
             ]"
             aria-label="Navigasi Menu Mobile"
@@ -391,11 +395,11 @@ function isItemActive(href) {
         </aside>
 
         <!-- Main Layout with Desktop Sidebar -->
-        <div class="flex-1 flex overflow-hidden">
+        <div class="flex-1 flex overflow-hidden print:block print:overflow-visible">
             <!-- Desktop Sidebar -->
             <aside
                 :class="[
-                    'hidden lg:flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-[width] duration-200 ease-in-out shrink-0 select-none',
+                    'print:hidden hidden lg:flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-[width] duration-200 ease-in-out shrink-0 select-none',
                     isSidebarCollapsed ? 'w-16' : 'w-64',
                 ]"
                 aria-label="Navigasi Menu Utama"
@@ -544,10 +548,10 @@ function isItemActive(href) {
             </aside>
 
             <!-- Main Content Area -->
-            <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+            <div class="flex-1 flex flex-col min-w-0 overflow-y-auto print:block print:overflow-visible">
                 <!-- Desktop Top Bar -->
                 <header
-                    class="hidden lg:flex h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 items-center justify-between px-6 sticky top-0 z-10"
+                    class="print:hidden hidden lg:flex h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 items-center justify-between px-6 sticky top-0 z-10"
                 >
                     <!-- Left: Collapse toggle + Breadcrumb / Header slot -->
                     <div class="flex items-center gap-4 min-w-0">
@@ -672,7 +676,7 @@ function isItemActive(href) {
                 </header>
 
                 <!-- Page Content -->
-                <main id="main-content" class="flex-1 p-4 sm:p-6 lg:p-8">
+                <main id="main-content" class="flex-1 p-4 sm:p-6 lg:p-8 print:p-0">
                     <div class="max-w-7xl mx-auto">
                         <slot />
                     </div>

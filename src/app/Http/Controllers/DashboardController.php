@@ -50,6 +50,10 @@ class DashboardController extends Controller
             ? $summary->getRecentStockMovements()
             : null;
 
+        $finance = $user?->can('reports.view_finance')
+            ? $summary->getFinanceSummary()
+            : null;
+
         return Inertia::render('Dashboard', [
             'purchaseOrders' => $purchaseOrders,
             'goodsReceipts' => $goodsReceipts,
@@ -59,6 +63,7 @@ class DashboardController extends Controller
             'purchaseInvoices' => $purchaseInvoices,
             'stockBalances' => $stockBalances,
             'stockMovements' => $stockMovements,
+            'finance' => $finance,
         ]);
     }
 }
