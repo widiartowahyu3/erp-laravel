@@ -17,7 +17,6 @@ use Tests\Support\ReportFixtures;
 use Tests\Support\TestDataFactory;
 
 beforeEach(function (): void {
-    config(['inertia.testing.ensure_pages_exist' => false]);
     (new ChartOfAccountSeeder)->run();
     (new RoleSeeder)->run();
     Carbon::setTestNow('2026-11-05 10:00:00');
