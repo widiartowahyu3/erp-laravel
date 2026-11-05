@@ -131,10 +131,10 @@ export const navigationGroups = [
             },
             {
                 name: 'Faktur Penjualan (SI)',
-                href: '#',
+                href: '/sales/invoices',
                 icon: 'FileSpreadsheet',
                 permission: 'sales_invoices.view',
-                available: false,
+                available: true,
                 description: 'Faktur tagihan piutang dagang pelanggan.',
             },
         ],
