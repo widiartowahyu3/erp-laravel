@@ -420,18 +420,17 @@ class PaymentService
 
     /**
      * @param  Collection<int, PaymentAllocation>  $allocations
-     * @return Collection<int, SalesInvoice|PurchaseInvoice>
+     * @return Collection<int, SalesInvoice>|Collection<int, PurchaseInvoice>
      */
     private function lockInvoices(PaymentType $type, Collection $allocations): Collection
     {
         $invoiceIds = $allocations->map(fn (PaymentAllocation $allocation): int => $this->invoiceIdOf($type, $allocation))->all();
 
-        return $this->invoiceQuery($type)
-            ->whereIn('id', $invoiceIds)
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
+        if ($type === PaymentType::RECEIPT) {
+            return SalesInvoice::query()->whereIn('id', $invoiceIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+        }
+
+        return PurchaseInvoice::query()->whereIn('id', $invoiceIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
     }
 
     /**

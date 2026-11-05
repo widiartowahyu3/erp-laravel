@@ -9,6 +9,11 @@ use Illuminate\Validation\Rule;
 
 final class PaymentStoreRequest extends BasePaymentRequest
 {
+    protected function paymentType(): ?PaymentType
+    {
+        return PaymentType::tryFrom((string) $this->input('payment_type', PaymentType::RECEIPT->value));
+    }
+
     /**
      * @return array<string, list<mixed>>
      */

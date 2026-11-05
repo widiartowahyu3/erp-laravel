@@ -139,7 +139,7 @@ test('index exposes rows, labels and filters; source links resolve for automatic
         ->assertInertia(fn (Assert $page) => $page
             ->component('Accounting/Journals/Index')
             ->has('statuses', 3)
-            ->has('sources', 5)
+            ->has('sources', 6)
             ->has('items.data', 1)
             ->where('items.data.0.sourceLabel', 'Penerimaan Barang')
             ->where('items.data.0.sourceUrl', route('purchasing.goods-receipts.show', $gr->id))

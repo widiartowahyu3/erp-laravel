@@ -24,6 +24,7 @@ use App\Http\Controllers\MasterData\TaxRateController;
 use App\Http\Controllers\MasterData\UnitController;
 use App\Http\Controllers\MasterData\WarehouseController;
 use App\Http\Controllers\Purchasing\GoodsReceiptController;
+use App\Http\Controllers\Purchasing\PurchaseInvoiceController;
 use App\Http\Controllers\Purchasing\PurchaseOrderController;
 use App\Http\Controllers\Sales\DeliveryOrderController;
 use App\Http\Controllers\Sales\SalesInvoiceController;
@@ -159,6 +160,15 @@ Route::middleware([
         Route::put('goods-receipts/{goods_receipt}', [GoodsReceiptController::class, 'update'])->middleware('can:goods_receipts.update')->name('goods-receipts.update');
         Route::post('goods-receipts/{goods_receipt}/post', [GoodsReceiptController::class, 'post'])->middleware('can:goods_receipts.post')->name('goods-receipts.post');
         Route::post('goods-receipts/{goods_receipt}/void', [GoodsReceiptController::class, 'void'])->middleware('can:goods_receipts.void')->name('goods-receipts.void');
+
+        Route::get('invoices', [PurchaseInvoiceController::class, 'index'])->middleware('can:purchase_invoices.view')->name('invoices.index');
+        Route::get('invoices/create', [PurchaseInvoiceController::class, 'create'])->middleware('can:purchase_invoices.create')->name('invoices.create');
+        Route::post('invoices', [PurchaseInvoiceController::class, 'store'])->middleware('can:purchase_invoices.create')->name('invoices.store');
+        Route::get('invoices/{purchase_invoice}', [PurchaseInvoiceController::class, 'show'])->middleware('can:purchase_invoices.view')->name('invoices.show');
+        Route::get('invoices/{purchase_invoice}/edit', [PurchaseInvoiceController::class, 'edit'])->middleware('can:purchase_invoices.update')->name('invoices.edit');
+        Route::put('invoices/{purchase_invoice}', [PurchaseInvoiceController::class, 'update'])->middleware('can:purchase_invoices.update')->name('invoices.update');
+        Route::post('invoices/{purchase_invoice}/post', [PurchaseInvoiceController::class, 'post'])->middleware('can:purchase_invoices.post')->name('invoices.post');
+        Route::post('invoices/{purchase_invoice}/void', [PurchaseInvoiceController::class, 'void'])->middleware('can:purchase_invoices.void')->name('invoices.void');
     });
 
     // Sales module routes

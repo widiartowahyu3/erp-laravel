@@ -116,6 +116,24 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->withErrors([$field => $validationMsg]);
             }
 
+            // Two requests racing past the service's own check for the same supplier invoice number
+            if ($constraint === 'purchase_invoices_supplier_id_supplier_invoice_number_unique') {
+                $validationMsg = 'Nomor faktur pemasok sudah dipakai untuk pemasok ini, termasuk oleh faktur yang sudah dibatalkan.';
+
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => $validationMsg,
+                        'errors' => [
+                            'supplier_invoice_number' => [$validationMsg],
+                        ],
+                    ], 422);
+                }
+
+                return redirect()->back()
+                    ->withInput($request->except(['password', 'current_password', 'password_confirmation', '_token']))
+                    ->withErrors(['supplier_invoice_number' => $validationMsg]);
+            }
+
             // Unknown unique violation indicates a bug or document concurrency collision
             report($e);
 

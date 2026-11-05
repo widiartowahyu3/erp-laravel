@@ -214,10 +214,13 @@ test('store creates a draft and ignores fields it does not accept', function ():
         ->and($payment->created_by)->toBe($this->finance->id);
 });
 
-test('store refuses a disbursement on payment_type', function (): void {
-    $this->withHeader('X-Inertia', 'true')
-        ->from('/accounting/payments/create')
+test('store treats payment_type as deciding the party, so a disbursement needs a supplier', function (): void {
+    $this->from('/accounting/payments/create')
         ->post('/accounting/payments', array_merge($this->payload, ['payment_type' => 'disbursement']))
+        ->assertSessionHasErrors('supplier_id');
+
+    $this->from('/accounting/payments/create')
+        ->post('/accounting/payments', array_merge($this->payload, ['payment_type' => 'bogus']))
         ->assertSessionHasErrors('payment_type');
 
     expect(Payment::count())->toBe(0);
