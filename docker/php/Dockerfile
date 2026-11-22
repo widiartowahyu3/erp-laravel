@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 # Base PHP-FPM image with required extensions & hardening
 # ------------------------------------------------------------------------------
-FROM php:8.5.12-fpm-alpine@sha256:4c2818074ec49f6abe46620f3965e0cb75bc3a5f2b417edd1aacaba6f091c40e AS base
+FROM php:8.6.0-fpm-alpine@sha256:3892978a38794b348f73d6926fb63e352b5338f8b302cdd2cf0ed968f63b50c5 AS base
 
 # Install runtime libraries
 RUN apk add --no-cache \
@@ -138,7 +138,7 @@ CMD ["php-fpm", "-F"]
 # ------------------------------------------------------------------------------
 # Web Stage: production nginx with the public assets baked in
 # ------------------------------------------------------------------------------
-FROM nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03 AS web
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS web
 
 COPY docker/nginx/prod.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/snippets/ /etc/nginx/snippets/
